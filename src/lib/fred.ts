@@ -13,7 +13,7 @@ function getKey(): string {
 // Fetch the most recent observation(s) for any FRED data series
 async function getObservations(seriesId: string, limit = 1) {
   const url = `${BASE_URL}/series/observations?series_id=${seriesId}&sort_order=desc&limit=${limit}&api_key=${getKey()}&file_type=json`
-  const res = await fetch(url, { next: { revalidate: 3600 } })
+  const res = await fetch(url, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(5000) })
   if (!res.ok) throw new Error(`FRED request failed for series ${seriesId}: ${res.status}`)
   const data = await res.json()
   if (data.error_message) throw new Error(`FRED error: ${data.error_message}`)

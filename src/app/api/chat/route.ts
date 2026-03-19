@@ -27,10 +27,13 @@ export async function POST(request: Request) {
 
     let liveData = ''
     try {
-      liveData = await fetchLiveData(latestUserMessage)
+      const timeout = new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error('live-data timeout')), 6000)
+      )
+      liveData = await Promise.race([fetchLiveData(latestUserMessage), timeout])
       console.log('[live-data] fetched, length:', liveData.length)
     } catch (err) {
-      console.error('[live-data] failed:', err)
+      console.error('[live-data] failed:', (err as Error).message)
     }
 
     const fullSystemPrompt = `${systemPrompt}

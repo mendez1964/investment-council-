@@ -18,7 +18,7 @@ let tickerCIKCache: Record<string, string> | null = null
 
 async function loadTickerCIKMap(): Promise<Record<string, string>> {
   if (tickerCIKCache) return tickerCIKCache
-  const res = await fetch(TICKERS_URL, { headers: HEADERS, next: { revalidate: 86400 } })
+  const res = await fetch(TICKERS_URL, { headers: HEADERS, next: { revalidate: 86400 }, signal: AbortSignal.timeout(5000) })
   if (!res.ok) throw new Error(`Failed to load SEC ticker map: ${res.status}`)
   const data = await res.json()
   const map: Record<string, string> = {}
@@ -41,7 +41,7 @@ async function tickerToCIK(ticker: string): Promise<string> {
 // Get filing history for a company using its CIK
 async function getCompanyFilings(cik: string) {
   const url = `${EDGAR_SUBMISSIONS}/CIK${cik}.json`
-  const res = await fetch(url, { headers: HEADERS, next: { revalidate: 3600 } })
+  const res = await fetch(url, { headers: HEADERS, next: { revalidate: 3600 }, signal: AbortSignal.timeout(5000) })
   if (!res.ok) throw new Error(`Failed to fetch EDGAR filings for CIK ${cik}: ${res.status}`)
   return res.json()
 }
@@ -135,7 +135,7 @@ export async function get8KEvents(ticker: string) {
 export async function searchFilings(query: string, formType = '', limit = 10) {
   const formFilter = formType ? `&forms=${encodeURIComponent(formType)}` : ''
   const url = `${EDGAR_SEARCH}?q=${encodeURIComponent(`"${query}"`)}&dateRange=custom&startdt=2022-01-01&enddt=2026-12-31${formFilter}`
-  const res = await fetch(url, { headers: HEADERS, next: { revalidate: 3600 } })
+  const res = await fetch(url, { headers: HEADERS, next: { revalidate: 3600 }, signal: AbortSignal.timeout(5000) })
   if (!res.ok) throw new Error(`EDGAR search failed: ${res.status}`)
   const data = await res.json()
   const hits = data.hits?.hits ?? []

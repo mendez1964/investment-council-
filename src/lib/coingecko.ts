@@ -19,7 +19,7 @@ export async function getCryptoPrice(coinId: string, currency = 'usd') {
   const url = `${COINGECKO_BASE}/simple/price?ids=${coinId.toLowerCase()}&vs_currencies=${currency}&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`
   const res = await fetch(url, {
     headers: getHeaders(),
-    next: { revalidate: 60 },
+    next: { revalidate: 60 }, signal: AbortSignal.timeout(5000),
   })
   if (!res.ok) throw new Error(`CoinGecko price request failed: ${res.status}`)
   const data = await res.json()
@@ -40,7 +40,7 @@ export async function getTop10ByCap(currency = 'usd') {
   const url = `${COINGECKO_BASE}/coins/markets?vs_currency=${currency}&order=market_cap_desc&per_page=10&page=1&sparkline=false&price_change_percentage=24h`
   const res = await fetch(url, {
     headers: getHeaders(),
-    next: { revalidate: 300 },
+    next: { revalidate: 300 }, signal: AbortSignal.timeout(5000),
   })
   if (!res.ok) throw new Error(`CoinGecko top 10 request failed: ${res.status}`)
   const data = await res.json()
@@ -59,7 +59,7 @@ export async function getTop10ByCap(currency = 'usd') {
 // Crypto Fear & Greed Index — 0 = Extreme Fear, 100 = Extreme Greed
 // This is a market sentiment indicator, not a price signal
 export async function getFearGreedIndex() {
-  const res = await fetch(FEAR_GREED_URL, { next: { revalidate: 3600 } })
+  const res = await fetch(FEAR_GREED_URL, { next: { revalidate: 3600 }, signal: AbortSignal.timeout(5000) })
   if (!res.ok) throw new Error(`Fear & Greed index request failed: ${res.status}`)
   const data = await res.json()
   const entry = data.data?.[0]
@@ -78,7 +78,7 @@ export async function getBitcoinDominance() {
   const url = `${COINGECKO_BASE}/global`
   const res = await fetch(url, {
     headers: getHeaders(),
-    next: { revalidate: 300 },
+    next: { revalidate: 300 }, signal: AbortSignal.timeout(5000),
   })
   if (!res.ok) throw new Error(`CoinGecko global request failed: ${res.status}`)
   const data = await res.json()
