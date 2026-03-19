@@ -20,11 +20,18 @@ export async function POST(request: Request) {
       .at(-1)?.content || ''
 
     // Load relevant knowledge base content and live market data in parallel
-    const [knowledgeBase, liveData, systemPrompt] = await Promise.all([
+    const [knowledgeBase, systemPrompt] = await Promise.all([
       Promise.resolve(getRelevantKnowledge(latestUserMessage)),
-      fetchLiveData(latestUserMessage),
       Promise.resolve(getSystemPrompt()),
     ])
+
+    let liveData = ''
+    try {
+      liveData = await fetchLiveData(latestUserMessage)
+      console.log('[live-data] fetched, length:', liveData.length)
+    } catch (err) {
+      console.error('[live-data] failed:', err)
+    }
 
     const fullSystemPrompt = `${systemPrompt}
 

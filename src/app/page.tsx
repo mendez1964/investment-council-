@@ -252,7 +252,7 @@ export default function Home() {
                     <span style={{ display: 'inline-block', width: '8px', height: '14px', background: '#2d6a4f', borderRadius: '2px', animation: 'blink 1s step-end infinite' }} />
                   )}
                 </div>
-                {msg.role === 'assistant' && msg.content && !isLoading && (
+                {msg.role === 'assistant' && msg.content && (
                   <button
                     onClick={() => printMessage(msg.content)}
                     title="Print this response"
