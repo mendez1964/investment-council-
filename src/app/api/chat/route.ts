@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getSystemPrompt, getRelevantKnowledge } from '@/lib/knowledge-base'
+import { fetchLiveData } from '@/lib/live-data'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -18,13 +19,17 @@ export async function POST(request: Request) {
       .filter((m: { role: string }) => m.role === 'user')
       .at(-1)?.content || ''
 
-    // Load relevant knowledge base content
-    const knowledgeBase = getRelevantKnowledge(latestUserMessage)
-    const systemPrompt = getSystemPrompt()
+    // Load relevant knowledge base content and live market data in parallel
+    const [knowledgeBase, liveData, systemPrompt] = await Promise.all([
+      Promise.resolve(getRelevantKnowledge(latestUserMessage)),
+      fetchLiveData(latestUserMessage),
+      Promise.resolve(getSystemPrompt()),
+    ])
 
     const fullSystemPrompt = `${systemPrompt}
 
 ${knowledgeBase.length > 0 ? `\n\n# LOADED KNOWLEDGE BASE CONTEXT\nThe following framework files are loaded for this query. Draw from them directly in your analysis:\n${knowledgeBase}` : ''}
+${liveData}
 
 Remember: Always identify which framework you are drawing from. Always include risk considerations. Always end substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice.`
 

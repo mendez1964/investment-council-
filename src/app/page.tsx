@@ -69,6 +69,34 @@ export default function Home() {
     }
   }
 
+  function printMessage(content: string) {
+    const win = window.open('', '_blank', 'width=800,height=600')
+    if (!win) return
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Investment Council — Research Output</title>
+          <style>
+            body { font-family: Georgia, serif; max-width: 720px; margin: 40px auto; padding: 0 24px; color: #111; line-height: 1.8; }
+            h1 { font-size: 13px; font-weight: normal; color: #888; border-bottom: 1px solid #ddd; padding-bottom: 12px; margin-bottom: 24px; letter-spacing: 0.05em; text-transform: uppercase; }
+            pre { white-space: pre-wrap; word-break: break-word; font-family: Georgia, serif; font-size: 15px; margin: 0; }
+            footer { margin-top: 40px; font-size: 11px; color: #aaa; border-top: 1px solid #eee; padding-top: 12px; }
+            @media print { body { margin: 20px; } }
+          </style>
+        </head>
+        <body>
+          <h1>Investment Council &mdash; ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</h1>
+          <pre>${content.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>
+          <footer>For educational purposes only. Not financial advice.</footer>
+        </body>
+      </html>
+    `)
+    win.document.close()
+    win.focus()
+    win.print()
+  }
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -211,17 +239,49 @@ export default function Home() {
               </div>
 
               {/* Content */}
-              <div style={{
-                flex: 1,
-                fontSize: '14px',
-                lineHeight: 1.75,
-                color: msg.role === 'user' ? '#bbb' : '#d4d4d4',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}>
-                {msg.content}
-                {isLoading && i === messages.length - 1 && msg.role === 'assistant' && msg.content === '' && (
-                  <span style={{ display: 'inline-block', width: '8px', height: '14px', background: '#2d6a4f', borderRadius: '2px', animation: 'blink 1s step-end infinite' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  fontSize: '14px',
+                  lineHeight: 1.75,
+                  color: msg.role === 'user' ? '#bbb' : '#d4d4d4',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {msg.content}
+                  {isLoading && i === messages.length - 1 && msg.role === 'assistant' && msg.content === '' && (
+                    <span style={{ display: 'inline-block', width: '8px', height: '14px', background: '#2d6a4f', borderRadius: '2px', animation: 'blink 1s step-end infinite' }} />
+                  )}
+                </div>
+                {msg.role === 'assistant' && msg.content && !isLoading && (
+                  <button
+                    onClick={() => printMessage(msg.content)}
+                    title="Print this response"
+                    style={{
+                      marginTop: '12px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#1a2e1f',
+                      border: '1px solid #2d6a4f',
+                      borderRadius: '6px',
+                      padding: '6px 14px',
+                      color: '#6ab187',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLButtonElement).style.background = '#2d6a4f'
+                      ;(e.currentTarget as HTMLButtonElement).style.color = '#fff'
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLButtonElement).style.background = '#1a2e1f'
+                      ;(e.currentTarget as HTMLButtonElement).style.color = '#6ab187'
+                    }}
+                  >
+                    🖨︎ Print
+                  </button>
                 )}
               </div>
             </div>
