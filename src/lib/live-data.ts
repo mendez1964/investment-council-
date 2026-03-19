@@ -20,15 +20,51 @@ const NOT_TICKERS = new Set([
   'COULD','SHOULD','THEIR','THERE','THESE','THOSE','SOME','MANY','MUCH',
 ])
 
+// Company name → ticker mapping so users can say "apple" instead of "AAPL"
+const COMPANY_NAMES: Record<string, string> = {
+  apple: 'AAPL', microsoft: 'MSFT', google: 'GOOGL', alphabet: 'GOOGL',
+  amazon: 'AMZN', meta: 'META', facebook: 'META', netflix: 'NFLX',
+  nvidia: 'NVDA', tesla: 'TSLA', palantir: 'PLTR', salesforce: 'CRM',
+  intel: 'INTC', amd: 'AMD', qualcomm: 'QCOM', broadcom: 'AVGO',
+  disney: 'DIS', walmart: 'WMT', target: 'TGT', costco: 'COST',
+  jpmorgan: 'JPM', 'jp morgan': 'JPM', 'bank of america': 'BAC',
+  goldman: 'GS', 'goldman sachs': 'GS', morgan: 'MS', 'morgan stanley': 'MS',
+  berkshire: 'BRK.B', visa: 'V', mastercard: 'MA', paypal: 'PYPL',
+  exxon: 'XOM', chevron: 'CVX', johnson: 'JNJ', pfizer: 'PFE',
+  'johnson and johnson': 'JNJ', unitedhealth: 'UNH', abbvie: 'ABBV',
+  boeing: 'BA', caterpillar: 'CAT', deere: 'DE', 'lockheed': 'LMT',
+  'home depot': 'HD', nike: 'NKE', starbucks: 'SBUX', mcdonalds: 'MCD',
+  uber: 'UBER', lyft: 'LYFT', airbnb: 'ABNB', doordash: 'DASH',
+  shopify: 'SHOP', square: 'SQ', 'block inc': 'SQ', twilio: 'TWLO',
+  snowflake: 'SNOW', datadog: 'DDOG', crowdstrike: 'CRWD', palo: 'PANW',
+  'palo alto': 'PANW', fortinet: 'FTNT', okta: 'OKTA', 'service now': 'NOW',
+  servicenow: 'NOW', workday: 'WDAY', zoom: 'ZM', 'c3 ai': 'AI',
+  'circle': 'CRCL', spy: 'SPY', qqq: 'QQQ', iwm: 'IWM', dia: 'DIA',
+}
+
 function extractTickers(message: string): string[] {
-  // Match $TICKER or standalone 1-5 uppercase letters
-  const matches = message.match(/\$([A-Z]{1,5})|(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])/g) ?? []
-  const seen = new Set<string>()
-  const unique: string[] = []
-  for (const t of matches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
-    if (!seen.has(t)) { seen.add(t); unique.push(t) }
+  const msg = message.toLowerCase()
+  const found = new Set<string>()
+
+  // 1. Check company names (lowercase match)
+  for (const [name, ticker] of Object.entries(COMPANY_NAMES)) {
+    if (msg.includes(name)) found.add(ticker)
   }
-  return unique.slice(0, 3) // max 3 tickers to stay within rate limits
+
+  // 2. Match $TICKER or ALL-CAPS ticker symbols
+  const matches = message.match(/\$([A-Za-z]{1,5})|(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])/g) ?? []
+  for (const t of matches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
+    found.add(t)
+  }
+
+  // 3. Also check for lowercase ticker mentions (e.g. "aapl", "tsla")
+  const lowerMatches = msg.match(/\$([a-z]{1,5})|(?<![a-z])([a-z]{2,5})(?![a-z])/g) ?? []
+  for (const t of lowerMatches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
+    // Only add if it looks like a ticker (short, all-alpha)
+    if (/^[A-Z]{2,5}$/.test(t) && !NOT_TICKERS.has(t)) found.add(t)
+  }
+
+  return Array.from(found).slice(0, 3)
 }
 
 function extractCryptoIds(message: string): string[] {

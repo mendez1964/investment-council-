@@ -139,7 +139,7 @@ export default function Home() {
             Investment Council
           </div>
           <div style={{ fontSize: '11px', color: '#555', marginTop: '1px' }}>
-            10 frameworks · Private intelligence
+            10 frameworks · Live market data
           </div>
         </div>
       </div>
