@@ -138,7 +138,7 @@ export default function Home() {
           <div style={{ fontSize: '15px', fontWeight: 600, color: '#e5e5e5', letterSpacing: '-0.01em' }}>
             Investment Council
           </div>
-          <div style={{ fontSize: '11px', color: '#555', marginTop: '1px' }}>
+          <div style={{ fontSize: '11px', color: '#556', marginTop: '1px' }}>
             10 frameworks · Live market data
           </div>
         </div>
