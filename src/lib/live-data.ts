@@ -51,17 +51,10 @@ function extractTickers(message: string): string[] {
     if (msg.includes(name)) found.add(ticker)
   }
 
-  // 2. Match $TICKER or ALL-CAPS ticker symbols
+  // 2. Match explicit $TICKER or ALL-CAPS ticker symbols only
   const matches = message.match(/\$([A-Za-z]{1,5})|(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])/g) ?? []
   for (const t of matches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
     found.add(t)
-  }
-
-  // 3. Also check for lowercase ticker mentions (e.g. "aapl", "tsla")
-  const lowerMatches = msg.match(/\$([a-z]{1,5})|(?<![a-z])([a-z]{2,5})(?![a-z])/g) ?? []
-  for (const t of lowerMatches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
-    // Only add if it looks like a ticker (short, all-alpha)
-    if (/^[A-Z]{2,5}$/.test(t) && !NOT_TICKERS.has(t)) found.add(t)
   }
 
   return Array.from(found).slice(0, 3)
