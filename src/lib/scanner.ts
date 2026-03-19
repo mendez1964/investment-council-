@@ -1,23 +1,27 @@
 // Intelligence-Driven Scanner — Investment Council Framework Scans
 // Each scan thinks like a specific council member and finds what THEY would find
-// NOTE: Uses Alpha Vantage overview data (10 calls per full scan)
-// Alpha Vantage free tier = 25 calls/day — use scans judiciously
+// Powered by Finnhub: 60 API calls/minute, no daily limit
 
-import { getTopMovers, getCompanyOverview } from '@/lib/alpha-vantage'
+import { getQuote, getMetrics, getProfile } from '@/lib/finnhub'
 import { getFedFundsRate, getYieldCurve, getUnemploymentRate } from '@/lib/fred'
 
-// S&P 500 scan universe — 20 leaders across all major sectors
-// Alpha Vantage free tier = 25 calls/day so 20 stocks is the practical max
-// To scan more stocks, upgrade Alpha Vantage to a paid plan
+// S&P 500 scan universe — 30 leaders across all major sectors
+// Finnhub free tier handles this comfortably (60 calls/min)
 const SCAN_UNIVERSE = [
-  'AAPL', 'MSFT', 'NVDA', 'TSLA', 'META',  // Big tech / momentum
-  'AMZN', 'GOOGL',                           // Mega-cap growth
-  'JPM',  'BAC',   'GS',                     // Financials
-  'JNJ',  'UNH',                             // Healthcare
-  'XOM',  'CVX',                             // Energy
-  'WMT',  'COST',  'HD',                     // Consumer / retail
-  'CAT',  'BA',                              // Industrials
-  'KO',                                      // Dividend / defensive value
+  // Big tech / momentum
+  'AAPL', 'MSFT', 'NVDA', 'TSLA', 'META', 'AMZN', 'GOOGL', 'ADBE', 'CRM', 'AMD',
+  // Financials
+  'JPM', 'BAC', 'GS', 'V', 'MA',
+  // Healthcare
+  'JNJ', 'UNH', 'PFE', 'ABBV',
+  // Energy
+  'XOM', 'CVX',
+  // Consumer / retail
+  'WMT', 'COST', 'HD', 'MCD', 'NKE',
+  // Industrials / defense
+  'CAT', 'BA', 'LMT',
+  // Dividend / defensive value
+  'KO', 'PG',
 ]
 
 // ── Data types ────────────────────────────────────────────────────────────────
@@ -26,19 +30,22 @@ interface StockData {
   ticker: string
   name: string
   sector: string
-  sma50: number | null    // 50-day moving average — used as price proxy
-  sma200: number | null   // 200-day moving average
+  price: number | null        // real-time current price from Finnhub quote
+  change: number | null       // $ change today
+  changePct: number | null    // % change today
   week52High: number | null
   week52Low: number | null
   pe: number | null
   eps: number | null
   peg: number | null
-  roe: number | null          // Return on equity as % (e.g. 25 = 25%)
+  roe: number | null          // Return on equity as % (e.g. 25.5 = 25.5%)
   bookValue: number | null    // Book value per share
   priceToBook: number | null
-  revenueGrowth: number | null  // Quarterly YOY revenue growth as %
+  revenueGrowth: number | null  // TTM revenue growth YOY as %
   dividendPerShare: number | null
   marketCap: number | null
+  currentRatio: number | null
+  debtToEquity: number | null
 }
 
 export interface ScanCandidate {
@@ -72,36 +79,51 @@ function fmt(num: number | null, prefix = '$', decimals = 2): string {
 // ── Fetch stock universe ──────────────────────────────────────────────────────
 
 async function fetchStockUniverse(): Promise<StockData[]> {
+  // Fetch quote + metrics + profile for all stocks in parallel
+  // Finnhub free tier handles 60 calls/min — 90 parallel calls is fine
   const results = await Promise.allSettled(
-    SCAN_UNIVERSE.map(ticker => getCompanyOverview(ticker))
+    SCAN_UNIVERSE.map(ticker =>
+      Promise.all([
+        getQuote(ticker),
+        getMetrics(ticker),
+        getProfile(ticker),
+      ])
+    )
   )
 
   return results
     .map((result, idx) => {
       if (result.status === 'rejected') return null
-      const o = result.value
-      if (!o || !o.Symbol || o.Note) return null  // rate limit or empty response
+      const [quote, metrics, profile] = result.value
 
-      const roeRaw = n(o.ReturnOnEquityTTM)
-      const revGrowthRaw = n(o.QuarterlyRevenueGrowthYOY)
+      // Skip if no valid quote (market closed returns 0, not null)
+      if (!quote || quote.c === undefined) return null
+
+      const price = quote.c || null
+      const m = metrics || {}
 
       return {
         ticker: SCAN_UNIVERSE[idx],
-        name: o.Name || SCAN_UNIVERSE[idx],
-        sector: o.Sector || 'Unknown',
-        sma50: n(o['50DayMovingAverage']),
-        sma200: n(o['200DayMovingAverage']),
-        week52High: n(o['52WeekHigh']),
-        week52Low: n(o['52WeekLow']),
-        pe: n(o.PERatio),
-        eps: n(o.EPS),
-        peg: n(o.PEGRatio),
-        roe: roeRaw !== null ? roeRaw * 100 : null,  // convert decimal to %
-        bookValue: n(o.BookValue),
-        priceToBook: n(o.PriceToBookRatio),
-        revenueGrowth: revGrowthRaw !== null ? revGrowthRaw * 100 : null,  // convert to %
-        dividendPerShare: n(o.DividendPerShare),
-        marketCap: n(o.MarketCapitalization),
+        name: profile?.name || SCAN_UNIVERSE[idx],
+        sector: profile?.finnhubIndustry || 'Unknown',
+        price,
+        change: quote.d ?? null,
+        changePct: quote.dp ?? null,
+        week52High: m['52WeekHigh'] ?? null,
+        week52Low: m['52WeekLow'] ?? null,
+        pe: m['peBasicExclExtraTTM'] ?? m['peTTM'] ?? null,
+        eps: m['epsBasicExclExtraTTM'] ?? null,
+        peg: m['pegAnnual'] ?? null,
+        roe: m['roeTTM'] ?? null,           // already as % in Finnhub (e.g. 25.5)
+        bookValue: m['bookValuePerShareAnnual'] ?? null,
+        priceToBook: m['pbAnnual'] ?? null,
+        revenueGrowth: m['revenueGrowthTTMYoy'] ?? null,  // already as % in Finnhub
+        dividendPerShare: m['dividendPerShareAnnual'] ?? null,
+        marketCap: profile?.marketCapitalization
+          ? profile.marketCapitalization * 1_000_000  // Finnhub gives market cap in millions
+          : null,
+        currentRatio: m['currentRatioAnnual'] ?? null,
+        debtToEquity: m['totalDebt/totalEquityAnnual'] ?? null,
       } as StockData
     })
     .filter((s): s is StockData => s !== null)
@@ -115,22 +137,27 @@ function tudorJonesScan(stocks: StockData[]): FrameworkScanResult {
   const candidates: ScanCandidate[] = []
 
   for (const s of stocks) {
-    if (!s.sma50 || !s.sma200 || !s.week52High || !s.week52Low) continue
+    if (!s.price || !s.week52High || !s.week52Low) continue
 
-    // Must be in confirmed uptrend: 50DMA above 200DMA
-    const inUptrend = s.sma50 > s.sma200
+    const range = s.week52High - s.week52Low
+    if (range <= 0) continue
 
-    // Must have pulled back from high: 5-25% below 52wk high
-    const distFromHigh = (s.week52High - s.sma50) / s.week52High
+    // "In uptrend" proxy: price is in upper 60% of its 52-week range
+    const positionInRange = (s.price - s.week52Low) / range
+    const inUptrend = positionInRange >= 0.4
+
+    // "Pulled back from high" — Tudor wants a reset, not a stock at all-time highs
+    const distFromHigh = (s.week52High - s.price) / s.week52High
     const inPullbackZone = distFromHigh >= 0.05 && distFromHigh <= 0.25
 
     if (inUptrend && inPullbackZone) {
       const pctFromHigh = (distFromHigh * 100).toFixed(1)
+      const pctOfRange = (positionInRange * 100).toFixed(0)
       candidates.push({
         ticker: s.ticker,
         name: s.name,
-        reason: `Uptrend confirmed (50DMA ${fmt(s.sma50, '$', 0)} > 200DMA ${fmt(s.sma200, '$', 0)}) · Pulled back ${pctFromHigh}% from 52wk high — reset zone`,
-        price: fmt(s.sma50),
+        reason: `In upper ${pctOfRange}% of 52wk range — uptrend intact · Pulled back ${pctFromHigh}% from high (${fmt(s.week52High, '$', 0)}) — reset zone`,
+        price: fmt(s.price),
       })
     }
   }
@@ -154,14 +181,15 @@ function livermoreScan(stocks: StockData[]): FrameworkScanResult {
   const candidates: ScanCandidate[] = []
 
   for (const s of stocks) {
-    if (!s.week52High || !s.sma50) continue
+    if (!s.week52High || !s.price) continue
 
     // Within 3% of 52-week high — Livermore's pivot zone
-    const distFromHigh = (s.week52High - s.sma50) / s.week52High
+    const distFromHigh = (s.week52High - s.price) / s.week52High
     const atPivot = distFromHigh >= 0 && distFromHigh <= 0.03
 
-    // Not in a clear downtrend (50DMA not significantly below 200DMA)
-    const notDowntrend = !s.sma200 || s.sma50 >= s.sma200 * 0.97
+    // Not in a clear downtrend — price above lower 30% of 52wk range
+    const notDowntrend = !s.week52Low || !s.week52High ||
+      (s.price - s.week52Low) / (s.week52High - s.week52Low) > 0.3
 
     if (atPivot && notDowntrend) {
       const pctBelow = (distFromHigh * 100).toFixed(1)
@@ -169,7 +197,7 @@ function livermoreScan(stocks: StockData[]): FrameworkScanResult {
         ticker: s.ticker,
         name: s.name,
         reason: `${pctBelow}% below 52wk high (${fmt(s.week52High, '$', 0)}) — at Livermore pivot point. Breakout above ${fmt(s.week52High)} is the entry signal.`,
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
   }
@@ -210,7 +238,7 @@ function buffettScan(stocks: StockData[]): FrameworkScanResult {
         ticker: s.ticker,
         name: s.name,
         reason: parts.join(' · '),
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
   }
@@ -249,7 +277,7 @@ function lynchScan(stocks: StockData[]): FrameworkScanResult {
         ticker: s.ticker,
         name: s.name,
         reason: parts.join(' · '),
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
   }
@@ -282,9 +310,9 @@ function grahamScan(stocks: StockData[]): FrameworkScanResult {
     // Graham Number: sqrt(22.5 × EPS × BookValue per share)
     let grahamNumber: number | null = null
     let belowGrahamNumber = false
-    if (s.bookValue && s.bookValue > 0 && s.sma50) {
+    if (s.bookValue && s.bookValue > 0 && s.price) {
       grahamNumber = Math.sqrt(22.5 * s.eps * s.bookValue)
-      belowGrahamNumber = s.sma50 < grahamNumber
+      belowGrahamNumber = s.price < grahamNumber
     }
 
     // Qualifies if: below Graham Number OR (low PE + paying dividend)
@@ -301,7 +329,7 @@ function grahamScan(stocks: StockData[]): FrameworkScanResult {
         ticker: s.ticker,
         name: s.name,
         reason: parts.join(' · '),
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
   }
@@ -325,7 +353,7 @@ function granthamScan(stocks: StockData[]): FrameworkScanResult {
   const meanReversion: ScanCandidate[] = []
 
   for (const s of stocks) {
-    if (!s.sma50) continue
+    if (!s.price) continue
 
     // Bubble warning: very high PE (extended valuation)
     if (s.pe !== null && s.pe > 35) {
@@ -333,19 +361,19 @@ function granthamScan(stocks: StockData[]): FrameworkScanResult {
         ticker: s.ticker,
         name: s.name,
         reason: `P/E of ${s.pe.toFixed(0)} — extended valuation territory. Grantham would call this bubble-level pricing.`,
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
 
     // Mean reversion candidate: near 52wk low with positive earnings
     if (s.week52Low && s.eps && s.eps > 0) {
-      const distFromLow = (s.sma50 - s.week52Low) / s.week52Low
+      const distFromLow = (s.price - s.week52Low) / s.week52Low
       if (distFromLow < 0.15) {
         meanReversion.push({
           ticker: s.ticker,
           name: s.name,
           reason: `${(distFromLow * 100).toFixed(1)}% above 52wk low · Positive EPS ${fmt(s.eps)} · Beaten down with intact earnings — mean reversion candidate`,
-          price: fmt(s.sma50),
+          price: fmt(s.price),
         })
       }
     }
@@ -451,8 +479,8 @@ function burryScan(stocks: StockData[]): FrameworkScanResult {
     const earningsMoney = s.eps > 0
 
     // Being near 52wk low = market consensus is bearish
-    const nearLow = s.week52Low && s.sma50 &&
-      (s.sma50 - s.week52Low) / s.week52Low < 0.25
+    const nearLow = s.week52Low && s.price &&
+      (s.price - s.week52Low) / s.week52Low < 0.25
 
     if (nearBookValue && earningsMoney) {
       const parts: string[] = []
@@ -465,7 +493,7 @@ function burryScan(stocks: StockData[]): FrameworkScanResult {
         ticker: s.ticker,
         name: s.name,
         reason: parts.join(' · '),
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
   }
@@ -523,7 +551,7 @@ async function roubiniScan(stocks: StockData[]): Promise<FrameworkScanResult> {
         ticker: s.ticker,
         name: s.name,
         reason: `⚠ P/E of ${s.pe.toFixed(0)} with thin earnings — expensive growth stock highly vulnerable to rate increases or earnings miss`,
-        price: fmt(s.sma50),
+        price: fmt(s.price),
       })
     }
   }
@@ -597,7 +625,7 @@ export function formatScanResults(results: FrameworkScanResult[]): string {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
   })]
-  lines.push('Universe scanned: AAPL, MSFT, NVDA, TSLA, META, AMZN, GOOGL, JPM, BAC, GS, JNJ, UNH, XOM, CVX, WMT, COST, HD, CAT, BA, KO')
+  lines.push('Universe scanned: AAPL, MSFT, NVDA, TSLA, META, AMZN, GOOGL, ADBE, CRM, AMD, JPM, BAC, GS, V, MA, JNJ, UNH, PFE, ABBV, XOM, CVX, WMT, COST, HD, MCD, NKE, CAT, BA, LMT, KO, PG')
   lines.push('─────────────────────────────────────────────────────────')
   lines.push('')
 
