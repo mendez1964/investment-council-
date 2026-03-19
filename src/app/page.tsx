@@ -240,6 +240,30 @@ export default function Home() {
 
               {/* Content */}
               <div style={{ flex: 1 }}>
+                {/* Print button — top of every assistant message */}
+                {msg.role === 'assistant' && msg.content && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <button
+                      onClick={() => printMessage(msg.content)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        background: '#2d6a4f',
+                        border: 'none',
+                        borderRadius: '5px',
+                        padding: '4px 12px',
+                        color: '#fff',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      🖨︎ Print
+                    </button>
+                  </div>
+                )}
                 <div style={{
                   fontSize: '14px',
                   lineHeight: 1.75,
@@ -252,37 +276,6 @@ export default function Home() {
                     <span style={{ display: 'inline-block', width: '8px', height: '14px', background: '#2d6a4f', borderRadius: '2px', animation: 'blink 1s step-end infinite' }} />
                   )}
                 </div>
-                {msg.role === 'assistant' && msg.content && (
-                  <button
-                    onClick={() => printMessage(msg.content)}
-                    title="Print this response"
-                    style={{
-                      marginTop: '12px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      background: '#1a2e1f',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      padding: '6px 14px',
-                      color: '#6ab187',
-                      fontSize: '12px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLButtonElement).style.background = '#2d6a4f'
-                      ;(e.currentTarget as HTMLButtonElement).style.color = '#fff'
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLButtonElement).style.background = '#1a2e1f'
-                      ;(e.currentTarget as HTMLButtonElement).style.color = '#6ab187'
-                    }}
-                  >
-                    🖨︎ Print
-                  </button>
-                )}
               </div>
             </div>
           ))
