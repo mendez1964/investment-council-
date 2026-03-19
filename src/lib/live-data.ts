@@ -78,9 +78,9 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
 
   // ── Scan detection (checked first — these are expensive multi-call operations) ──
   const wantsFullScan = /council\s*scan|full\s*scan|run\s*(all|the|council)\s*scan|run\s*scan/i.test(msg)
-  const frameworkScanMatch = msg.match(/run\s+(?:the\s+)?(tudor|livermore|buffett|warren|lynch|graham|grantham|dalio|burry|michael\s*burry|roubini)\s*scan/i)
-    || msg.match(/what\s+would\s+(tudor|jones|livermore|buffett|warren|lynch|graham|grantham|dalio|burry|roubini)\s+(?:be\s+buying|buy|say|warn|recommend|find|look\s+for)\s+today/i)
-    || msg.match(/\b(tudor|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s+scan\b/i)
+  const frameworkScanMatch = msg.match(/run\s+(?:the\s+)?(tudor(?:\s+jones)?|livermore|buffett|warren|lynch|graham|grantham|dalio|burry|michael\s+burry|roubini)\s+scan/i)
+    || msg.match(/what\s+would\s+(tudor(?:\s+jones)?|livermore|buffett|warren|lynch|graham|grantham|dalio|burry|roubini)\s+(?:be\s+buying|buy|say|warn|recommend|find|look\s+for)/i)
+    || msg.match(/\b(tudor(?:\s+jones)?|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s+scan\b/i)
 
   if (wantsFullScan) {
     const results = await runFullCouncilScan()

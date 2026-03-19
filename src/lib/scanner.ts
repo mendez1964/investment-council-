@@ -6,13 +6,18 @@
 import { getTopMovers, getCompanyOverview } from '@/lib/alpha-vantage'
 import { getFedFundsRate, getYieldCurve, getUnemploymentRate } from '@/lib/fred'
 
-// Core stock universe — balanced across momentum, growth, and value
-// Kept to 10 stocks to stay within Alpha Vantage daily quota
+// S&P 500 scan universe — 20 leaders across all major sectors
+// Alpha Vantage free tier = 25 calls/day so 20 stocks is the practical max
+// To scan more stocks, upgrade Alpha Vantage to a paid plan
 const SCAN_UNIVERSE = [
-  'AAPL', 'MSFT', 'NVDA', 'TSLA',   // Tech / momentum
-  'META', 'AMZN',                     // Mega-cap growth
-  'JPM',  'JNJ',                      // Value / defensive
-  'XOM',  'WMT',                      // Energy / consumer
+  'AAPL', 'MSFT', 'NVDA', 'TSLA', 'META',  // Big tech / momentum
+  'AMZN', 'GOOGL',                           // Mega-cap growth
+  'JPM',  'BAC',   'GS',                     // Financials
+  'JNJ',  'UNH',                             // Healthcare
+  'XOM',  'CVX',                             // Energy
+  'WMT',  'COST',  'HD',                     // Consumer / retail
+  'CAT',  'BA',                              // Industrials
+  'KO',                                      // Dividend / defensive value
 ]
 
 // ── Data types ────────────────────────────────────────────────────────────────
@@ -592,7 +597,7 @@ export function formatScanResults(results: FrameworkScanResult[]): string {
     weekday: 'short', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
   })]
-  lines.push('Universe scanned: AAPL, MSFT, NVDA, TSLA, META, AMZN, JPM, JNJ, XOM, WMT')
+  lines.push('Universe scanned: AAPL, MSFT, NVDA, TSLA, META, AMZN, GOOGL, JPM, BAC, GS, JNJ, UNH, XOM, CVX, WMT, COST, HD, CAT, BA, KO')
   lines.push('─────────────────────────────────────────────────────────')
   lines.push('')
 
