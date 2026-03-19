@@ -27,8 +27,11 @@ export async function POST(request: Request) {
 
     let liveData = ''
     try {
+      // Scans fetch 10+ stock overviews — allow up to 30s; regular queries get 8s
+      const isScan = /council\s*scan|full\s*scan|run\s*(all|the|council)?\s*scan|(tudor|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s*scan/i.test(latestUserMessage)
+      const timeoutMs = isScan ? 30000 : 8000
       const timeout = new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('live-data timeout')), 6000)
+        setTimeout(() => reject(new Error('live-data timeout')), timeoutMs)
       )
       liveData = await Promise.race([fetchLiveData(latestUserMessage), timeout])
       console.log('[live-data] fetched, length:', liveData.length)

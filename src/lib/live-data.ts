@@ -5,6 +5,7 @@ import { getStockQuote, getCompanyOverview, getTopMovers } from '@/lib/alpha-van
 import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth } from '@/lib/fred'
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
+import { runFullCouncilScan, runFrameworkScan, formatScanResults } from '@/lib/scanner'
 
 // Words that look like tickers but aren't — skip these
 const NOT_TICKERS = new Set([
@@ -74,6 +75,25 @@ function extractCryptoIds(message: string): string[] {
 
 export async function fetchLiveData(userMessage: string): Promise<string> {
   const msg = userMessage
+
+  // ── Scan detection (checked first — these are expensive multi-call operations) ──
+  const wantsFullScan = /council\s*scan|full\s*scan|run\s*(all|the|council)\s*scan|run\s*scan/i.test(msg)
+  const frameworkScanMatch = msg.match(/run\s+(?:the\s+)?(tudor|livermore|buffett|warren|lynch|graham|grantham|dalio|burry|michael\s*burry|roubini)\s*scan/i)
+    || msg.match(/what\s+would\s+(tudor|jones|livermore|buffett|warren|lynch|graham|grantham|dalio|burry|roubini)\s+(?:be\s+buying|buy|say|warn|recommend|find|look\s+for)\s+today/i)
+    || msg.match(/\b(tudor|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s+scan\b/i)
+
+  if (wantsFullScan) {
+    const results = await runFullCouncilScan()
+    const formatted = formatScanResults(results)
+    return `\n\n# COUNCIL SCAN DATA — fetched right now\nPresent these results clearly grouped by framework. Remind the user these are screening candidates for further analysis, not buy recommendations.\n\n${formatted}`
+  }
+
+  if (frameworkScanMatch) {
+    const framework = frameworkScanMatch[1] || frameworkScanMatch[0]
+    const result = await runFrameworkScan(framework)
+    const formatted = formatScanResults([result])
+    return `\n\n# FRAMEWORK SCAN DATA — fetched right now\nPresent these results clearly. Remind the user these are screening candidates for further analysis, not buy recommendations.\n\n${formatted}`
+  }
 
   const wantsEconomic = /fed\s*funds|interest\s*rate|federal\s*reserve|inflation|cpi|consumer\s*price|yield\s*curve|treasury|2.year|10.year|unemployment|jobless|\bgdp\b|gross\s*domestic|macro|economic/i.test(msg)
   const wantsCrypto = /bitcoin|btc|ethereum|eth|crypto|solana|cardano|dogecoin|doge|ripple|xrp|bnb|binance|fear.greed|dominance/i.test(msg)
