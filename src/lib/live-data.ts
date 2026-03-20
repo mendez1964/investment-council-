@@ -6,6 +6,8 @@ import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, g
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
 import { runFullCouncilScan, runFrameworkScan, formatScanResults } from '@/lib/scanner'
+import { getOnChainSnapshot, formatOnChainForCouncil } from '@/lib/glassnode'
+import { getCoinMetricsSnapshot, formatCoinMetricsForCouncil } from '@/lib/coinmetrics'
 
 // Words that look like tickers but aren't — skip these
 const NOT_TICKERS = new Set([
@@ -61,16 +63,76 @@ function extractTickers(message: string): string[] {
   return Array.from(found).slice(0, 3)
 }
 
+// Full crypto map: ticker/name → CoinGecko ID
+const CRYPTO_COIN_MAP: Record<string, string> = {
+  // Major coins
+  btc: 'bitcoin', bitcoin: 'bitcoin',
+  eth: 'ethereum', ethereum: 'ethereum',
+  sol: 'solana', solana: 'solana',
+  bnb: 'binancecoin', binance: 'binancecoin',
+  xrp: 'ripple', ripple: 'ripple',
+  ada: 'cardano', cardano: 'cardano',
+  doge: 'dogecoin', dogecoin: 'dogecoin',
+  avax: 'avalanche-2', avalanche: 'avalanche-2',
+  dot: 'polkadot', polkadot: 'polkadot',
+  matic: 'matic-network', polygon: 'matic-network',
+  link: 'chainlink', chainlink: 'chainlink',
+  ltc: 'litecoin', litecoin: 'litecoin',
+  bch: 'bitcoin-cash',
+  uni: 'uniswap', uniswap: 'uniswap',
+  atom: 'cosmos', cosmos: 'cosmos',
+  // Layer 2 & newer
+  arb: 'arbitrum', arbitrum: 'arbitrum',
+  op: 'optimism', optimism: 'optimism',
+  near: 'near',
+  fil: 'filecoin', filecoin: 'filecoin',
+  apt: 'aptos', aptos: 'aptos',
+  sui: 'sui',
+  inj: 'injective-protocol', injective: 'injective-protocol',
+  tia: 'celestia', celestia: 'celestia',
+  jup: 'jupiter-exchange-solana', jupiter: 'jupiter-exchange-solana',
+  // Hedera & ecosystem
+  hbar: 'hedera-hashgraph', hedera: 'hedera-hashgraph',
+  // DeFi / other top coins
+  crv: 'curve-dao-token', curve: 'curve-dao-token',
+  aave: 'aave',
+  mkr: 'maker', maker: 'maker',
+  snx: 'synthetix-network-token', synthetix: 'synthetix-network-token',
+  comp: 'compound-governance-token', compound: 'compound-governance-token',
+  ldo: 'lido-dao', lido: 'lido-dao',
+  // Meme & trending
+  shib: 'shiba-inu', shiba: 'shiba-inu',
+  pepe: 'pepe',
+  wif: 'dogwifcoin',
+  bonk: 'bonk',
+  floki: 'floki',
+  // Infrastructure
+  fet: 'fetch-ai', fetch: 'fetch-ai',
+  render: 'render-token', rndr: 'render-token',
+  grt: 'the-graph', graph: 'the-graph',
+  imx: 'immutable-x', immutable: 'immutable-x',
+  sand: 'the-sandbox', sandbox: 'the-sandbox',
+  mana: 'decentraland', decentraland: 'decentraland',
+  axs: 'axie-infinity', axie: 'axie-infinity',
+  algo: 'algorand', algorand: 'algorand',
+  xlm: 'stellar', stellar: 'stellar',
+  xtz: 'tezos', tezos: 'tezos',
+  eos: 'eos',
+  xmr: 'monero', monero: 'monero',
+  zec: 'zcash', zcash: 'zcash',
+  ton: 'the-open-network',
+  trx: 'tron', tron: 'tron',
+  vet: 'vechain', vechain: 'vechain',
+}
+
 function extractCryptoIds(message: string): string[] {
-  const ids: string[] = []
-  if (/\bbitcoin\b|\bbtc\b/i.test(message)) ids.push('bitcoin')
-  if (/\bethereum\b|\beth\b/i.test(message)) ids.push('ethereum')
-  if (/\bsolana\b|\bsol\b/i.test(message)) ids.push('solana')
-  if (/\bcardano\b|\bada\b/i.test(message)) ids.push('cardano')
-  if (/\bdogecoin\b|\bdoge\b/i.test(message)) ids.push('dogecoin')
-  if (/\bripple\b|\bxrp\b/i.test(message)) ids.push('ripple')
-  if (/\bbnb\b|\bbinance\b/i.test(message)) ids.push('binancecoin')
-  return ids
+  const lower = message.toLowerCase()
+  const found = new Set<string>()
+  for (const [keyword, coinId] of Object.entries(CRYPTO_COIN_MAP)) {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i')
+    if (regex.test(lower)) found.add(coinId)
+  }
+  return Array.from(found).slice(0, 5)
 }
 
 export async function fetchLiveData(userMessage: string): Promise<string> {
@@ -95,12 +157,19 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
     return `\n\n# FRAMEWORK SCAN DATA — fetched right now\nPresent these results clearly. Remind the user these are screening candidates for further analysis, not buy recommendations.\n\n${formatted}`
   }
 
-  const wantsEconomic = /fed\s*funds|interest\s*rate|federal\s*reserve|inflation|cpi|consumer\s*price|yield\s*curve|treasury|2.year|10.year|unemployment|jobless|\bgdp\b|gross\s*domestic|macro|economic/i.test(msg)
-  const wantsCrypto = /bitcoin|btc|ethereum|eth|crypto|solana|cardano|dogecoin|doge|ripple|xrp|bnb|binance|fear.greed|dominance/i.test(msg)
-  const wantsMovers = /movers|gainers|losers|most\s*active|top\s*stocks|market\s*today|pre.?market|what.s moving|what is moving/i.test(msg)
+  const wantsBriefing = /pre.?market\s*briefing|end.?of.?day\s*(summary|briefing|report)|market\s*summary|market\s*briefing/i.test(msg)
+  const wantsEconomic = wantsBriefing || /fed\s*funds|interest\s*rate|federal\s*reserve|inflation|cpi|consumer\s*price|yield\s*curve|treasury|2.year|10.year|unemployment|jobless|\bgdp\b|gross\s*domestic|macro|economic/i.test(msg)
+  const wantsMovers = wantsBriefing || /movers|gainers|losers|most\s*active|top\s*stocks|market\s*today|pre.?market|what.s moving|what is moving/i.test(msg)
   const wantsSEC = /10-?k|10-?q|annual\s*report|quarterly\s*report|sec\s*filing|insider\s*(buy|sell|transaction)|form\s*4|\b8-?k\b|material\s*event|13[fF]|hedge\s*fund\s*hold/i.test(msg)
-  const tickers = extractTickers(msg)
+
+  // For briefings, always pull key market proxies: SPY, QQQ, DIA, IWM + Bitcoin
+  const briefingTickers = wantsBriefing ? ['SPY', 'QQQ', 'DIA', 'IWM'] : []
+  const combined = [...briefingTickers, ...extractTickers(msg)]
+  const tickers = combined.filter((t, i) => combined.indexOf(t) === i).slice(0, 5)
   const cryptoIds = extractCryptoIds(msg)
+  const wantsCrypto = wantsBriefing || cryptoIds.length > 0 || /\bcrypto\b|fear.greed|dominance|altcoin|defi|web3|blockchain/i.test(msg)
+  if (wantsBriefing && !cryptoIds.includes('bitcoin')) cryptoIds.push('bitcoin')
+  const wantsOnChain = /mvrv|sopr|realized.price|on.?chain|hash.?rate|exchange.?flow|long.?term.?holder|\blth\b|\bsth\b|puell|thermocap|cycle.?position|bitcoin.?health|network.?health|glassnode|accumulation|whale|exchange.?reserve/i.test(msg)
 
   const sections: string[] = []
   const tasks: Promise<void>[] = []
@@ -230,6 +299,48 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
         })
         if (lines.length > 0) sections.push(`LIVE SEC FILING DATA (EDGAR):\n${lines.join('\n')}`)
       })
+    )
+  }
+
+  // ── On-chain data (Glassnode + CoinMetrics) ──────────────────────────────
+  if (wantsOnChain || (wantsCrypto && /bitcoin|\bbtc\b|cycle|halving|planb|saylor|andreas|hayes/i.test(msg))) {
+    tasks.push(
+      (async () => {
+        // Run both in parallel — Glassnode (needs key) + CoinMetrics (always free)
+        const [glassnodeSnap, coinmetricsSnap] = await Promise.all([
+          getOnChainSnapshot().catch(() => null),
+          getCoinMetricsSnapshot().catch(() => null),
+        ])
+
+        // Glassnode takes priority when key is set; CoinMetrics fills in the rest
+        const btcData = await getCryptoPrice('bitcoin').catch(() => null) as any
+        const btcPrice = btcData?.price ?? undefined
+
+        if (glassnodeSnap) {
+          const formatted = formatOnChainForCouncil(glassnodeSnap, btcPrice)
+          if (formatted) sections.push(formatted)
+        }
+
+        // CoinMetrics: add metrics not already covered by Glassnode
+        if (coinmetricsSnap) {
+          const glassnodeHasData = glassnodeSnap && (
+            glassnodeSnap.mvrv != null ||
+            glassnodeSnap.hashRate != null ||
+            glassnodeSnap.activeAddresses != null
+          )
+
+          if (glassnodeHasData) {
+            // Glassnode is active — only add CoinMetrics exchange flow detail if Glassnode missed it
+            if (glassnodeSnap!.exchangeNetFlow == null && coinmetricsSnap.exchangeNetFlow != null) {
+              sections.push(`EXCHANGE FLOW (CoinMetrics): Net ${coinmetricsSnap.exchangeNetFlow > 0 ? '+' : ''}${coinmetricsSnap.exchangeNetFlow.toFixed(0)} BTC | Inflow: ${coinmetricsSnap.exchangeInflow?.toFixed(0)} | Outflow: ${coinmetricsSnap.exchangeOutflow?.toFixed(0)}`)
+            }
+          } else {
+            // No Glassnode key — use CoinMetrics as primary on-chain source
+            const formatted = formatCoinMetricsForCouncil(coinmetricsSnap)
+            if (formatted) sections.push(formatted)
+          }
+        }
+      })()
     )
   }
 
