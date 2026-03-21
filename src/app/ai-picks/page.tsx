@@ -55,7 +55,7 @@ function ConfidenceDots({ value, color }: { value: number; color: string }) {
           key={i}
           style={{
             width: '6px', height: '6px', borderRadius: '50%',
-            background: i < value ? color : '#1f1f1f',
+            background: i < value ? color : '#e5e7eb',
             flexShrink: 0,
           }}
         />
@@ -70,12 +70,12 @@ function PickCard({ pick }: { pick: Pick }) {
   const isLoss = pick.outcome === 'loss'
   const isPending = pick.outcome === 'pending'
 
-  const accentColor = isBull ? '#4ade80' : '#f87171'
-  const accentBg = isBull ? '#052e16' : '#2e0505'
-  const accentBorder = isBull ? '#14532d' : '#7f1d1d'
+  const accentColor = isBull ? '#16a34a' : '#dc2626'
+  const accentBg = isBull ? '#dcfce7' : '#fee2e2'
+  const accentBorder = isBull ? '#bbf7d0' : '#fecaca'
 
-  const outcomeColor = isWin ? '#4ade80' : isLoss ? '#f87171' : '#555'
-  const outcomeBg = isWin ? '#052e16' : isLoss ? '#2e0505' : '#111'
+  const outcomeColor = isWin ? '#16a34a' : isLoss ? '#dc2626' : '#555'
+  const outcomeBg = isWin ? '#dcfce7' : isLoss ? '#fee2e2' : '#f4f4f5'
 
   const retPct = pick.direction_return_pct
   const retDisplay = retPct != null
@@ -84,7 +84,7 @@ function PickCard({ pick }: { pick: Pick }) {
 
   return (
     <div style={{
-      background: '#0a0a0a',
+      background: '#ffffff',
       border: `1px solid ${accentBorder}`,
       borderTop: `3px solid ${accentColor}`,
       borderRadius: '8px',
@@ -117,11 +117,11 @@ function PickCard({ pick }: { pick: Pick }) {
 
       {/* Symbol + sector */}
       <div>
-        <div style={{ fontSize: '18px', fontWeight: 800, color: '#e5e5e5', letterSpacing: '0.02em', lineHeight: 1 }}>
+        <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827', letterSpacing: '0.02em', lineHeight: 1 }}>
           {pick.symbol}
         </div>
         {(pick.sector) && (
-          <div style={{ fontSize: '9px', color: '#333', marginTop: '2px', letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '2px', letterSpacing: '0.04em' }}>
             {pick.sector}
           </div>
         )}
@@ -131,13 +131,13 @@ function PickCard({ pick }: { pick: Pick }) {
       <ConfidenceDots value={pick.confidence} color={accentColor} />
 
       {/* Rationale */}
-      <div style={{ fontSize: '10px', color: '#888', lineHeight: 1.45, fontStyle: 'italic', flex: 1 }}>
+      <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.45, fontStyle: 'italic', flex: 1 }}>
         &quot;{pick.rationale}&quot;
       </div>
 
       {/* Catalyst */}
       {pick.catalyst && (
-        <div style={{ fontSize: '9px', color: '#555', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '9px', color: '#6b7280', lineHeight: 1.4 }}>
           ⚡ {pick.catalyst}
         </div>
       )}
@@ -146,8 +146,8 @@ function PickCard({ pick }: { pick: Pick }) {
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
         {pick.entry_price != null && (
           <div style={{ fontSize: '10px', fontVariantNumeric: 'tabular-nums' }}>
-            <span style={{ color: '#333' }}>Entry </span>
-            <span style={{ color: '#666', fontWeight: 600 }}>
+            <span style={{ color: '#9ca3af' }}>Entry </span>
+            <span style={{ color: '#374151', fontWeight: 600 }}>
               {pick.type === 'crypto' && pick.entry_price > 1000
                 ? `$${pick.entry_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
                 : `$${pick.entry_price.toFixed(pick.entry_price < 1 ? 4 : 2)}`}
@@ -155,7 +155,7 @@ function PickCard({ pick }: { pick: Pick }) {
           </div>
         )}
         {pick.exit_price != null ? (
-          <div style={{ fontSize: '10px', color: '#333', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: '10px', color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
             → <span style={{ color: outcomeColor, fontWeight: 600 }}>
               {pick.type === 'crypto' && pick.exit_price > 1000
                 ? `$${pick.exit_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
@@ -163,7 +163,7 @@ function PickCard({ pick }: { pick: Pick }) {
             </span>
           </div>
         ) : isPending && pick.entry_price != null ? (
-          <div style={{ fontSize: '9px', color: '#2a2a2a', fontStyle: 'italic' }}>eval in 24h</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', fontStyle: 'italic' }}>eval in 24h</div>
         ) : null}
       </div>
     </div>
@@ -173,8 +173,8 @@ function PickCard({ pick }: { pick: Pick }) {
 function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) {
   if (loading || !stats) {
     return (
-      <div style={{ background: '#080808', border: '1px solid #111', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#333', textAlign: 'center' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center' }}>
           {loading ? 'Generating picks...' : 'Building track record — check back after picks are evaluated'}
         </div>
       </div>
@@ -185,8 +185,8 @@ function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) 
 
   if (total === 0) {
     return (
-      <div style={{ background: '#080808', border: '1px solid #111', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#333', textAlign: 'center', letterSpacing: '0.04em' }}>
+      <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', letterSpacing: '0.04em' }}>
           TRACK RECORD BUILDING — picks are evaluated after 24 hours
         </div>
       </div>
@@ -198,45 +198,45 @@ function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) 
 
   return (
     <div style={{
-      background: '#080808', border: '1px solid #141414',
+      background: '#ffffff', border: '1px solid #e4e4e7',
       borderRadius: '10px', padding: '14px 16px', marginBottom: '16px',
     }}>
       <div style={{ display: 'flex', gap: '0', alignItems: 'stretch', flexWrap: 'wrap' }}>
 
         {/* Record */}
-        <div style={{ paddingRight: '16px', borderRight: '1px solid #141414', marginRight: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '4px' }}>RECORD</div>
+        <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>RECORD</div>
           <div style={{ fontSize: '18px', fontWeight: 800, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
-            <span style={{ color: '#4ade80' }}>{wins}W</span>
-            <span style={{ color: '#333', fontSize: '14px', margin: '0 4px' }}>–</span>
-            <span style={{ color: '#f87171' }}>{losses}L</span>
+            <span style={{ color: '#16a34a' }}>{wins}W</span>
+            <span style={{ color: '#d1d5db', fontSize: '14px', margin: '0 4px' }}>–</span>
+            <span style={{ color: '#dc2626' }}>{losses}L</span>
           </div>
-          <div style={{ fontSize: '9px', color: '#2a2a2a', marginTop: '3px' }}>{total} evaluated</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '3px' }}>{total} evaluated</div>
         </div>
 
         {/* Win rate */}
-        <div style={{ paddingRight: '16px', borderRight: '1px solid #141414', marginRight: '16px', minWidth: '100px' }}>
-          <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '4px' }}>WIN RATE</div>
-          <div style={{ fontSize: '18px', fontWeight: 800, color: win_rate >= 55 ? '#4ade80' : win_rate >= 45 ? '#fbbf24' : '#f87171', lineHeight: 1 }}>
+        <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px', minWidth: '100px' }}>
+          <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>WIN RATE</div>
+          <div style={{ fontSize: '18px', fontWeight: 800, color: win_rate >= 55 ? '#16a34a' : win_rate >= 45 ? '#fbbf24' : '#dc2626', lineHeight: 1 }}>
             {win_rate.toFixed(1)}%
           </div>
-          <div style={{ marginTop: '5px', background: '#111', borderRadius: '3px', height: '4px', width: '80px' }}>
-            <div style={{ height: '100%', borderRadius: '3px', background: win_rate >= 55 ? '#4ade80' : win_rate >= 45 ? '#fbbf24' : '#f87171', width: `${Math.min(win_rate, 100)}%`, transition: 'width 0.5s' }} />
+          <div style={{ marginTop: '5px', background: '#f0f0f0', borderRadius: '3px', height: '4px', width: '80px' }}>
+            <div style={{ height: '100%', borderRadius: '3px', background: win_rate >= 55 ? '#16a34a' : win_rate >= 45 ? '#fbbf24' : '#dc2626', width: `${Math.min(win_rate, 100)}%`, transition: 'width 0.5s' }} />
           </div>
         </div>
 
         {/* Avg returns */}
-        <div style={{ paddingRight: '16px', borderRight: '1px solid #141414', marginRight: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '4px' }}>AVG RETURN</div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#4ade80', lineHeight: 1.4 }}>+{avg_win.toFixed(2)}% win</div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#f87171', lineHeight: 1.4 }}>-{avg_loss.toFixed(2)}% loss</div>
+        <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>AVG RETURN</div>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', lineHeight: 1.4 }}>+{avg_win.toFixed(2)}% win</div>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', lineHeight: 1.4 }}>-{avg_loss.toFixed(2)}% loss</div>
         </div>
 
         {/* Streak */}
         {streak_type && streak_count > 0 && (
-          <div style={{ paddingRight: '16px', borderRight: '1px solid #141414', marginRight: '16px' }}>
-            <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '4px' }}>STREAK</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: streak_type === 'win' ? '#4ade80' : '#f87171', lineHeight: 1 }}>
+          <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
+            <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>STREAK</div>
+            <div style={{ fontSize: '16px', fontWeight: 800, color: streak_type === 'win' ? '#16a34a' : '#dc2626', lineHeight: 1 }}>
               {streak_type === 'win' ? '🔥' : '❄️'} {streak_count}{streak_type === 'win' ? 'W' : 'L'}
             </div>
           </div>
@@ -244,28 +244,28 @@ function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) 
 
         {/* Best pick */}
         {best && (
-          <div style={{ paddingRight: '16px', borderRight: '1px solid #141414', marginRight: '16px' }}>
-            <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '4px' }}>BEST CALL</div>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#e5e5e5', lineHeight: 1 }}>{best.symbol}</div>
-            <div style={{ fontSize: '11px', color: '#4ade80', fontWeight: 700 }}>+{best.return_pct?.toFixed(2)}%</div>
+          <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
+            <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>BEST CALL</div>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#111827', lineHeight: 1 }}>{best.symbol}</div>
+            <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>+{best.return_pct?.toFixed(2)}%</div>
           </div>
         )}
 
         {/* Stocks vs Crypto */}
-        <div style={{ paddingRight: '16px', borderRight: '1px solid #141414', marginRight: '16px' }}>
-          <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '4px' }}>BY TYPE</div>
-          <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.6 }}>
-            Stocks: <span style={{ color: '#7ec8a0', fontWeight: 600 }}>{stockTotal > 0 ? ((stock_wins / stockTotal) * 100).toFixed(0) : '—'}%</span>
+        <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
+          <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>BY TYPE</div>
+          <div style={{ fontSize: '10px', color: '#6b7280', lineHeight: 1.6 }}>
+            Stocks: <span style={{ color: '#16a34a', fontWeight: 600 }}>{stockTotal > 0 ? ((stock_wins / stockTotal) * 100).toFixed(0) : '—'}%</span>
           </div>
-          <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.6 }}>
-            Crypto: <span style={{ color: '#fbbf24', fontWeight: 600 }}>{cryptoTotal > 0 ? ((crypto_wins / cryptoTotal) * 100).toFixed(0) : '—'}%</span>
+          <div style={{ fontSize: '10px', color: '#6b7280', lineHeight: 1.6 }}>
+            Crypto: <span style={{ color: '#d97706', fontWeight: 600 }}>{cryptoTotal > 0 ? ((crypto_wins / cryptoTotal) * 100).toFixed(0) : '—'}%</span>
           </div>
         </div>
 
         {/* Recent dots */}
         {recent.length > 0 && (
           <div style={{ flex: 1, minWidth: '80px' }}>
-            <div style={{ fontSize: '9px', color: '#333', letterSpacing: '0.07em', marginBottom: '6px' }}>LAST {recent.length}</div>
+            <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '6px' }}>LAST {recent.length}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
               {recent.map((r, i) => (
                 <div
@@ -273,7 +273,7 @@ function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) 
                   title={r.return_pct != null ? `${r.return_pct >= 0 ? '+' : ''}${r.return_pct.toFixed(2)}%` : ''}
                   style={{
                     width: '10px', height: '10px', borderRadius: '2px',
-                    background: r.outcome === 'win' ? '#166534' : r.outcome === 'loss' ? '#7f1d1d' : '#222',
+                    background: r.outcome === 'win' ? '#16a34a' : r.outcome === 'loss' ? '#dc2626' : '#d1d5db',
                     cursor: 'default',
                   }}
                 />
@@ -328,23 +328,23 @@ export default function AIPicksPage() {
   const nextPickDate = tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060606', color: '#e5e5e5', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: '#f4f4f5', color: '#111827', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
-      <div style={{ borderBottom: '1px solid #111', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#080808', flexShrink: 0 }}>
+      <div style={{ borderBottom: '1px solid #e4e4e7', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#ffffff', flexShrink: 0 }}>
         <button
           onClick={() => router.back()}
-          style={{ background: 'transparent', border: '1px solid #1f1f1f', borderRadius: '6px', color: '#666', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-          onMouseLeave={e => e.currentTarget.style.color = '#666'}
+          style={{ background: 'transparent', border: '1px solid #d4d4d8', borderRadius: '6px', color: '#555', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#111827'}
+          onMouseLeave={e => e.currentTarget.style.color = '#555'}
         >← Back</button>
         <div style={{ fontSize: '16px', fontWeight: 700 }}>🤖 AI Daily Picks</div>
-        <div style={{ fontSize: '12px', fontWeight: 600, color: '#aaa' }}>{pickDate}</div>
-        <div style={{ fontSize: '10px', color: '#2a2a2a' }}>·</div>
-        <div style={{ fontSize: '10px', color: '#2a2a2a', letterSpacing: '0.03em' }}>
-          Next picks: <span style={{ color: '#444' }}>{nextPickDate}</span>
+        <div style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>{pickDate}</div>
+        <div style={{ fontSize: '10px', color: '#d1d5db' }}>·</div>
+        <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.03em' }}>
+          Next picks: <span style={{ color: '#6b7280' }}>{nextPickDate}</span>
         </div>
         {data?.is_cached && (
-          <div style={{ fontSize: '9px', color: '#1f1f1f', background: '#111', borderRadius: '4px', padding: '2px 7px', letterSpacing: '0.05em' }}>
+          <div style={{ fontSize: '9px', color: '#9ca3af', background: '#f4f4f5', borderRadius: '4px', padding: '2px 7px', letterSpacing: '0.05em', border: '1px solid #e4e4e7' }}>
             CACHED
           </div>
         )}
@@ -352,9 +352,9 @@ export default function AIPicksPage() {
           onClick={() => load(true)}
           disabled={generating || loading}
           style={{
-            background: generating || loading ? '#111' : '#1a472a',
+            background: generating || loading ? '#f4f4f5' : '#dcfce7',
             border: 'none', borderRadius: '6px',
-            padding: '4px 12px', color: generating || loading ? '#333' : '#7ec8a0',
+            padding: '4px 12px', color: generating || loading ? '#d1d5db' : '#16a34a',
             fontSize: '11px', fontWeight: 600, cursor: generating || loading ? 'default' : 'pointer',
             fontFamily: 'inherit', letterSpacing: '0.04em',
           }}
@@ -367,22 +367,22 @@ export default function AIPicksPage() {
       <div style={{ flex: 1, padding: '24px 32px', display: 'flex', flexDirection: 'column' }}>
         {/* Market context */}
         {data?.market_context && (
-          <div style={{ fontSize: '11px', color: '#555', marginBottom: '12px', fontStyle: 'italic', lineHeight: 1.5, flexShrink: 0 }}>
+          <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '12px', fontStyle: 'italic', lineHeight: 1.5, flexShrink: 0 }}>
             📡 {data.market_context}
           </div>
         )}
 
         {/* Stats bar */}
         <div style={{ flexShrink: 0 }}>
-          <div style={{ fontSize: '9px', color: '#2a2a2a', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '6px' }}>AI TRACK RECORD</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '6px' }}>AI TRACK RECORD</div>
           <StatBar stats={data?.stats ?? null} loading={loading} />
         </div>
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexShrink: 0 }}>
           {([
-            { key: 'stocks', label: '📈 Stocks', color: '#7ec8a0', bg: '#1a472a', count: stocks.length },
-            { key: 'crypto', label: '₿ Crypto', color: '#fbbf24', bg: '#451a03', count: cryptos.length },
+            { key: 'stocks', label: '📈 Stocks', activeColor: '#15803d', activeBg: '#dcfce7', count: stocks.length },
+            { key: 'crypto', label: '₿ Crypto', activeColor: '#d97706', activeBg: '#fef3c7', count: cryptos.length },
           ] as const).map(t => (
             <button
               key={t.key}
@@ -390,8 +390,8 @@ export default function AIPicksPage() {
               style={{
                 padding: '7px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '12px', fontWeight: 700, letterSpacing: '0.03em',
-                background: tab === t.key ? t.bg : '#111',
-                color: tab === t.key ? t.color : '#444',
+                background: tab === t.key ? t.activeBg : '#f4f4f5',
+                color: tab === t.key ? t.activeColor : '#6b7280',
                 transition: 'all 0.15s',
               }}
             >
@@ -407,19 +407,19 @@ export default function AIPicksPage() {
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '12px' }}>
-              <div style={{ fontSize: '13px', color: '#444' }}>
+              <div style={{ fontSize: '13px', color: '#6b7280' }}>
                 🤖 Analyzing market data and generating picks...
               </div>
-              <div style={{ fontSize: '11px', color: '#2a2a2a' }}>
+              <div style={{ fontSize: '11px', color: '#9ca3af' }}>
                 This may take 15–20 seconds on first load
               </div>
             </div>
           ) : error ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#f87171', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#dc2626', fontSize: '13px' }}>
               {error}
             </div>
           ) : picks.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280', fontSize: '13px' }}>
               No picks available — click Refresh to generate
             </div>
           ) : (
@@ -436,11 +436,11 @@ export default function AIPicksPage() {
         </div>
 
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'center', marginTop: '12px', flexShrink: 0, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '9px', color: '#222', letterSpacing: '0.03em' }}>
-            📌 <span style={{ color: '#333' }}>WIN/LOSS</span> — bullish pick wins if price rises from entry after 24h; bearish wins if price falls
+          <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.03em' }}>
+            📌 <span style={{ color: '#9ca3af' }}>WIN/LOSS</span> — bullish pick wins if price rises from entry after 24h; bearish wins if price falls
           </div>
-          <div style={{ fontSize: '9px', color: '#1a1a1a' }}>·</div>
-          <div style={{ fontSize: '9px', color: '#1a1a1a' }}>Stocks M–F only · Crypto daily · Not financial advice</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af' }}>·</div>
+          <div style={{ fontSize: '9px', color: '#9ca3af' }}>Stocks M–F only · Crypto daily · Not financial advice</div>
         </div>
       </div>
     </div>

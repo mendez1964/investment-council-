@@ -77,28 +77,29 @@ export default function NewsPage() {
   const activeCat = CATEGORIES.find(c => c.id === category)!
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060606', color: '#e5e5e5', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: '#f4f4f5', color: '#111827', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
 
       {/* Top bar */}
-      <div style={{ borderBottom: '1px solid #111', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#080808', flexShrink: 0 }}>
+      <div style={{ borderBottom: '1px solid #e4e4e7', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#ffffff', flexShrink: 0 }}>
         <button
           onClick={() => router.back()}
-          style={{ background: 'transparent', border: '1px solid #1f1f1f', borderRadius: '6px', color: '#666', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-          onMouseLeave={e => e.currentTarget.style.color = '#666'}
+          style={{ background: 'transparent', border: '1px solid #d4d4d8', borderRadius: '6px', color: '#555', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#111827'}
+          onMouseLeave={e => e.currentTarget.style.color = '#555'}
         >← Back</button>
 
-        <div style={{ fontSize: '16px', fontWeight: 700 }}>📰 Market News</div>
+        <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>📰 Market News</div>
 
         {/* Category tabs */}
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '4px', background: '#f4f4f5', borderRadius: '8px', padding: '3px' }}>
           {CATEGORIES.map(c => (
             <button key={c.id} onClick={() => setCategory(c.id)}
               style={{
                 padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '12px', fontWeight: 600,
-                background: category === c.id ? '#141414' : 'transparent',
-                color: category === c.id ? c.color : '#444',
+                background: category === c.id ? '#ffffff' : 'transparent',
+                color: category === c.id ? c.color : '#6b7280',
+                boxShadow: category === c.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
               }}
             >{c.label}</button>
           ))}
@@ -111,8 +112,8 @@ export default function NewsPage() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Search headlines..."
             style={{
-              background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '7px',
-              color: '#e5e5e5', fontSize: '12px', fontFamily: 'inherit',
+              background: '#ffffff', border: '1px solid #d4d4d8', borderRadius: '7px',
+              color: '#111827', fontSize: '12px', fontFamily: 'inherit',
               padding: '6px 14px 6px 32px', width: '220px', outline: 'none',
             }}
           />
@@ -120,27 +121,27 @@ export default function NewsPage() {
         </div>
 
         {!loading && (
-          <div style={{ fontSize: '11px', color: '#2a2a2a' }}>{filtered.length} stories</div>
+          <div style={{ fontSize: '11px', color: '#6b7280' }}>{filtered.length} stories</div>
         )}
       </div>
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* Sidebar: source + ticker filters */}
-        <div style={{ width: '200px', minWidth: '200px', borderRight: '1px solid #0f0f0f', background: '#080808', overflowY: 'auto', padding: '20px 12px' }}>
+        <div style={{ width: '200px', minWidth: '200px', borderRight: '1px solid #e4e4e7', background: '#ffffff', overflowY: 'auto', padding: '20px 12px' }}>
 
           {/* Ticker chips */}
           {tickers.length > 0 && (
             <>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: '#2a2a2a', letterSpacing: '0.1em', marginBottom: '8px', paddingLeft: '4px' }}>TICKERS</div>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: '#9ca3af', letterSpacing: '0.1em', marginBottom: '8px', paddingLeft: '4px' }}>TICKERS</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginBottom: '20px' }}>
                 <button
                   onClick={() => setActiveTicker(null)}
-                  style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 700, textAlign: 'left', background: activeTicker === null ? '#1a472a' : 'transparent', color: activeTicker === null ? '#7ec8a0' : '#555' }}
+                  style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 700, textAlign: 'left', background: activeTicker === null ? '#dcfce7' : 'transparent', color: activeTicker === null ? '#15803d' : '#6b7280' }}
                 >ALL</button>
                 {tickers.map(t => (
                   <button key={t} onClick={() => setActiveTicker(activeTicker === t ? null : t)}
-                    style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 700, textAlign: 'left', background: activeTicker === t ? '#111' : 'transparent', color: activeTicker === t ? '#e5e5e5' : '#555' }}
+                    style={{ padding: '5px 10px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 700, textAlign: 'left', background: activeTicker === t ? '#f4f4f5' : 'transparent', color: activeTicker === t ? '#111' : '#6b7280' }}
                   >{t}</button>
                 ))}
               </div>
@@ -148,12 +149,12 @@ export default function NewsPage() {
           )}
 
           {/* Source legend */}
-          <div style={{ fontSize: '10px', fontWeight: 800, color: '#2a2a2a', letterSpacing: '0.1em', marginBottom: '8px', paddingLeft: '4px' }}>SOURCES</div>
+          <div style={{ fontSize: '10px', fontWeight: 800, color: '#9ca3af', letterSpacing: '0.1em', marginBottom: '8px', paddingLeft: '4px' }}>SOURCES</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {Object.entries(SOURCE_COLORS).slice(0, 8).map(([src, color]) => (
               <div key={src} style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '4px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <span style={{ fontSize: '11px', color: '#3a3a3a' }}>{src}</span>
+                <span style={{ fontSize: '11px', color: '#374151' }}>{src}</span>
               </div>
             ))}
           </div>
@@ -162,9 +163,9 @@ export default function NewsPage() {
         {/* Main feed */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '80px', color: '#444', fontSize: '14px' }}>Loading {activeCat.label} news...</div>
+            <div style={{ textAlign: 'center', padding: '80px', color: '#6b7280', fontSize: '14px' }}>Loading {activeCat.label} news...</div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '80px', color: '#444', fontSize: '14px' }}>No stories found</div>
+            <div style={{ textAlign: 'center', padding: '80px', color: '#6b7280', fontSize: '14px' }}>No stories found</div>
           ) : (
             <>
               {/* Breaking news */}
@@ -184,7 +185,7 @@ export default function NewsPage() {
               {rest.length > 0 && (
                 <div>
                   {breaking.length > 0 && (
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#2a2a2a', letterSpacing: '0.12em', marginBottom: '12px' }}>EARLIER TODAY</div>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#9ca3af', letterSpacing: '0.12em', marginBottom: '12px' }}>EARLIER TODAY</div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                     {rest.map((a, i) => <ArticleCard key={a.id ?? i} article={a} />)}
@@ -204,12 +205,13 @@ function ArticleCard({ article, isBreaking }: { article: Article; isBreaking?: b
     <a href={article.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
       <div
         style={{
-          padding: '14px 16px', background: '#0a0a0a', borderRadius: '8px',
-          borderLeft: isBreaking ? '3px solid #f87171' : '3px solid #111',
+          padding: '14px 16px', background: '#ffffff', borderRadius: '8px',
+          border: '1px solid #f0f0f0',
+          borderLeft: isBreaking ? '3px solid #dc2626' : '3px solid #e4e4e7',
           cursor: 'pointer', transition: 'background 0.1s',
         }}
-        onMouseEnter={e => (e.currentTarget.style.background = '#101010')}
-        onMouseLeave={e => (e.currentTarget.style.background = '#0a0a0a')}
+        onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
+        onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
       >
         {/* Meta row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
@@ -220,17 +222,17 @@ function ArticleCard({ article, isBreaking }: { article: Article; isBreaking?: b
             <span style={{ fontSize: '10px', fontWeight: 700, color: '#7ec8a0', background: '#052e16', borderRadius: '3px', padding: '2px 6px' }}>{article.ticker}</span>
           )}
           <span style={{ fontSize: '11px', fontWeight: 600, color: sourceColor(article.source) }}>{article.source}</span>
-          <span style={{ fontSize: '11px', color: '#2a2a2a', marginLeft: 'auto' }}>{timeAgo(article.datetime)}</span>
+          <span style={{ fontSize: '11px', color: '#9ca3af', marginLeft: 'auto' }}>{timeAgo(article.datetime)}</span>
         </div>
 
         {/* Headline */}
-        <div style={{ fontSize: '13px', fontWeight: 600, color: '#d4d4d4', lineHeight: 1.5, marginBottom: article.summary ? '6px' : 0 }}>
+        <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827', lineHeight: 1.5, marginBottom: article.summary ? '6px' : 0 }}>
           {article.headline}
         </div>
 
         {/* Summary */}
         {article.summary && (
-          <div style={{ fontSize: '12px', color: '#4a4a4a', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+          <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
             {article.summary}
           </div>
         )}

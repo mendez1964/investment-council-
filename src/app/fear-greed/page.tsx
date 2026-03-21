@@ -95,31 +95,31 @@ export default function FearGreedPage() {
   const ticks = [0, 25, 50, 75, 100]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#060606', color: '#e5e5e5', fontFamily: 'inherit' }}>
+    <div style={{ minHeight: '100vh', background: '#f4f4f5', color: '#111827', fontFamily: 'inherit' }}>
 
       {/* ── Top bar ── */}
-      <div style={{ borderBottom: '1px solid #111', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#080808' }}>
+      <div style={{ borderBottom: '1px solid #e4e4e7', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#ffffff' }}>
         <button
           onClick={() => router.back()}
-          style={{ background: 'transparent', border: '1px solid #1f1f1f', borderRadius: '6px', color: '#666', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-          onMouseLeave={e => e.currentTarget.style.color = '#666'}
+          style={{ background: 'transparent', border: '1px solid #d4d4d8', borderRadius: '6px', color: '#555', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#111827'}
+          onMouseLeave={e => e.currentTarget.style.color = '#555'}
         >
           ← Back
         </button>
-        <div style={{ fontSize: '16px', fontWeight: 700, color: '#e5e5e5' }}>😨 Fear &amp; Greed Index</div>
-        <div style={{ fontSize: '11px', color: '#333', marginLeft: '4px' }}>Alternative.me · Updates daily</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+        <div style={{ fontSize: '16px', fontWeight: 700, color: '#111827' }}>😨 Fear &amp; Greed Index</div>
+        <div style={{ fontSize: '11px', color: '#6b7280', marginLeft: '4px' }}>Alternative.me · Updates daily</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', background: '#f4f4f5', borderRadius: '8px', padding: '3px' }}>
           {(['crypto', 'stock'] as const).map(m => (
             <button key={m} onClick={() => setDataMode(m)}
-              style={{ padding: '4px 12px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, background: dataMode === m ? '#1a1a1a' : 'transparent', color: dataMode === m ? '#ccc' : '#333' }}
+              style={{ padding: '4px 12px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, background: dataMode === m ? '#ffffff' : 'transparent', color: dataMode === m ? '#111827' : '#6b7280', boxShadow: dataMode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}
             >{m === 'crypto' ? 'Crypto' : 'Stocks'}</button>
           ))}
         </div>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '120px', color: '#444', fontSize: '14px' }}>Loading...</div>
+        <div style={{ textAlign: 'center', padding: '120px', color: '#6b7280', fontSize: '14px' }}>Loading...</div>
       ) : (
         <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '40px 32px' }}>
 
@@ -130,7 +130,7 @@ export default function FearGreedPage() {
             <div>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
                 <svg viewBox="0 0 320 196" width="480" height="294" style={{ overflow: 'visible' }}>
-                  <path d={arcPath(0, 100, R)} fill="none" stroke="#1a1a1a" strokeWidth="28" strokeLinecap="butt" />
+                  <path d={arcPath(0, 100, R)} fill="none" stroke="#e5e7eb" strokeWidth="28" strokeLinecap="butt" />
                   {ZONES.map(z => {
                     const isPast = value > z.end
                     const isCurrent = value >= z.start && value <= z.end
@@ -141,16 +141,16 @@ export default function FearGreedPage() {
                   {ticks.map(t => {
                     const inner = valToSVG(t, R - 32)
                     const outer = valToSVG(t, R + 4)
-                    return <line key={t} x1={inner.x.toFixed(2)} y1={inner.y.toFixed(2)} x2={outer.x.toFixed(2)} y2={outer.y.toFixed(2)} stroke="#060606" strokeWidth="2.5" />
+                    return <line key={t} x1={inner.x.toFixed(2)} y1={inner.y.toFixed(2)} x2={outer.x.toFixed(2)} y2={outer.y.toFixed(2)} stroke="#f4f4f5" strokeWidth="2.5" />
                   })}
-                  <polygon points={`${needleTip.x.toFixed(2)},${needleTip.y.toFixed(2)} ${needleBase1.x.toFixed(2)},${needleBase1.y.toFixed(2)} ${needleBase2.x.toFixed(2)},${needleBase2.y.toFixed(2)}`} fill="#e5e5e5" opacity="0.95" />
-                  <circle cx={CX} cy={CY} r="7" fill="#e5e5e5" />
+                  <polygon points={`${needleTip.x.toFixed(2)},${needleTip.y.toFixed(2)} ${needleBase1.x.toFixed(2)},${needleBase1.y.toFixed(2)} ${needleBase2.x.toFixed(2)},${needleBase2.y.toFixed(2)}`} fill="#1f2937" opacity="0.95" />
+                  <circle cx={CX} cy={CY} r="7" fill="#1f2937" />
                   <text x={CX} y={CY - 36} textAnchor="middle" fill={zoneColor} fontSize="52" fontWeight="bold" fontFamily="monospace">{value}</text>
                   <text x={CX} y={CY - 12} textAnchor="middle" fill={zoneColor} fontSize="13" fontWeight="700" fontFamily="sans-serif" letterSpacing="0.06em">{currentZone.label.toUpperCase()}</text>
-                  <text x="20" y="183" textAnchor="middle" fill="#333" fontSize="9" fontFamily="sans-serif">Extreme</text>
-                  <text x="20" y="192" textAnchor="middle" fill="#333" fontSize="9" fontFamily="sans-serif">Fear</text>
-                  <text x="300" y="183" textAnchor="middle" fill="#333" fontSize="9" fontFamily="sans-serif">Extreme</text>
-                  <text x="300" y="192" textAnchor="middle" fill="#333" fontSize="9" fontFamily="sans-serif">Greed</text>
+                  <text x="20" y="183" textAnchor="middle" fill="#6b7280" fontSize="9" fontFamily="sans-serif">Extreme</text>
+                  <text x="20" y="192" textAnchor="middle" fill="#6b7280" fontSize="9" fontFamily="sans-serif">Fear</text>
+                  <text x="300" y="183" textAnchor="middle" fill="#6b7280" fontSize="9" fontFamily="sans-serif">Extreme</text>
+                  <text x="300" y="192" textAnchor="middle" fill="#6b7280" fontSize="9" fontFamily="sans-serif">Greed</text>
                 </svg>
               </div>
 
@@ -159,11 +159,11 @@ export default function FearGreedPage() {
                 {ZONE_CONTEXT.map(z => {
                   const isActive = z.label === currentZone.label
                   return (
-                    <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 12px', borderRadius: '7px', background: isActive ? '#111' : 'transparent', border: isActive ? `1px solid ${z.color}30` : '1px solid transparent' }}>
+                    <div key={z.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 12px', borderRadius: '7px', background: isActive ? '#f9fafb' : 'transparent', border: isActive ? `1px solid ${z.color}30` : '1px solid transparent' }}>
                       <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: z.color, flexShrink: 0, opacity: isActive ? 1 : 0.4 }} />
-                      <div style={{ fontSize: '11px', color: '#2a2a2a', width: '64px', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{z.range}</div>
-                      <div style={{ fontSize: '12px', color: isActive ? z.color : '#444', fontWeight: isActive ? 700 : 400 }}>{z.label}</div>
-                      {isActive && <div style={{ fontSize: '10px', color: '#555', marginLeft: 'auto' }}>← NOW</div>}
+                      <div style={{ fontSize: '11px', color: '#6b7280', width: '64px', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{z.range}</div>
+                      <div style={{ fontSize: '12px', color: isActive ? z.color : '#9ca3af', fontWeight: isActive ? 700 : 400 }}>{z.label}</div>
+                      {isActive && <div style={{ fontSize: '10px', color: '#9ca3af', marginLeft: 'auto' }}>← NOW</div>}
                     </div>
                   )
                 })}
@@ -174,24 +174,24 @@ export default function FearGreedPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
               {/* Current interpretation */}
-              <div style={{ background: '#0a0a0a', border: `1px solid ${zoneColor}35`, borderRadius: '10px', padding: '20px 22px' }}>
+              <div style={{ background: '#ffffff', border: `1px solid ${zoneColor}35`, borderRadius: '10px', padding: '20px 22px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 800, color: zoneColor, marginBottom: '10px', letterSpacing: '0.08em' }}>
                   CURRENT READING — {currentZone.label.toUpperCase()} ({value})
                 </div>
-                <div style={{ fontSize: '14px', color: '#c0c0c0', lineHeight: 1.7 }}>{currentZone.desc}</div>
+                <div style={{ fontSize: '14px', color: '#374151', lineHeight: 1.7 }}>{currentZone.desc}</div>
               </div>
 
               {/* Last updated */}
               {current && (
-                <div style={{ fontSize: '11px', color: '#2a2a2a' }}>
+                <div style={{ fontSize: '11px', color: '#9ca3af' }}>
                   Last updated: {new Date(parseInt(current.timestamp) * 1000).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
               )}
 
               {/* 60-day sparkline */}
               {sparkVals.length > 1 && (
-                <div style={{ background: '#0a0a0a', border: '1px solid #141414', borderRadius: '10px', padding: '16px 18px' }}>
-                  <div style={{ fontSize: '10px', color: '#333', marginBottom: '10px', letterSpacing: '0.08em', fontWeight: 700 }}>60-DAY HISTORY</div>
+                <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '16px 18px' }}>
+                  <div style={{ fontSize: '10px', color: '#6b7280', marginBottom: '10px', letterSpacing: '0.08em', fontWeight: 700 }}>60-DAY HISTORY</div>
                   <svg viewBox={`0 0 ${chartW} ${chartH + 10}`} width="100%" height="90" style={{ display: 'block' }}>
                     <rect x="0" y={toY(100)} width={chartW} height={toY(75) - toY(100)} fill="#16a34a" opacity="0.06" />
                     <rect x="0" y={toY(75)}  width={chartW} height={toY(55) - toY(75)}  fill="#65a30d" opacity="0.05" />
@@ -203,7 +203,7 @@ export default function FearGreedPage() {
                     <polyline points={polyPoints} fill="none" stroke={zoneColor} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
                     <circle cx={toX(sparkVals.length - 1).toFixed(1)} cy={toY(sparkVals[sparkVals.length - 1]).toFixed(1)} r="4" fill={zoneColor} />
                   </svg>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#222', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>
                     <span>{historical[0] ? new Date(parseInt(historical[0].timestamp) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '60 days ago'}</span>
                     <span>Today</span>
                   </div>
@@ -214,15 +214,15 @@ export default function FearGreedPage() {
 
           {/* ── 7 Components ── */}
           <div style={{ marginBottom: '48px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 800, color: '#333', letterSpacing: '0.12em', marginBottom: '16px', textTransform: 'uppercase' }}>The 7 Components (CNN Methodology)</div>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#6b7280', letterSpacing: '0.12em', marginBottom: '16px', textTransform: 'uppercase' }}>The 7 Components (CNN Methodology)</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
               {COMPONENTS.map(c => (
-                <div key={c.name} style={{ background: '#0a0a0a', border: '1px solid #141414', borderRadius: '9px', padding: '16px 18px' }}>
+                <div key={c.name} style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '9px', padding: '16px 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                     <span style={{ fontSize: '16px' }}>{c.icon}</span>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#c0c0c0' }}>{c.name}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#111827' }}>{c.name}</span>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6 }}>{c.desc}</div>
+                  <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.6 }}>{c.desc}</div>
                 </div>
               ))}
             </div>
@@ -230,22 +230,22 @@ export default function FearGreedPage() {
 
           {/* ── Historical Signals ── */}
           <div>
-            <div style={{ fontSize: '12px', fontWeight: 800, color: '#333', letterSpacing: '0.12em', marginBottom: '16px', textTransform: 'uppercase' }}>Historical Context — What These Levels Have Meant</div>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: '#6b7280', letterSpacing: '0.12em', marginBottom: '16px', textTransform: 'uppercase' }}>Historical Context — What These Levels Have Meant</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {HISTORICAL_SIGNALS.map((h, i) => {
                 const zone = ZONE_CONTEXT[i]
                 return (
-                  <div key={h.level} style={{ display: 'grid', gridTemplateColumns: '200px 260px 1fr', gap: '16px', padding: '14px 16px', borderRadius: '8px', background: h.level.includes(currentZone.label.split(' ')[0]) && h.level.includes(currentZone.label.split(' ').slice(-1)[0]) ? '#0f0f0f' : 'transparent', alignItems: 'start' }}>
+                  <div key={h.level} style={{ display: 'grid', gridTemplateColumns: '200px 260px 1fr', gap: '16px', padding: '14px 16px', borderRadius: '8px', background: h.level.includes(currentZone.label.split(' ')[0]) && h.level.includes(currentZone.label.split(' ').slice(-1)[0]) ? '#f9fafb' : 'transparent', alignItems: 'start' }}>
                     <div style={{ fontSize: '12px', fontWeight: 700, color: zone.color }}>{h.level}</div>
-                    <div style={{ fontSize: '11px', color: '#3a3a3a', lineHeight: 1.5 }}>{h.examples}</div>
-                    <div style={{ fontSize: '12px', color: '#666', lineHeight: 1.5 }}>{h.outcome}</div>
+                    <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.5 }}>{h.examples}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.5 }}>{h.outcome}</div>
                   </div>
                 )
               })}
             </div>
           </div>
 
-          <div style={{ marginTop: '48px', padding: '16px', borderTop: '1px solid #111', fontSize: '11px', color: '#222', textAlign: 'center' }}>
+          <div style={{ marginTop: '48px', padding: '16px', borderTop: '1px solid #e4e4e7', fontSize: '11px', color: '#9ca3af', textAlign: 'center' }}>
             Data source: Alternative.me Crypto Fear &amp; Greed API · Updates daily · For informational purposes only
           </div>
         </div>
