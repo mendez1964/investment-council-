@@ -77,7 +77,7 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '12px',
+          background: '#111', border: '1px solid #222', borderRadius: '12px',
           padding: '22px 24px', width: '820px', maxWidth: '97vw', maxHeight: '92vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: '0 24px 80px rgba(0,0,0,0.9)',
@@ -87,7 +87,7 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '14px', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: 700, color: '#e5e5e5', flex: 1 }}>📰 Market News</div>
           {!loading && (
-            <div style={{ fontSize: '10px', color: '#333', marginRight: '12px' }}>{filtered.length} stories</div>
+            <div style={{ fontSize: '10px', color: '#777', marginRight: '12px' }}>{filtered.length} stories</div>
           )}
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
         </div>
@@ -99,8 +99,8 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
             style={{
               padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontSize: '11px', fontWeight: 600,
-              background: mode === 'market' ? '#1a1a1a' : 'transparent',
-              color: mode === 'market' ? '#e5e5e5' : '#444',
+              background: mode === 'market' ? '#222' : 'transparent',
+              color: mode === 'market' ? '#e5e5e5' : '#777',
             }}
           >Market News</button>
           {watchlistTickers.length > 0 && (
@@ -110,7 +110,7 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
                 padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '11px', fontWeight: 600,
                 background: mode === 'watchlist' ? '#1a472a' : 'transparent',
-                color: mode === 'watchlist' ? '#7ec8a0' : '#444',
+                color: mode === 'watchlist' ? '#7ec8a0' : '#777',
               }}
             >My Watchlist ({watchlistTickers.length})</button>
           )}
@@ -126,8 +126,8 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
                 style={{
                   padding: '4px 12px', borderRadius: '5px', border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: '11px', fontWeight: 500,
-                  background: category === c.id ? '#111' : 'transparent',
-                  color: category === c.id ? '#ccc' : '#333',
+                  background: category === c.id ? '#222' : 'transparent',
+                  color: category === c.id ? '#ccc' : '#777',
                 }}
               >{c.label}</button>
             ))}
@@ -154,7 +154,7 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
                   padding: '3px 10px', borderRadius: '4px', border: 'none', cursor: 'pointer',
                   fontFamily: 'inherit', fontSize: '10px', fontWeight: 700,
                   background: activeTicker === t ? '#1a1a1a' : 'transparent',
-                  color: activeTicker === t ? '#e5e5e5' : '#444',
+                  color: activeTicker === t ? '#e5e5e5' : '#777',
                 }}
               >{t}</button>
             ))}
@@ -164,9 +164,9 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
         {/* Articles */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>Loading news...</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#777', fontSize: '13px' }}>Loading news...</div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>No stories found</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#777', fontSize: '13px' }}>No stories found</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {filtered.map((article, i) => {
@@ -181,14 +181,14 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
                   >
                     <div style={{
                       padding: '11px 14px',
-                      background: '#080808',
+                      background: '#141414',
                       borderRadius: '7px',
                       borderLeft: isBreaking ? '3px solid #f87171' : '3px solid transparent',
                       transition: 'background 0.1s',
                       cursor: 'pointer',
                     }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#0f0f0f')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#080808')}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#1a1a1a')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#141414')}
                     >
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                         <div style={{ flex: 1 }}>
@@ -200,13 +200,13 @@ export default function NewsFeed({ onClose, watchlistTickers = [] }: { onClose: 
                               <span style={{ fontSize: '9px', fontWeight: 700, color: '#7ec8a0', background: '#052e16', borderRadius: '3px', padding: '1px 5px' }}>{article.ticker}</span>
                             )}
                             <span style={{ fontSize: '9px', fontWeight: 600, color: sourceColor(article.source) }}>{article.source}</span>
-                            <span style={{ fontSize: '9px', color: '#2a2a2a', marginLeft: 'auto' }}>{timeAgo(article.datetime)}</span>
+                            <span style={{ fontSize: '9px', color: '#666', marginLeft: 'auto' }}>{timeAgo(article.datetime)}</span>
                           </div>
                           <div style={{ fontSize: '12px', fontWeight: 600, color: '#d4d4d4', lineHeight: 1.45, marginBottom: '3px' }}>
                             {article.headline}
                           </div>
                           {article.summary && (
-                            <div style={{ fontSize: '10px', color: '#444', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            <div style={{ fontSize: '10px', color: '#888', lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                               {article.summary}
                             </div>
                           )}

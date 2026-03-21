@@ -79,7 +79,7 @@ export default function EarningsCalendar({ onClose }: Props) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#0d0d0d', border: '1px solid #1f1f1f',
+          background: '#111', border: '1px solid #222',
           borderRadius: '12px', padding: '24px',
           width: '680px', maxWidth: '95vw',
           maxHeight: '90vh', overflow: 'auto',
@@ -92,10 +92,10 @@ export default function EarningsCalendar({ onClose }: Props) {
             📅 Earnings Calendar
           </div>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-            <div style={{ fontSize: '10px', color: '#444', marginRight: '8px' }}>
+            <div style={{ fontSize: '10px', color: '#888', marginRight: '8px' }}>
               {loading ? 'Loading...' : `${events.length} reports`}
             </div>
-            <span style={{ fontSize: '11px', color: '#555' }}>
+            <span style={{ fontSize: '11px', color: '#888' }}>
               <span style={{ background: '#1a3a5c', color: '#60a5fa', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>BMO</span>
               {' '}Before Open {'  '}
               <span style={{ background: '#3b1a1a', color: '#f87171', borderRadius: '3px', padding: '1px 5px', fontSize: '10px' }}>AMC</span>
@@ -118,7 +118,7 @@ export default function EarningsCalendar({ onClose }: Props) {
         {/* Day headers */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '4px' }}>
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: '10px', fontWeight: 700, color: '#333', padding: '4px 0', letterSpacing: '0.05em' }}>{d}</div>
+            <div key={d} style={{ textAlign: 'center', fontSize: '10px', fontWeight: 700, color: '#555', padding: '4px 0', letterSpacing: '0.05em' }}>{d}</div>
           ))}
         </div>
 
@@ -150,7 +150,7 @@ export default function EarningsCalendar({ onClose }: Props) {
               >
                 <div style={{
                   fontSize: '11px', fontWeight: isToday ? 700 : 400,
-                  color: isToday ? '#7ec8a0' : isWeekend ? '#333' : '#555',
+                  color: isToday ? '#7ec8a0' : isWeekend ? '#555' : '#999',
                   marginBottom: '3px',
                 }}>
                   {day}
@@ -173,7 +173,7 @@ export default function EarningsCalendar({ onClose }: Props) {
                   )
                 })}
                 {dayEvents.length > 4 && (
-                  <div style={{ fontSize: '9px', color: '#333' }}>+{dayEvents.length - 4} more</div>
+                  <div style={{ fontSize: '9px', color: '#666' }}>+{dayEvents.length - 4} more</div>
                 )}
               </div>
             )
@@ -182,7 +182,7 @@ export default function EarningsCalendar({ onClose }: Props) {
 
         {/* Selected day detail */}
         {selectedDate && selectedEvents.length > 0 && (
-          <div style={{ marginTop: '16px', background: '#080808', border: '1px solid #1a1a1a', borderRadius: '8px', padding: '14px' }}>
+          <div style={{ marginTop: '16px', background: '#141414', border: '1px solid #222', borderRadius: '8px', padding: '14px' }}>
             <div style={{ fontSize: '12px', fontWeight: 700, color: '#7ec8a0', marginBottom: '10px' }}>
               {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               {' — '}{selectedEvents.length} report{selectedEvents.length !== 1 ? 's' : ''}
@@ -198,20 +198,20 @@ export default function EarningsCalendar({ onClose }: Props) {
                     borderRadius: '6px', padding: '8px 10px',
                   }}>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e5e5' }}>{e.symbol}</div>
-                    <div style={{ fontSize: '10px', color: isBMO ? '#60a5fa' : isAMC ? '#f87171' : '#555', marginTop: '2px' }}>
+                    <div style={{ fontSize: '10px', color: isBMO ? '#60a5fa' : isAMC ? '#f87171' : '#888', marginTop: '2px' }}>
                       {isBMO ? 'Before Market Open' : isAMC ? 'After Market Close' : e.hour?.toUpperCase() ?? '—'}
                     </div>
                     {e.epsEstimate != null && (
-                      <div style={{ fontSize: '10px', color: '#555', marginTop: '4px' }}>
-                        EPS est: <span style={{ color: '#888' }}>${e.epsEstimate.toFixed(2)}</span>
+                      <div style={{ fontSize: '10px', color: '#777', marginTop: '4px' }}>
+                        EPS est: <span style={{ color: '#aaa' }}>${e.epsEstimate.toFixed(2)}</span>
                       </div>
                     )}
                     {e.revenueEstimate != null && (
-                      <div style={{ fontSize: '10px', color: '#555' }}>
-                        Rev est: <span style={{ color: '#888' }}>${(e.revenueEstimate / 1e9).toFixed(2)}B</span>
+                      <div style={{ fontSize: '10px', color: '#777' }}>
+                        Rev est: <span style={{ color: '#aaa' }}>${(e.revenueEstimate / 1e9).toFixed(2)}B</span>
                       </div>
                     )}
-                    <div style={{ fontSize: '10px', color: '#333', marginTop: '2px' }}>Q{e.quarter} {e.year}</div>
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>Q{e.quarter} {e.year}</div>
                   </div>
                 )
               })}
@@ -220,7 +220,7 @@ export default function EarningsCalendar({ onClose }: Props) {
         )}
 
         {loading && (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#444', fontSize: '13px' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#777', fontSize: '13px' }}>
             Loading earnings data...
           </div>
         )}

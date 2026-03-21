@@ -119,7 +119,7 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '12px',
+          background: '#111', border: '1px solid #222', borderRadius: '12px',
           padding: '24px', width: '500px', maxWidth: '95vw', maxHeight: '90vh',
           overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.8)',
         }}
@@ -127,14 +127,14 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px' }}>
           <div style={{ fontSize: '15px', fontWeight: 700, color: '#e5e5e5', flex: 1 }}>📊 Fear & Greed Index</div>
-          <div style={{ fontSize: '10px', color: '#2a2a2a', marginRight: '12px' }}>Alternative.me · Crypto · Updates daily</div>
+          <div style={{ fontSize: '10px', color: '#666', marginRight: '12px' }}>Alternative.me · Crypto · Updates daily</div>
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>Loading...</div>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#777', fontSize: '13px' }}>Loading...</div>
         ) : entries.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>Data unavailable</div>
+          <div style={{ textAlign: 'center', padding: '60px', color: '#777', fontSize: '13px' }}>Data unavailable</div>
         ) : (
           <>
             {/* ── Gauge SVG ─────────────────────────────────────────────── */}
@@ -144,7 +144,7 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
                 {/* Background arc (dim track) */}
                 <path
                   d={arcPath(0, 100, R)}
-                  fill="none" stroke="#1a1a1a" strokeWidth="20" strokeLinecap="butt"
+                  fill="none" stroke="#282828" strokeWidth="20" strokeLinecap="butt"
                 />
 
                 {/* Colored zone arcs */}
@@ -191,17 +191,17 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
                 <text x={CX} y={CY - 7}  textAnchor="middle" fill={zoneColor} fontSize="10" fontWeight="700" fontFamily="sans-serif" letterSpacing="0.06em">{currentZone.label.toUpperCase()}</text>
 
                 {/* Side labels */}
-                <text x="14" y="126" textAnchor="middle" fill="#333" fontSize="7.5" fontFamily="sans-serif">Extreme</text>
-                <text x="14" y="133" textAnchor="middle" fill="#333" fontSize="7.5" fontFamily="sans-serif">Fear</text>
-                <text x="207" y="126" textAnchor="middle" fill="#333" fontSize="7.5" fontFamily="sans-serif">Extreme</text>
-                <text x="207" y="133" textAnchor="middle" fill="#333" fontSize="7.5" fontFamily="sans-serif">Greed</text>
+                <text x="14" y="126" textAnchor="middle" fill="#666" fontSize="7.5" fontFamily="sans-serif">Extreme</text>
+                <text x="14" y="133" textAnchor="middle" fill="#666" fontSize="7.5" fontFamily="sans-serif">Fear</text>
+                <text x="207" y="126" textAnchor="middle" fill="#666" fontSize="7.5" fontFamily="sans-serif">Extreme</text>
+                <text x="207" y="133" textAnchor="middle" fill="#666" fontSize="7.5" fontFamily="sans-serif">Greed</text>
               </svg>
             </div>
 
             {/* ── 30-day sparkline ───────────────────────────────────────── */}
             {sparkVals.length > 1 && (
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '10px', color: '#2a2a2a', marginBottom: '6px', textAlign: 'center', letterSpacing: '0.07em' }}>30-DAY HISTORY</div>
+                <div style={{ fontSize: '10px', color: '#666', marginBottom: '6px', textAlign: 'center', letterSpacing: '0.07em' }}>30-DAY HISTORY</div>
                 <svg viewBox={`0 0 ${chartW} ${chartH + 8}`} width="100%" height="62" style={{ display: 'block' }}>
                   {/* Zone bands (subtle) */}
                   <rect x="0" y={toY(100)} width={chartW} height={toY(75) - toY(100)} fill="#16a34a" opacity="0.06" />
@@ -223,7 +223,7 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
                     r="3.5" fill={zoneColor}
                   />
                 </svg>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#222', marginTop: '2px', padding: '0 2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#666', marginTop: '2px', padding: '0 2px' }}>
                   <span>
                     {historical[0]
                       ? new Date(parseInt(historical[0].timestamp) * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -236,13 +236,13 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
 
             {/* ── Current zone explanation ───────────────────────────────── */}
             <div style={{
-              background: '#080808', border: `1px solid ${zoneColor}30`,
+              background: '#141414', border: `1px solid ${zoneColor}30`,
               borderRadius: '8px', padding: '12px 14px', marginBottom: '16px',
             }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: zoneColor, marginBottom: '6px', letterSpacing: '0.05em' }}>
                 {currentZone.label.toUpperCase()} — {currentZone.range}
               </div>
-              <div style={{ fontSize: '12px', color: '#888', lineHeight: 1.65 }}>{currentZone.desc}</div>
+              <div style={{ fontSize: '12px', color: '#c0c0c0', lineHeight: 1.65 }}>{currentZone.desc}</div>
             </div>
 
             {/* ── Zone legend ────────────────────────────────────────────── */}
@@ -259,8 +259,8 @@ export default function FearGreedGauge({ onClose }: { onClose: () => void }) {
                     }}
                   >
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: z.color, flexShrink: 0, opacity: isActive ? 1 : 0.5 }} />
-                    <div style={{ fontSize: '10px', color: '#2a2a2a', width: '56px', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{z.range}</div>
-                    <div style={{ fontSize: '11px', color: isActive ? z.color : '#444', fontWeight: isActive ? 700 : 400 }}>{z.label}</div>
+                    <div style={{ fontSize: '10px', color: '#666', width: '56px', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{z.range}</div>
+                    <div style={{ fontSize: '11px', color: isActive ? z.color : '#888', fontWeight: isActive ? 700 : 400 }}>{z.label}</div>
                   </div>
                 )
               })}

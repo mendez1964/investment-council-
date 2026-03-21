@@ -69,12 +69,12 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{ background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '12px', padding: '24px', width: '780px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}
+        style={{ background: '#111', border: '1px solid #222', borderRadius: '12px', padding: '24px', width: '780px', maxWidth: '95vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.8)' }}
       >
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', gap: '10px', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: 700, color: '#e5e5e5', flex: 1 }}>📊 Market Movers</div>
-          {lastUpdated && <div style={{ fontSize: '10px', color: '#333' }}>Updated {lastUpdated}</div>}
+          {lastUpdated && <div style={{ fontSize: '10px', color: '#666' }}>Updated {lastUpdated}</div>}
           <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
         </div>
 
@@ -87,8 +87,8 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
               style={{
                 flex: 1, padding: '8px 0', borderRadius: '8px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: '12px', fontWeight: 700, letterSpacing: '0.03em',
-                background: tab === t.key ? t.bg : '#111',
-                color: tab === t.key ? t.color : '#444',
+                background: tab === t.key ? t.bg : '#161616',
+                color: tab === t.key ? t.color : '#666',
                 transition: 'all 0.15s',
               }}
             >
@@ -99,7 +99,7 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
 
         {/* Count selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '14px', flexShrink: 0 }}>
-          <span style={{ fontSize: '11px', color: '#444' }}>Show:</span>
+          <span style={{ fontSize: '11px', color: '#777' }}>Show:</span>
           {COUNTS.map(n => (
             <button
               key={n}
@@ -107,8 +107,8 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
               style={{
                 padding: '3px 10px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: '11px', fontWeight: 600,
-                background: count === n && !customCount ? activeTab.bg : '#111',
-                color: count === n && !customCount ? activeTab.color : '#444',
+                background: count === n && !customCount ? activeTab.bg : '#161616',
+                color: count === n && !customCount ? activeTab.color : '#666',
               }}
             >
               Top {n}
@@ -124,7 +124,7 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
               fontFamily: 'inherit', outline: 'none', textAlign: 'center',
             }}
           />
-          <span style={{ fontSize: '11px', color: '#333', marginLeft: '4px' }}>
+          <span style={{ fontSize: '11px', color: '#666', marginLeft: '4px' }}>
             Showing {Math.min(effectiveCount, total)} of {total} available
           </span>
         </div>
@@ -132,9 +132,9 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
         {/* Grid */}
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#444', fontSize: '13px' }}>Loading market data...</div>
+            <div style={{ textAlign: 'center', padding: '40px', color: '#777', fontSize: '13px' }}>Loading market data...</div>
           ) : rows.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#444', fontSize: '13px' }}>No data available — market may be closed</div>
+            <div style={{ textAlign: 'center', padding: '40px', color: '#777', fontSize: '13px' }}>No data available — market may be closed</div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px' }}>
               {rows.map((m, i) => {
@@ -156,9 +156,9 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
                     <div style={{ fontSize: '15px', fontWeight: 600, color: '#ccc', marginBottom: '4px' }}>
                       ${parseFloat(m.price).toFixed(2)}
                     </div>
-                    <div style={{ fontSize: '10px', color: '#444' }}>
+                    <div style={{ fontSize: '10px', color: '#777' }}>
                       {m.change_amount && (
-                        <span style={{ color: pos ? '#166534' : neg ? '#991b1b' : '#555' }}>
+                        <span style={{ color: pos ? '#4ade80' : neg ? '#f87171' : '#888' }}>
                           {pos && !m.change_amount?.startsWith('+') ? '+' : ''}{parseFloat(m.change_amount).toFixed(2)}{'  '}
                         </span>
                       )}
@@ -171,7 +171,7 @@ export default function MarketMovers({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div style={{ fontSize: '10px', color: '#222', textAlign: 'center', marginTop: '12px', flexShrink: 0 }}>
+        <div style={{ fontSize: '10px', color: '#555', textAlign: 'center', marginTop: '12px', flexShrink: 0 }}>
           Data: Alpha Vantage · Refreshes on open · Market hours only
         </div>
       </div>

@@ -84,7 +84,7 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '12px',
+          background: '#111', border: '1px solid #222', borderRadius: '12px',
           padding: '24px', width: '780px', maxWidth: '96vw', maxHeight: '90vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: '0 24px 80px rgba(0,0,0,0.85)',
@@ -94,7 +94,7 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: 700, color: '#e5e5e5', flex: 1 }}>🚀 IPO Calendar</div>
           {!loading && (
-            <div style={{ fontSize: '10px', color: '#333', marginRight: '12px' }}>
+            <div style={{ fontSize: '10px', color: '#777', marginRight: '12px' }}>
               {upcoming.length} upcoming · {formatMarketCap(totalValue)} total deal value
             </div>
           )}
@@ -110,10 +110,10 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
               style={{
                 padding: '4px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, letterSpacing: '0.04em',
-                background: filter === f ? '#1a1a1a' : 'transparent',
+                background: filter === f ? '#222' : 'transparent',
                 color: filter === f
                   ? (f === 'all' ? '#e5e5e5' : (STATUS_STYLE[f]?.color ?? '#e5e5e5'))
-                  : '#333',
+                  : '#666',
                 transition: 'all 0.15s',
               }}
             >
@@ -127,18 +127,18 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
           {Object.entries(STATUS_STYLE).filter(([k]) => k !== 'withdrawn').map(([, v]) => (
             <div key={v.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: v.color }} />
-              <span style={{ fontSize: '9px', color: '#333', letterSpacing: '0.05em' }}>{v.label}</span>
+              <span style={{ fontSize: '9px', color: '#777', letterSpacing: '0.05em' }}>{v.label}</span>
             </div>
           ))}
-          <div style={{ fontSize: '9px', color: '#222', marginLeft: 'auto' }}>Next 90 days · Finnhub</div>
+          <div style={{ fontSize: '9px', color: '#666', marginLeft: 'auto' }}>Next 90 days · Finnhub</div>
         </div>
 
         {/* List */}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>Loading IPO data...</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#777', fontSize: '13px' }}>Loading IPO data...</div>
           ) : filtered.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px', color: '#444', fontSize: '13px' }}>No IPOs found</div>
+            <div style={{ textAlign: 'center', padding: '60px', color: '#777', fontSize: '13px' }}>No IPOs found</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {sortedDates.map(date => {
@@ -153,9 +153,9 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
                     {/* Date header */}
                     <div style={{
                       fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em',
-                      color: isToday ? '#7ec8a0' : isPast ? '#222' : '#555',
+                      color: isToday ? '#7ec8a0' : isPast ? '#555' : '#aaa',
                       marginBottom: '8px', paddingBottom: '6px',
-                      borderBottom: '1px solid #111',
+                      borderBottom: '1px solid #222',
                     }}>
                       {dateLabel.toUpperCase()}
                       {isToday && <span style={{ marginLeft: '8px', fontSize: '9px', background: '#1a472a', color: '#7ec8a0', borderRadius: '4px', padding: '1px 6px' }}>TODAY</span>}
@@ -171,7 +171,7 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
                           <div
                             key={i}
                             style={{
-                              background: '#080808', border: `1px solid #151515`,
+                              background: '#141414', border: `1px solid #222`,
                               borderLeft: `3px solid ${st.color}`,
                               borderRadius: '7px', padding: '10px 14px',
                               display: 'grid',
@@ -185,30 +185,30 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
                               <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e5e5' }}>
                                 {ipo.symbol || '—'}
                               </div>
-                              <div style={{ fontSize: '10px', color: '#555', marginTop: '1px' }}>{ipo.name}</div>
-                              <div style={{ fontSize: '9px', color: '#2a2a2a', marginTop: '2px' }}>{ipo.exchange}</div>
+                              <div style={{ fontSize: '10px', color: '#888', marginTop: '1px' }}>{ipo.name}</div>
+                              <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>{ipo.exchange}</div>
                             </div>
 
                             {/* Price range */}
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '9px', color: '#2a2a2a', letterSpacing: '0.05em', marginBottom: '2px' }}>PRICE</div>
-                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#888', fontVariantNumeric: 'tabular-nums' }}>
+                              <div style={{ fontSize: '9px', color: '#666', letterSpacing: '0.05em', marginBottom: '2px' }}>PRICE</div>
+                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#bbb', fontVariantNumeric: 'tabular-nums' }}>
                                 {formatPrice(ipo.price)}
                               </div>
                             </div>
 
                             {/* Shares */}
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '9px', color: '#2a2a2a', letterSpacing: '0.05em', marginBottom: '2px' }}>SHARES</div>
-                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#666' }}>
+                              <div style={{ fontSize: '9px', color: '#666', letterSpacing: '0.05em', marginBottom: '2px' }}>SHARES</div>
+                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#999' }}>
                                 {formatShares(ipo.numberOfShares)}
                               </div>
                             </div>
 
                             {/* Est. deal size */}
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '9px', color: '#2a2a2a', letterSpacing: '0.05em', marginBottom: '2px' }}>DEAL SIZE</div>
-                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#666' }}>
+                              <div style={{ fontSize: '9px', color: '#666', letterSpacing: '0.05em', marginBottom: '2px' }}>DEAL SIZE</div>
+                              <div style={{ fontSize: '12px', fontWeight: 600, color: '#999' }}>
                                 {formatMarketCap(estCap)}
                               </div>
                             </div>
@@ -232,7 +232,7 @@ export default function IPOCalendar({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div style={{ fontSize: '9px', color: '#1a1a1a', textAlign: 'center', marginTop: '12px', flexShrink: 0 }}>
+        <div style={{ fontSize: '9px', color: '#555', textAlign: 'center', marginTop: '12px', flexShrink: 0 }}>
           IPO data from Finnhub · Updated hourly · Deal sizes are estimates based on price range midpoint
         </div>
       </div>
