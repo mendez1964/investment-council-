@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import PineScriptTab from '@/components/PineScriptTab'
 import WatchlistTab from '@/components/WatchlistTab'
+import EarningsCalendar from '@/components/EarningsCalendar'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -11,66 +12,66 @@ interface Message {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; prompt: string; needsTicker?: boolean }
+type SidebarItem = { label: string; prompt: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 const STOCKS_SECTIONS: SidebarSection[] = [
   {
+    id: 'analyze',
+    title: 'ANALYZE',
+    items: [
+      { label: 'Analyze a Stock / ETF', prompt: '', isAnalysis: 'stock' },
+    ],
+  },
+  {
     id: 'market',
     title: 'MARKET',
     items: [
-      { label: 'Pre-Market Briefing', prompt: `Give me today's pre-market briefing. Structure it exactly like this — do NOT give each council member their own section:
+      { label: 'Pre-Market Briefing', prompt: `Give me today's pre-market briefing.
+
+IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
+
+If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure — do NOT give each council member their own section:
 
 ## PRE-MARKET BRIEFING — [Today's Date]
 
 **1. MARKET SNAPSHOT**
-One table using the live data provided: SPY (S&P proxy), QQQ (Nasdaq proxy), DIA (Dow proxy), IWM (Russell 2000), Bitcoin, 2-Year Yield, 10-Year Yield, Fed Funds Rate. Show price, day change %, and one-word status (bullish/bearish/neutral). Note: we do not have futures or VIX in the live feed — use what is provided.
+One table using the live data provided. Columns: Instrument | Price | Change | Status. Include: SPY, QQQ, DIA, IWM, Bitcoin, 2-Year Yield, 10-Year Yield, Fed Funds Rate. For any missing: write "—" and move on. Do not explain each gap — just note at the bottom how many equity prices loaded.
 
-**2. OVERNIGHT & PRE-MARKET CATALYSTS**
-Bullet list: what happened overnight that matters — earnings, fed speakers, geopolitical, economic data released pre-market. Keep each bullet to one line.
+**2. MOVERS & WHAT THEY SIGNAL**
+Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. One sentence per bullet on what the name signals about market health. If movers data is missing, skip this section entirely.
 
-**3. ECONOMIC DATA DUE TODAY**
-Table: Time | Report | Prior | Estimate. Only scheduled releases for today.
+**3. COUNCIL CONSENSUS**
+One paragraph only. Synthesize Dalio, Tudor Jones, Livermore, Grantham, Roubini into ONE unified voice — no separate advisor sections. State the consensus in one sentence, then name the one key tension where they disagree.
 
-**4. WHAT THE MOVERS ARE SAYING**
-Top gainers, losers, most active — synthesized into 3-5 bullet points. What does the pattern mean? Strip out warrants and micro-caps, focus on what signals broad market health.
+**4. KEY LEVELS & GAME PLAN**
+- 4-5 key price levels to watch today, one line each
+- Bias: Bullish / Neutral / Cautious / Bearish + one sentence why
+- First 30 minutes: one thing to confirm before committing capital` },
+      { label: 'End of Day Summary', prompt: `Give me today's end-of-day market summary.
 
-**5. COUNCIL CONSENSUS VIEW**
-One synthesized paragraph (not separate advisor sections). Pull from Dalio, Tudor Jones, Livermore, Grantham, Roubini as relevant — but write it as ONE unified council voice. Where frameworks agree, state the consensus. Where they disagree, name the tension in one sentence.
+IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full summary. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have — yields, Bitcoin, movers, etc.]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
-**6. KEY LEVELS TO WATCH TODAY**
-Bullet list: 5-7 specific price levels with one-line explanation of why each matters today.
-
-**7. GAME PLAN**
-- Bias: Bullish / Neutral / Cautious / Bearish — and why in one sentence
-- First 30 minutes: what to watch before committing
-- Top 3 actions before the open` },
-      { label: 'End of Day Summary', prompt: `Give me today's end-of-day market summary. Structure it exactly like this — do NOT give each council member their own section:
+If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure — do NOT give each council member their own section:
 
 ## END-OF-DAY SUMMARY — [Today's Date]
 
 **1. MARKET CLOSE SNAPSHOT**
-One table using the live data provided: SPY, QQQ, DIA, IWM — price, day change %, volume. Also: Bitcoin price, 10-Year Yield, 2-Year Yield, Fed Funds Rate from the live feed. Note: we do not have VIX, DXY, or commodities in our live feed — use what is provided, flag what is missing.
+One table. Columns: Instrument | Price | Day Change % | Signal. Include: SPY, QQQ, DIA, IWM, Bitcoin, 10-Year Yield, 2-Year Yield, Fed Funds Rate. Write "—" for anything missing.
 
-**2. TODAY'S SECTOR SCORECARD**
-One table: each sector, up or down, relative strength vs S&P. Which sectors led, which lagged.
+**2. SECTOR SCORECARD**
+Use the LIVE SECTOR SCORECARD data provided. One table: Sector | ETF | Change % | Direction. Sort by performance — best to worst. Identify the top 2 leading sectors and bottom 2 lagging sectors in one sentence below the table. If sector data is missing from the feed, skip this section.
 
 **3. WHAT TODAY'S MOVERS TELL US**
-Top gainers, losers, most active — synthesized into 3-5 bullets. What is the market telling us through these names? Strip out noise (warrants, micro-caps). Focus on the signal names.
+Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. What is the market saying through the signal names only? If movers data is missing, skip this section entirely.
 
 **4. COUNCIL CONSENSUS — WHAT TODAY MEANT**
-One synthesized paragraph. Pull from all relevant frameworks but write as ONE unified council voice. Did the trend hold or break? Was today a signal or noise? Where do frameworks agree vs. disagree — one sentence on the tension.
+One paragraph only. ONE unified council voice — no separate advisor sections. Did the trend hold or break? Was today signal or noise? One sentence naming where frameworks agree, one sentence naming the key tension.
 
-**5. WHAT CHANGED TODAY**
-Bullet list: specific things that shifted — a level broken, a narrative confirmed, a risk that rose or fell. Only things that actually changed today vs. yesterday's view.
-
-**6. TONIGHT'S WATCHLIST**
-Table: Name | Why It Matters Tonight | What to Look For. Max 5 names.
-
-**7. SETUP FOR TOMORROW**
-- Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish
-- Key overnight events to watch (earnings after close, Asian markets, futures)
-- One thing that would change the view bullish, one thing that would change it bearish` },
+**5. WHAT CHANGED & SETUP FOR TOMORROW**
+- Bullet list: 3-5 things that actually shifted today vs. yesterday — levels broken, narratives confirmed, risks rising/falling
+- Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish + one sentence why
+- One thing that turns it bullish tomorrow, one thing that turns it bearish` },
       { label: 'Market Health', prompt: 'What is the current health of the market? Cover trend, breadth, and sentiment.' },
       { label: 'Sector Rotation', prompt: 'Which sectors are showing strength and which are showing weakness right now?' },
       { label: 'Macro Environment', prompt: 'Give me a macro environment check — rates, inflation, GDP, and what they mean for markets.' },
@@ -133,12 +134,20 @@ Table: Name | Why It Matters Tonight | What to Look For. Max 5 names.
       { label: '13F Holdings', prompt: 'Show me recent 13F hedge fund holdings for ', needsTicker: true },
       { label: 'SEC Filings', prompt: 'Show me the latest SEC filings for ', needsTicker: true },
       { label: 'Economic Data', prompt: 'Give me the latest economic data — fed rate, CPI, yield curve, unemployment, and GDP.' },
+      { label: 'Earnings Calendar', prompt: '', isCalendar: true },
       { label: 'Market Movers', prompt: 'What are the top market movers today — gainers, losers, and most active?' },
     ],
   },
 ]
 
 const CRYPTO_SECTIONS: SidebarSection[] = [
+  {
+    id: 'analyzecrypto',
+    title: 'ANALYZE',
+    items: [
+      { label: 'Analyze a Crypto', prompt: '', isAnalysis: 'crypto' },
+    ],
+  },
   {
     id: 'analysis',
     title: 'ANALYSIS',
@@ -203,11 +212,16 @@ export default function Home() {
   const [tickerPopup, setTickerPopup] = useState<{ promptPrefix: string; placeholder: string } | null>(null)
   const [tickerInput, setTickerInput] = useState('')
   const tickerInputRef = useRef<HTMLInputElement>(null)
+  const [showEarningsCalendar, setShowEarningsCalendar] = useState(false)
+  const [analysisPopup, setAnalysisPopup] = useState<'stock' | 'crypto' | null>(null)
+  const [analysisSymbol, setAnalysisSymbol] = useState('')
+  const [councilChimeIn, setCouncilChimeIn] = useState(false)
+  const analysisInputRef = useRef<HTMLInputElement>(null)
 
   // Sidebar state
   const [sidebarMode, setSidebarMode] = useState<'stocks' | 'crypto'>('stocks')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['market']))
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['analyze', 'market']))
 
   // Pine Script code coming back from chat → editor
   const [pendingPineCode, setPendingPineCode] = useState<string | null>(null)
@@ -246,7 +260,7 @@ export default function Home() {
   function switchSidebarMode(mode: 'stocks' | 'crypto') {
     setSidebarMode(mode)
     const sections = mode === 'stocks' ? STOCKS_SECTIONS : CRYPTO_SECTIONS
-    setExpandedSections(new Set([sections[0].id]))
+    setExpandedSections(new Set([sections[0].id, sections[1]?.id].filter(Boolean) as string[]))
   }
 
   function toggleSection(id: string) {
@@ -256,6 +270,80 @@ export default function Home() {
       else next.add(id)
       return next
     })
+  }
+
+  function newChat() {
+    setMessages([])
+    setInput('')
+    setActivePineScript(null)
+    setAnalysisPopup(null)
+    setTickerPopup(null)
+    pineCodeInjected.current = false
+  }
+
+  function buildAnalysisPrompt(symbol: string, type: 'stock' | 'crypto', withCouncil: boolean): string {
+    const s = symbol.toUpperCase()
+    if (type === 'stock') {
+      const base = `Give me a professional analysis of ${s}. No investment council frameworks — just what a professional trader or analyst needs to know.
+
+1. PRICE & MARKET DATA
+Current price, day change %, volume vs average, market cap, 52-week high/low. Use the live data provided.
+
+2. FUNDAMENTALS
+P/E ratio, EPS, revenue growth (YoY), gross margin, profit margin, debt/equity ratio, free cash flow. Flag anything that stands out — good or bad.
+
+3. VALUATION
+Is ${s} cheap, fair, or expensive vs its sector and its own historical average? Give a direct answer.
+
+4. TECHNICAL PICTURE
+Trend direction (above or below 200-day MA?), key support and resistance levels, momentum reading (RSI direction, MACD). Where is price in relation to its range?
+
+5. RECENT CATALYSTS
+Latest earnings result, any major news, insider buying or selling activity, analyst rating changes.
+
+6. KEY RISKS
+Top 3 risks that could hurt this stock in the next 3-6 months. Be specific.
+
+7. BOTTOM LINE
+One direct paragraph: what is the state of this stock right now? Is it worth attention or not?
+
+Be direct and factual. Use numbers. No fluff.`
+      if (!withCouncil) return base
+      return base + `\n\n---\n\n## COUNCIL VIEW\nNow have the Investment Council weigh in on ${s} — one synthesized paragraph applying the most relevant frameworks. Which council members have the strongest opinion here and why?`
+    } else {
+      const base = `Give me a professional crypto analysis of ${s}. No council frameworks — just what a pro crypto trader needs to know.
+
+1. PRICE & MARKET DATA
+Current price, 24h change %, volume, market cap, BTC dominance context. Use the live data provided.
+
+2. ON-CHAIN METRICS
+MVRV ratio, exchange net flows (accumulation or distribution?), active addresses, hash rate (if BTC). Use any on-chain data available.
+
+3. TECHNICAL PICTURE
+Trend direction, key support and resistance, momentum. Where is price relative to its recent range?
+
+4. RECENT CATALYSTS
+Key news, protocol updates, regulatory developments, whale activity.
+
+5. KEY RISKS
+Top 3 risks that could hurt ${s} in the near term. Be specific.
+
+6. BOTTOM LINE
+One direct paragraph: what is the state of ${s} right now?
+
+Be direct and factual. Use numbers.`
+      if (!withCouncil) return base
+      return base + `\n\n---\n\n## COUNCIL VIEW\nNow have the Crypto Council weigh in on ${s} — one synthesized paragraph from the most relevant specialists (Saylor, PlanB, Hayes, Raoul Pal, Vitalik as applicable).`
+    }
+  }
+
+  function submitAnalysisPopup() {
+    if (!analysisPopup || !analysisSymbol.trim()) return
+    const prompt = buildAnalysisPrompt(analysisSymbol.trim(), analysisPopup, councilChimeIn)
+    setAnalysisPopup(null)
+    setAnalysisSymbol('')
+    setActiveTab('chat')
+    setTimeout(() => sendMessageWithText(prompt), 50)
   }
 
   async function sendMessage() {
@@ -304,8 +392,17 @@ export default function Home() {
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string) {
-    if (needsTicker) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean) {
+    if (isCalendar) {
+      setShowEarningsCalendar(true)
+      return
+    }
+    if (isAnalysis) {
+      setAnalysisPopup(isAnalysis)
+      setAnalysisSymbol('')
+      setCouncilChimeIn(false)
+      setTimeout(() => analysisInputRef.current?.focus(), 50)
+    } else if (needsTicker) {
       setTickerPopup({ promptPrefix: prompt, placeholder: placeholder || 'Enter ticker or description...' })
       setTickerInput('')
       setTimeout(() => tickerInputRef.current?.focus(), 50)
@@ -423,6 +520,7 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      {showEarningsCalendar && <EarningsCalendar onClose={() => setShowEarningsCalendar(false)} />}
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{
@@ -447,6 +545,31 @@ export default function Home() {
             18 frameworks · Live market data
           </div>
         </div>
+
+        {/* New Chat button */}
+        {messages.length > 0 && (
+          <button
+            onClick={newChat}
+            title="Start a new chat"
+            style={{
+              marginLeft: '12px',
+              background: 'transparent',
+              border: '1px solid #1f1f1f',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              color: '#444',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              letterSpacing: '0.04em',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#333' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
+          >
+            + New Chat
+          </button>
+        )}
 
         {/* Cost counters */}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', alignItems: 'center' }}>
@@ -661,7 +784,7 @@ export default function Home() {
                           <button
                             key={item.label}
                             onClick={() => {
-                              handleToolbarSelect(item.prompt, item.needsTicker, item.label)
+                              handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar)
                               if (activeTab !== 'chat') setActiveTab('chat')
                             }}
                             disabled={isLoading}
@@ -901,6 +1024,57 @@ export default function Home() {
                   onClick={() => setActivePineScript(null)}
                   style={{ background: 'transparent', border: 'none', color: '#444', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
                 >×</button>
+              </div>
+            )}
+
+            {/* Analysis popup */}
+            {analysisPopup && (
+              <div style={{
+                marginBottom: '10px',
+                background: '#0d1f16', border: '1px solid #2d6a4f',
+                borderRadius: '10px', padding: '12px 14px',
+                display: 'flex', flexDirection: 'column', gap: '10px',
+              }}>
+                <div style={{ fontSize: '12px', color: '#7ec8a0', fontWeight: 600 }}>
+                  {analysisPopup === 'stock' ? '📈 Analyze a Stock or ETF' : '₿ Analyze a Crypto'}
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    ref={analysisInputRef}
+                    value={analysisSymbol}
+                    onChange={e => setAnalysisSymbol(e.target.value.toUpperCase())}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') submitAnalysisPopup()
+                      if (e.key === 'Escape') setAnalysisPopup(null)
+                    }}
+                    placeholder={analysisPopup === 'stock' ? 'e.g. AAPL, NVDA, SPY...' : 'e.g. BTC, ETH, SOL...'}
+                    style={{
+                      flex: 1, background: '#0a0a0a', border: '1px solid #1f1f1f',
+                      borderRadius: '6px', padding: '7px 10px',
+                      color: '#e5e5e5', fontSize: '14px', fontFamily: 'inherit',
+                      outline: 'none', letterSpacing: '0.05em',
+                    }}
+                  />
+                  <button
+                    onClick={submitAnalysisPopup}
+                    style={{ background: '#2d6a4f', border: 'none', borderRadius: '6px', padding: '7px 14px', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    Analyze
+                  </button>
+                  <button
+                    onClick={() => setAnalysisPopup(null)}
+                    style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '18px', cursor: 'pointer', padding: '0 4px' }}
+                  >×</button>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                  <input
+                    type="checkbox"
+                    checked={councilChimeIn}
+                    onChange={e => setCouncilChimeIn(e.target.checked)}
+                    style={{ accentColor: '#2d6a4f', width: '14px', height: '14px' }}
+                  />
+                  <span style={{ fontSize: '12px', color: '#555' }}>Have Council chime in after the analysis</span>
+                </label>
               </div>
             )}
 

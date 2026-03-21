@@ -1,7 +1,8 @@
 // Fetches live market data relevant to the user's message
 // and returns it as a formatted context block for Claude
 
-import { getStockQuote, getCompanyOverview, getTopMovers } from '@/lib/alpha-vantage'
+import { getTopMovers } from '@/lib/alpha-vantage'
+import { getQuote, getProfile, getMetrics, getEarningsCalendar, formatEarningsCalendar } from '@/lib/finnhub'
 import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth } from '@/lib/fred'
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
@@ -158,9 +159,17 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
   }
 
   const wantsBriefing = /pre.?market\s*briefing|end.?of.?day\s*(summary|briefing|report)|market\s*summary|market\s*briefing/i.test(msg)
+  const wantsEarnings = wantsBriefing || /earnings\s*calendar|earnings\s*this\s*week|earnings\s*today|upcoming\s*earnings|who.*reporting|what.*reporting|earnings\s*schedule/i.test(msg)
   const wantsEconomic = wantsBriefing || /fed\s*funds|interest\s*rate|federal\s*reserve|inflation|cpi|consumer\s*price|yield\s*curve|treasury|2.year|10.year|unemployment|jobless|\bgdp\b|gross\s*domestic|macro|economic/i.test(msg)
   const wantsMovers = wantsBriefing || /movers|gainers|losers|most\s*active|top\s*stocks|market\s*today|pre.?market|what.s moving|what is moving/i.test(msg)
   const wantsSEC = /10-?k|10-?q|annual\s*report|quarterly\s*report|sec\s*filing|insider\s*(buy|sell|transaction)|form\s*4|\b8-?k\b|material\s*event|13[fF]|hedge\s*fund\s*hold/i.test(msg)
+
+  const SECTOR_ETFS = ['XLK','XLF','XLE','XLV','XLI','XLY','XLP','XLU','XLRE','XLB','XLC']
+  const SECTOR_NAMES: Record<string, string> = {
+    XLK: 'Technology', XLF: 'Financials', XLE: 'Energy', XLV: 'Healthcare',
+    XLI: 'Industrials', XLY: 'Consumer Disc.', XLP: 'Consumer Staples',
+    XLU: 'Utilities', XLRE: 'Real Estate', XLB: 'Materials', XLC: 'Communication',
+  }
 
   // For briefings, always pull key market proxies: SPY, QQQ, DIA, IWM + Bitcoin
   const briefingTickers = wantsBriefing ? ['SPY', 'QQQ', 'DIA', 'IWM'] : []
@@ -174,37 +183,79 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
   const sections: string[] = []
   const tasks: Promise<void>[] = []
 
-  // ── Stock quotes & fundamentals ─────────────────────────────────────────────
+  // ── Stock quotes & fundamentals (Finnhub — 60 calls/min, no daily cap) ───────
   if (tickers.length > 0) {
     tasks.push(
       Promise.all(
         tickers.map(ticker =>
           Promise.all([
-            getStockQuote(ticker).catch(() => null),
-            getCompanyOverview(ticker).catch(() => null),
+            getQuote(ticker).catch(() => null),
+            getProfile(ticker).catch(() => null),
+            getMetrics(ticker).catch(() => null),
           ])
         )
       ).then(results => {
         const lines: string[] = []
-        results.forEach(([quote, overview], idx) => {
+        results.forEach(([quote, profile, metrics], idx) => {
           const ticker = tickers[idx]
-          if (quote && quote['05. price']) {
-            const price = parseFloat(quote['05. price']).toFixed(2)
-            const change = quote['09. change']
-            const changePct = quote['10. change percent']
-            const volume = parseInt(quote['06. volume']).toLocaleString()
-            const day = quote['07. latest trading day']
-            lines.push(`${ticker}: $${price}  |  Change: ${change} (${changePct})  |  Volume: ${volume}  |  Date: ${day}`)
+          if (quote && quote.c) {
+            const price = quote.c.toFixed(2)
+            const change = (quote.d ?? 0).toFixed(2)
+            const changePct = (quote.dp ?? 0).toFixed(2)
+            const high = quote.h?.toFixed(2)
+            const low = quote.l?.toFixed(2)
+            lines.push(`${ticker}: $${price}  |  Change: ${change > 0 ? '+' : ''}${change} (${changePct}%)  |  Day Range: $${low}–$${high}`)
           }
-          if (overview && overview.Name) {
-            lines.push(`  Company: ${overview.Name} | Sector: ${overview.Sector} | Market Cap: $${parseInt(overview.MarketCapitalization).toLocaleString()}`)
-            lines.push(`  P/E: ${overview.PERatio} | EPS: ${overview.EPS} | 52wk High: $${overview['52WeekHigh']} | 52wk Low: $${overview['52WeekLow']}`)
-            if (overview.Description) {
-              lines.push(`  Description: ${overview.Description.substring(0, 300)}...`)
+          if (profile && profile.name) {
+            const mktCap = profile.marketCapitalization ? `$${(profile.marketCapitalization * 1e6).toLocaleString()}` : '—'
+            lines.push(`  ${profile.name} | ${profile.finnhubIndustry ?? profile.gsector ?? '—'} | Market Cap: ${mktCap}`)
+          }
+          if (metrics) {
+            const pe = metrics['peBasicExclExtraTTM'] ?? metrics['peTTM'] ?? null
+            const eps = metrics['epsTTM'] ?? null
+            const high52 = metrics['52WeekHigh'] ?? null
+            const low52 = metrics['52WeekLow'] ?? null
+            if (pe || eps || high52) {
+              lines.push(`  P/E: ${pe?.toFixed(2) ?? '—'} | EPS: ${eps?.toFixed(2) ?? '—'} | 52wk: $${low52?.toFixed(2) ?? '—'}–$${high52?.toFixed(2) ?? '—'}`)
             }
           }
         })
-        if (lines.length > 0) sections.push(`LIVE STOCK DATA (Alpha Vantage — real-time):\n${lines.join('\n')}`)
+        if (lines.length > 0) sections.push(`LIVE STOCK DATA (Finnhub — real-time):\n${lines.join('\n')}`)
+      })
+    )
+  }
+
+  // ── Earnings calendar (briefings + earnings queries — Finnhub, cached 1hr) ───
+  if (wantsEarnings) {
+    tasks.push(
+      getEarningsCalendar(7).then(events => {
+        const formatted = formatEarningsCalendar(events)
+        if (formatted) sections.push(formatted)
+      }).catch(() => {})
+    )
+  }
+
+  // ── Sector ETF scorecard (briefings only — Finnhub, no daily cap) ────────────
+  if (wantsBriefing) {
+    tasks.push(
+      Promise.all(
+        SECTOR_ETFS.map(etf => getQuote(etf).catch(() => null))
+      ).then(results => {
+        console.log('[sectors] raw results:', JSON.stringify(results?.slice(0,2)))
+        const rows: string[] = []
+        results.forEach((q: any, i: number) => {
+          const etf = SECTOR_ETFS[i]
+          const name = SECTOR_NAMES[etf]
+          if (q != null && q.c != null && q.c > 0) {
+            const chg = (q.dp ?? 0).toFixed(2)
+            const dir = (q.dp ?? 0) > 0 ? '▲' : (q.dp ?? 0) < 0 ? '▼' : '—'
+            rows.push(`${name} (${etf}): ${dir} ${chg}%  |  $${q.c.toFixed(2)}`)
+          }
+        })
+        console.log('[sectors] rows built:', rows.length)
+        if (rows.length > 0) {
+          sections.push(`LIVE SECTOR SCORECARD (Finnhub):\n${rows.join('\n')}`)
+        }
       })
     )
   }

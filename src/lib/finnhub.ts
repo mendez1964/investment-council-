@@ -62,3 +62,54 @@ export async function getRecommendations(ticker: string) {
   if (!res.ok) throw new Error(`Finnhub recommendations failed for ${ticker}: ${res.status}`)
   return res.json()
 }
+
+// Earnings calendar — upcoming and recent earnings reports
+// Returns companies reporting earnings in the given date range
+export async function getEarningsCalendar(daysAhead = 7): Promise<EarningsEvent[]> {
+  const from = new Date().toISOString().split('T')[0]
+  const to = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const res = await fetch(
+    `${BASE}/calendar/earnings?from=${from}&to=${to}&token=${getKey()}`,
+    { next: { revalidate: 3600 } } // cache 1 hour
+  )
+  if (!res.ok) throw new Error(`Finnhub earnings calendar failed: ${res.status}`)
+  const data = await res.json()
+  return (data.earningsCalendar ?? []) as EarningsEvent[]
+}
+
+export interface EarningsEvent {
+  symbol: string
+  date: string
+  hour: 'bmo' | 'amc' | 'dmh' | string  // before market open, after market close, during hours
+  epsEstimate: number | null
+  epsActual: number | null
+  revenueEstimate: number | null
+  revenueActual: number | null
+  quarter: number
+  year: number
+}
+
+// Format earnings calendar for Claude context
+export function formatEarningsCalendar(events: EarningsEvent[]): string {
+  if (!events.length) return ''
+
+  // Filter to notable names only — skip tiny/unknown tickers
+  const byDate: Record<string, EarningsEvent[]> = {}
+  events.forEach(e => {
+    if (!byDate[e.date]) byDate[e.date] = []
+    byDate[e.date].push(e)
+  })
+
+  const lines: string[] = []
+  Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).forEach(([date, evts]) => {
+    const label = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+    const items = evts.slice(0, 20).map(e => {
+      const time = e.hour === 'bmo' ? 'BMO' : e.hour === 'amc' ? 'AMC' : e.hour === 'dmh' ? 'DMH' : e.hour?.toUpperCase() ?? '—'
+      const eps = e.epsEstimate != null ? ` | EPS est: $${e.epsEstimate.toFixed(2)}` : ''
+      return `  ${e.symbol} (${time})${eps}`
+    })
+    lines.push(`${label}:\n${items.join('\n')}`)
+  })
+
+  return `EARNINGS CALENDAR — Next ${Object.keys(byDate).length} days (Finnhub):\nBMO=Before Market Open  AMC=After Market Close  DMH=During Market Hours\n${lines.join('\n')}`
+}
