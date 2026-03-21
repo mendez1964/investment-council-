@@ -14,6 +14,8 @@ import NewsFeed from '@/components/NewsFeed'
 import ChartModal from '@/components/ChartModal'
 import EconomicCalendar from '@/components/EconomicCalendar'
 import PortfolioTab from '@/components/PortfolioTab'
+import Sidebar, { type SidebarItem as SidebarItemType } from '@/components/Sidebar'
+import { Menu } from 'lucide-react'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -256,7 +258,7 @@ export default function Home() {
 
   // Sidebar state
   const [sidebarMode, setSidebarMode] = useState<'stocks' | 'crypto'>('stocks')
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['analyze', 'market']))
 
   // Pine Script code coming back from chat → editor
@@ -587,9 +589,12 @@ Be direct and factual. Use numbers.`
   }
 
   const currentSections = sidebarMode === 'stocks' ? STOCKS_SECTIONS : CRYPTO_SECTIONS
-  const accentColor = sidebarMode === 'stocks' ? '#2d6a4f' : '#b45309'
-  const accentBg = sidebarMode === 'stocks' ? '#1a472a' : '#451a03'
-  const accentText = sidebarMode === 'stocks' ? '#7ec8a0' : '#fbbf24'
+
+  function handleSidebarItemClick(item: SidebarItemType) {
+    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns)
+    if (activeTab !== 'chat') setActiveTab('chat')
+    setSidebarMobileOpen(false)
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -610,13 +615,39 @@ Be direct and factual. Use numbers.`
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{
-        padding: '12px 24px',
+        padding: '12px 16px',
         borderBottom: '1px solid #1f1f1f',
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: '10px',
         flexShrink: 0,
       }}>
+        {/* Mobile hamburger */}
+        <button
+          id="mobile-hamburger"
+          onClick={() => setSidebarMobileOpen(true)}
+          title="Open menu"
+          style={{
+            display: 'none',
+            background: 'transparent',
+            border: '1px solid #1f1f1f',
+            borderRadius: '6px',
+            padding: '5px 7px',
+            color: '#555',
+            cursor: 'pointer',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <Menu size={16} />
+        </button>
+        <style>{`
+          @media (max-width: 767px) {
+            #mobile-hamburger { display: flex !important; }
+          }
+        `}</style>
+
         <div style={{
           width: '28px', height: '28px', borderRadius: '6px',
           background: 'linear-gradient(135deg, #1a472a, #2d6a4f)',
@@ -758,219 +789,18 @@ Be direct and factual. Use numbers.`
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* ── Left Sidebar ────────────────────────────────────────────── */}
-        {(activeTab === 'chat') && (
-          <div style={{
-            width: sidebarCollapsed ? '36px' : '252px',
-            minWidth: sidebarCollapsed ? '36px' : '252px',
-            borderRight: '1px solid #161616',
-            background: '#060606',
-            display: 'flex',
-            flexDirection: 'column',
-            transition: 'width 0.2s, min-width 0.2s',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}>
-
-            {/* Collapse toggle */}
-            <button
-              onClick={() => setSidebarCollapsed(c => !c)}
-              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                borderBottom: '1px solid #111',
-                color: '#2a2a2a',
-                cursor: 'pointer',
-                padding: '9px 12px',
-                fontSize: '13px',
-                flexShrink: 0,
-                fontFamily: 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: sidebarCollapsed ? 'center' : 'flex-end',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#555')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#2a2a2a')}
-            >
-              {sidebarCollapsed ? '›' : '‹'}
-            </button>
-
-            {!sidebarCollapsed && (
-              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingBottom: '16px' }}>
-
-                {/* Mode selector */}
-                <div style={{
-                  display: 'flex',
-                  margin: '10px 10px 8px',
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  border: '1px solid #1a1a1a',
-                  background: '#0a0a0a',
-                  flexShrink: 0,
-                }}>
-                  {(['stocks', 'crypto'] as const).map(mode => (
-                    <button
-                      key={mode}
-                      onClick={() => switchSidebarMode(mode)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 0',
-                        background: sidebarMode === mode ? (mode === 'stocks' ? '#1a472a' : '#451a03') : 'transparent',
-                        border: 'none',
-                        color: sidebarMode === mode ? (mode === 'stocks' ? '#7ec8a0' : '#fbbf24') : '#3a3a3a',
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        letterSpacing: '0.07em',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                        transition: 'all 0.15s',
-                        textTransform: 'uppercase',
-                      }}
-                    >
-                      {mode === 'stocks' ? 'Stocks' : 'Crypto'}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sections */}
-                {currentSections.map(section => {
-                  const isOpen = expandedSections.has(section.id)
-                  return (
-                  <div key={section.id} style={{ flexShrink: 0 }}>
-
-                    {/* Section header */}
-                    <button
-                      onClick={() => toggleSection(section.id)}
-                      style={{
-                        width: '100%',
-                        background: 'transparent',
-                        border: 'none',
-                        borderTop: '1px solid #111',
-                        padding: '10px 14px 8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        cursor: 'pointer',
-                        color: isOpen ? accentText : '#383838',
-                        fontSize: '10px',
-                        fontWeight: 800,
-                        letterSpacing: '0.13em',
-                        fontFamily: 'inherit',
-                        textAlign: 'left',
-                        textTransform: 'uppercase',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.color = '#888')}
-                      onMouseLeave={e => (e.currentTarget.style.color = isOpen ? accentText : '#383838')}
-                    >
-                      <span>{section.title}</span>
-                      <span style={{ fontSize: '10px', opacity: 0.4 }}>{isOpen ? '▾' : '▸'}</span>
-                    </button>
-
-                    {/* Section items */}
-                    {isOpen && (
-                      <div style={{ padding: '0 8px 10px' }}>
-                        {section.items.map(item => {
-                          const isFeature = !!(item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks || item.isIPO || item.isNews || item.isChart || item.isEconCalendar || item.isAnalysis || item.isCalculators || item.isPatterns)
-                          return (
-                          <button
-                            key={item.label}
-                            onClick={() => {
-                              handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns)
-                              if (activeTab !== 'chat') setActiveTab('chat')
-                            }}
-                            disabled={isLoading}
-                            style={{
-                              width: '100%',
-                              background: isFeature ? accentBg : 'transparent',
-                              border: isFeature ? `1px solid ${accentColor}22` : '1px solid transparent',
-                              borderRadius: '7px',
-                              padding: isFeature ? '7px 10px' : '5px 8px',
-                              marginBottom: isFeature ? '4px' : '1px',
-                              color: isFeature ? accentText : '#909090',
-                              fontSize: isFeature ? '12px' : '12px',
-                              fontWeight: isFeature ? 600 : 400,
-                              cursor: isLoading ? 'default' : 'pointer',
-                              textAlign: 'left',
-                              fontFamily: 'inherit',
-                              lineHeight: 1.35,
-                              transition: 'all 0.12s',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '7px',
-                            }}
-                            onMouseEnter={e => {
-                              if (!isLoading) {
-                                e.currentTarget.style.color = '#e5e5e5'
-                                e.currentTarget.style.background = isFeature ? accentColor : '#141414'
-                                e.currentTarget.style.borderColor = isFeature ? accentColor : 'transparent'
-                              }
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.color = isFeature ? accentText : '#909090'
-                              e.currentTarget.style.background = isFeature ? accentBg : 'transparent'
-                              e.currentTarget.style.borderColor = isFeature ? `${accentColor}22` : 'transparent'
-                            }}
-                          >
-                            {item.icon && (
-                              <span style={{ fontSize: '12px', flexShrink: 0, opacity: isFeature ? 1 : 0.6 }}>{item.icon}</span>
-                            )}
-                            <span>{item.label}</span>
-                          </button>
-                        )})}
-                      </div>
-                    )}
-                  </div>
-                )})}
-
-
-                <div style={{ flex: 1 }} />
-              </div>
-            )}
-
-            {/* Collapsed: vertical mode indicator */}
-            {sidebarCollapsed && (
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                paddingTop: '16px',
-                gap: '12px',
-              }}>
-                <div
-                  onClick={() => { switchSidebarMode('stocks'); setSidebarCollapsed(false) }}
-                  title="Stocks & Equities"
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    color: sidebarMode === 'stocks' ? '#7ec8a0' : '#2a2a2a',
-                    cursor: 'pointer',
-                    writingMode: 'vertical-rl',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  STOCKS
-                </div>
-                <div style={{ width: '1px', height: '16px', background: '#1a1a1a' }} />
-                <div
-                  onClick={() => { switchSidebarMode('crypto'); setSidebarCollapsed(false) }}
-                  title="Crypto"
-                  style={{
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    letterSpacing: '0.06em',
-                    color: sidebarMode === 'crypto' ? '#fbbf24' : '#2a2a2a',
-                    cursor: 'pointer',
-                    writingMode: 'vertical-rl',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  CRYPTO
-                </div>
-              </div>
-            )}
-          </div>
+        {activeTab === 'chat' && (
+          <Sidebar
+            mode={sidebarMode}
+            onModeChange={switchSidebarMode}
+            sections={currentSections}
+            expandedSections={expandedSections}
+            onToggleSection={toggleSection}
+            onItemClick={handleSidebarItemClick}
+            isLoading={isLoading}
+            mobileOpen={sidebarMobileOpen}
+            onMobileClose={() => setSidebarMobileOpen(false)}
+          />
         )}
 
         {/* ── Main Content ─────────────────────────────────────────────── */}
