@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     }
 
     // Block 3: live data + closing reminder — NOT cached (fresh every request)
-    const liveAndReminder = `${liveData}\n\nRemember: Always identify which framework you are drawing from. Always include risk considerations. Always end substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice.`
+    const liveAndReminder = `${liveData}\n\nRemember: Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.`
     systemBlocks.push({
       type: 'text',
       text: liveAndReminder,

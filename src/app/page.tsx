@@ -1,9 +1,19 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import MarkdownRenderer from '@/components/MarkdownRenderer'
 import PineScriptTab from '@/components/PineScriptTab'
 import WatchlistTab from '@/components/WatchlistTab'
 import EarningsCalendar from '@/components/EarningsCalendar'
+import MarketMovers from '@/components/MarketMovers'
+import FearGreedGauge from '@/components/FearGreedGauge'
+import AIPicks from '@/components/AIPicks'
+import IPOCalendar from '@/components/IPOCalendar'
+import NewsFeed from '@/components/NewsFeed'
+import ChartModal from '@/components/ChartModal'
+import EconomicCalendar from '@/components/EconomicCalendar'
+import PortfolioTab from '@/components/PortfolioTab'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -12,7 +22,7 @@ interface Message {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; prompt: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean }
+type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 const STOCKS_SECTIONS: SidebarSection[] = [
@@ -20,39 +30,39 @@ const STOCKS_SECTIONS: SidebarSection[] = [
     id: 'analyze',
     title: 'ANALYZE',
     items: [
-      { label: 'Analyze a Stock / ETF', prompt: '', isAnalysis: 'stock' },
+      { label: 'Analyze a Stock / ETF', icon: '🔍', prompt: '', isAnalysis: 'stock' },
     ],
   },
   {
     id: 'market',
     title: 'MARKET',
     items: [
-      { label: 'Pre-Market Briefing', prompt: `Give me today's pre-market briefing.
+      { label: 'Pre-Market Briefing', icon: '🌅', prompt: `Give me today's pre-market briefing.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
-If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure — do NOT give each council member their own section:
+If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure:
 
 ## PRE-MARKET BRIEFING — [Today's Date]
 
 **1. MARKET SNAPSHOT**
-One table using the live data provided. Columns: Instrument | Price | Change | Status. Include: SPY, QQQ, DIA, IWM, Bitcoin, 2-Year Yield, 10-Year Yield, Fed Funds Rate. For any missing: write "—" and move on. Do not explain each gap — just note at the bottom how many equity prices loaded.
+One table using the live data provided. Columns: Instrument | Price | Change | Status. Include: SPY, QQQ, DIA, IWM, Bitcoin, 2-Year Yield, 10-Year Yield, Fed Funds Rate. For any missing: write "—" and move on. Note at the bottom how many equity prices loaded.
 
-**2. MOVERS & WHAT THEY SIGNAL**
-Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. One sentence per bullet on what the name signals about market health. If movers data is missing, skip this section entirely.
+**2. SECTOR SCORECARD**
+Use the LIVE SECTOR SCORECARD data provided. One table: Sector | ETF | Price | Change %. Sort best to worst. If sector data is missing, skip this section.
 
-**3. COUNCIL CONSENSUS**
-One paragraph only. Synthesize Dalio, Tudor Jones, Livermore, Grantham, Roubini into ONE unified voice — no separate advisor sections. State the consensus in one sentence, then name the one key tension where they disagree.
+**3. MOVERS & WHAT THEY SIGNAL**
+Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. One sentence per bullet: what does this name signal about market conditions today? If movers data is missing, skip this section entirely.
 
 **4. KEY LEVELS & GAME PLAN**
 - 4-5 key price levels to watch today, one line each
-- Bias: Bullish / Neutral / Cautious / Bearish + one sentence why
+- Bias: Bullish / Neutral / Cautious / Bearish + one sentence of factual reasoning (data-based, not opinion)
 - First 30 minutes: one thing to confirm before committing capital` },
-      { label: 'End of Day Summary', prompt: `Give me today's end-of-day market summary.
+      { label: 'End of Day Summary', icon: '🌆', prompt: `Give me today's end-of-day market summary.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full summary. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have — yields, Bitcoin, movers, etc.]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
-If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure — do NOT give each council member their own section:
+If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure:
 
 ## END-OF-DAY SUMMARY — [Today's Date]
 
@@ -60,31 +70,30 @@ If we have at least 2 of SPY/QQQ/DIA/IWM prices, proceed with this structure —
 One table. Columns: Instrument | Price | Day Change % | Signal. Include: SPY, QQQ, DIA, IWM, Bitcoin, 10-Year Yield, 2-Year Yield, Fed Funds Rate. Write "—" for anything missing.
 
 **2. SECTOR SCORECARD**
-Use the LIVE SECTOR SCORECARD data provided. One table: Sector | ETF | Change % | Direction. Sort by performance — best to worst. Identify the top 2 leading sectors and bottom 2 lagging sectors in one sentence below the table. If sector data is missing from the feed, skip this section.
+Use the LIVE SECTOR SCORECARD data provided. One table: Sector | ETF | Change % | Direction. Sort by performance — best to worst. Note top 2 leading and bottom 2 lagging sectors. If sector data is missing from the feed, skip this section.
 
 **3. WHAT TODAY'S MOVERS TELL US**
-Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. What is the market saying through the signal names only? If movers data is missing, skip this section entirely.
+Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. One sentence per bullet: what does each name signal about what the market was focused on today? If movers data is missing, skip entirely.
 
-**4. COUNCIL CONSENSUS — WHAT TODAY MEANT**
-One paragraph only. ONE unified council voice — no separate advisor sections. Did the trend hold or break? Was today signal or noise? One sentence naming where frameworks agree, one sentence naming the key tension.
-
-**5. WHAT CHANGED & SETUP FOR TOMORROW**
-- Bullet list: 3-5 things that actually shifted today vs. yesterday — levels broken, narratives confirmed, risks rising/falling
-- Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish + one sentence why
-- One thing that turns it bullish tomorrow, one thing that turns it bearish` },
-      { label: 'Market Health', prompt: 'What is the current health of the market? Cover trend, breadth, and sentiment.' },
-      { label: 'Sector Rotation', prompt: 'Which sectors are showing strength and which are showing weakness right now?' },
-      { label: 'Macro Environment', prompt: 'Give me a macro environment check — rates, inflation, GDP, and what they mean for markets.' },
-      { label: 'Fear & Greed', prompt: 'What is the current market fear and greed status?' },
-      { label: 'Yield Curve', prompt: 'What does the current yield curve look like and what does it signal?' },
-      { label: 'Volatility Check', prompt: 'Assess current market volatility and what it means for positioning.' },
+**4. WHAT CHANGED & SETUP FOR TOMORROW**
+- 3-5 things that actually shifted today — levels broken, narratives confirmed, risks rising/falling
+- Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish + one factual sentence (data-based)
+- One specific thing that could turn it bullish tomorrow, one that could turn it bearish` },
+      { label: 'Market Health', icon: '❤️', prompt: 'Give me a professional market health assessment using the live data available. Cover: trend (SPY/QQQ above or below key MAs?), breadth signals, VIX level, and any notable divergences. Data and facts only — no opinions or advisor frameworks unless I ask.' },
+      { label: 'Sector Rotation', icon: '🔄', prompt: 'Using the live sector data available, show me which sectors are leading and lagging right now. One table: Sector | ETF | Change % | Direction. Then 3-4 factual bullets on what the rotation pattern suggests about current risk appetite. Data only.' },
+      { label: 'Macro Environment', icon: '🌐', prompt: 'Give me a current macro environment snapshot using the live data available. Cover: Fed Funds Rate, CPI trend, 2Y and 10Y yields, yield curve shape, GDP trend, unemployment. Format as a table, then 2-3 factual bullets on what the numbers indicate. No advisor frameworks unless I ask.' },
+      { label: 'Fear & Greed', icon: '😨', prompt: '', isFearGreed: true },
+      { label: 'Yield Curve', icon: '〰️', prompt: 'Give me the current yield curve snapshot using live data. Show key rates in a table, note whether the curve is normal, flat, or inverted, and what the current shape has historically preceded. Facts only.' },
+      { label: 'Volatility Check', icon: '⚡', prompt: 'Give me a current volatility assessment using live data. Cover: VIX level and context (where is it vs 12-month range?), any notable options flow signals, and what the current vol regime means for position sizing. Data first.' },
+      { label: 'Economic Calendar', icon: '📅', prompt: '', isEconCalendar: true },
+      { label: 'News Feed', icon: '📰', prompt: '', isNews: true },
     ],
   },
   {
     id: 'scans',
     title: 'RUN A SCAN',
     items: [
-      { label: 'Full Council Scan', prompt: 'Run the full council scan' },
+      { label: 'Full Council Scan', icon: '⚙️', prompt: 'Run the full council scan' },
       { label: 'Tudor Jones', prompt: 'Run the Tudor Jones scan' },
       { label: 'Livermore', prompt: 'Run the Livermore scan' },
       { label: 'Buffett', prompt: 'Run the Buffett scan' },
@@ -100,7 +109,7 @@ One paragraph only. ONE unified council voice — no separate advisor sections. 
     id: 'council',
     title: 'ASK THE COUNCIL',
     items: [
-      { label: 'Full Council View', prompt: 'Give me the full council view on the current market.' },
+      { label: 'Full Council View', icon: '🏛️', prompt: 'Give me the full council view on the current market.' },
       { label: 'Buffett', prompt: 'What would Buffett say about the market right now?' },
       { label: 'Dalio', prompt: 'What would Dalio say about the market right now?' },
       { label: 'Soros', prompt: 'What would Soros say about the market right now?' },
@@ -118,24 +127,41 @@ One paragraph only. ONE unified council voice — no separate advisor sections. 
     id: 'tools',
     title: 'TRADE TOOLS',
     items: [
-      { label: 'Analyze a Setup', prompt: 'Analyze this trade setup for ', needsTicker: true },
-      { label: 'Position Sizing', prompt: 'Help me calculate position size. My account is $', needsTicker: true },
-      { label: 'Risk Assessment', prompt: 'Give me a full risk assessment for ', needsTicker: true },
-      { label: 'Entry / Stop / Target', prompt: 'Help me define entry, stop, and target for ', needsTicker: true },
-      { label: 'Hold or Cut', prompt: 'Help me decide whether to hold or cut my position in ', needsTicker: true },
+      { label: 'Analyze a Setup', icon: '🔬', prompt: 'Analyze this trade setup for ', needsTicker: true },
+      { label: 'Position Sizing', icon: '💰', prompt: 'Help me calculate position size. Walk me through the math — account size, risk per trade %, entry and stop levels. My account is $', needsTicker: true },
+      { label: 'Risk Assessment', icon: '⚠️', prompt: 'Give me a professional risk assessment for ', needsTicker: true },
+      { label: 'Entry / Stop / Target', icon: '🎯', prompt: 'Help me define entry, stop, and target levels for ', needsTicker: true },
+      { label: 'Hold or Cut', icon: '✂️', prompt: 'Help me think through whether to hold or cut my position in ', needsTicker: true },
     ],
   },
   {
     id: 'data',
     title: 'GET DATA',
     items: [
-      { label: 'Stock Quote', prompt: 'Get me the current stock quote and fundamentals for ', needsTicker: true },
-      { label: 'Insider Transactions', prompt: 'Show me recent insider transactions for ', needsTicker: true },
-      { label: '13F Holdings', prompt: 'Show me recent 13F hedge fund holdings for ', needsTicker: true },
-      { label: 'SEC Filings', prompt: 'Show me the latest SEC filings for ', needsTicker: true },
-      { label: 'Economic Data', prompt: 'Give me the latest economic data — fed rate, CPI, yield curve, unemployment, and GDP.' },
-      { label: 'Earnings Calendar', prompt: '', isCalendar: true },
-      { label: 'Market Movers', prompt: 'What are the top market movers today — gainers, losers, and most active?' },
+      { label: 'Stock Quote', icon: '💹', prompt: 'Get me the current stock quote and fundamentals for ', needsTicker: true },
+      { label: 'Insider Transactions', icon: '👤', prompt: 'Show me recent insider transactions for ', needsTicker: true },
+      { label: '13F Holdings', icon: '🏛️', prompt: 'Show me recent 13F hedge fund holdings for ', needsTicker: true },
+      { label: 'SEC Filings', icon: '📄', prompt: 'Show me the latest SEC filings for ', needsTicker: true },
+      { label: 'Economic Data', icon: '📊', prompt: 'Give me the latest economic data — fed rate, CPI, yield curve, unemployment, and GDP.' },
+      { label: 'Earnings Calendar', icon: '📅', prompt: '', isCalendar: true },
+      { label: 'IPO Calendar', icon: '🚀', prompt: '', isIPO: true },
+      { label: 'Market Movers', icon: '⚡', prompt: '', isMovers: true },
+      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true },
+      { label: 'Chart a Ticker', icon: '📈', prompt: '', isChart: true },
+    ],
+  },
+  {
+    id: 'calculators',
+    title: 'CALCULATORS',
+    items: [
+      { label: 'Financial Calculators', icon: '🧮', prompt: '', isCalculators: true },
+    ],
+  },
+  {
+    id: 'technical',
+    title: 'TECHNICAL ANALYSIS',
+    items: [
+      { label: 'Candlestick Patterns', icon: '📊', prompt: '', isPatterns: true },
     ],
   },
 ]
@@ -145,29 +171,29 @@ const CRYPTO_SECTIONS: SidebarSection[] = [
     id: 'analyzecrypto',
     title: 'ANALYZE',
     items: [
-      { label: 'Analyze a Crypto', prompt: '', isAnalysis: 'crypto' },
+      { label: 'Analyze a Crypto', icon: '🔍', prompt: '', isAnalysis: 'crypto' },
     ],
   },
   {
     id: 'analysis',
     title: 'ANALYSIS',
     items: [
-      { label: 'Full Crypto Council', prompt: 'Give me the full crypto council view right now. What do Saylor, PlanB, Raoul Pal, Hayes, Vitalik, Cathie Wood, Andreas, and Hoskinson all say about the current crypto market?' },
-      { label: 'Bitcoin Deep Dive', prompt: 'Give me a full Bitcoin analysis right now using all relevant frameworks — Saylor, PlanB, Andreas, Raoul Pal, and Hayes.' },
-      { label: 'Ethereum & DeFi', prompt: 'Give me a full Ethereum and DeFi analysis from Vitalik, Raoul Pal, and Cathie Wood perspectives. Include Layer 2 ecosystem health and DeFi TVL context.' },
-      { label: 'Cycle Position', prompt: 'Where are we in the Bitcoin halving cycle right now? Use PlanB Stock-to-Flow, MVRV context, halving timing, and Raoul Pal macro framework to assess current cycle position.' },
-      { label: 'On-Chain Health', prompt: 'Give me a full on-chain health check for Bitcoin right now using the PlanB and Andreas frameworks. Cover MVRV, realized price, exchange reserves, long-term holders, hash rate, and what it all means.' },
-      { label: 'Derivatives Positioning', prompt: 'What does current Bitcoin derivatives positioning look like? Apply Arthur Hayes framework — check funding rates, open interest, leverage risk, and liquidation level analysis.' },
-      { label: 'Macro Crypto View', prompt: 'What is the current macro environment saying about crypto? Apply Raoul Pal everything code — check global M2, DXY, ISM PMI, yen carry trade. Is macro favorable or unfavorable for crypto right now?' },
-      { label: 'Altcoin Season Check', prompt: 'Is altcoin season here, ending, or not started? Check BTC dominance, ETH/BTC ratio, funding rates, and apply Arthur Hayes altcoin season mechanics framework.' },
-      { label: 'Institutional Flow', prompt: 'What does institutional Bitcoin adoption look like right now? Apply Saylor framework — check ETF flow trends, exchange outflows, corporate treasury activity, and what it signals.' },
+      { label: 'Full Crypto Council', icon: '🏛️', prompt: 'Give me the full crypto council view right now. What do Saylor, PlanB, Raoul Pal, Hayes, Vitalik, Cathie Wood, Andreas, and Hoskinson all say about the current crypto market?' },
+      { label: 'Bitcoin Deep Dive', icon: '₿', prompt: 'Give me a full Bitcoin analysis right now using all relevant frameworks — Saylor, PlanB, Andreas, Raoul Pal, and Hayes.' },
+      { label: 'Ethereum & DeFi', icon: '⟠', prompt: 'Give me a full Ethereum and DeFi analysis from Vitalik, Raoul Pal, and Cathie Wood perspectives. Include Layer 2 ecosystem health and DeFi TVL context.' },
+      { label: 'Cycle Position', icon: '🔄', prompt: 'Where are we in the Bitcoin halving cycle right now? Use PlanB Stock-to-Flow, MVRV context, halving timing, and Raoul Pal macro framework to assess current cycle position.' },
+      { label: 'On-Chain Health', icon: '🔗', prompt: 'Give me a full on-chain health check for Bitcoin right now using the PlanB and Andreas frameworks. Cover MVRV, realized price, exchange reserves, long-term holders, hash rate, and what it all means.' },
+      { label: 'Derivatives Positioning', icon: '📐', prompt: 'What does current Bitcoin derivatives positioning look like? Apply Arthur Hayes framework — check funding rates, open interest, leverage risk, and liquidation level analysis.' },
+      { label: 'Macro Crypto View', icon: '🌐', prompt: 'What is the current macro environment saying about crypto? Apply Raoul Pal everything code — check global M2, DXY, ISM PMI, yen carry trade. Is macro favorable or unfavorable for crypto right now?' },
+      { label: 'Altcoin Season', icon: '🌊', prompt: 'Is altcoin season here, ending, or not started? Check BTC dominance, ETH/BTC ratio, funding rates, and apply Arthur Hayes altcoin season mechanics framework.' },
+      { label: 'Institutional Flow', icon: '🏦', prompt: 'What does institutional Bitcoin adoption look like right now? Apply Saylor framework — check ETF flow trends, exchange outflows, corporate treasury activity, and what it signals.' },
     ],
   },
   {
     id: 'cryptoscans',
     title: 'RUN A SCAN',
     items: [
-      { label: 'Bitcoin Cycle Scan', prompt: 'Run a Bitcoin cycle scan. Apply PlanB framework — assess MVRV ratio position, distance from Stock-to-Flow model, days since last halving, realized price distance, and what phase of the cycle we are in.' },
+      { label: 'Bitcoin Cycle Scan', icon: '⚙️', prompt: 'Run a Bitcoin cycle scan. Apply PlanB framework — assess MVRV ratio position, distance from Stock-to-Flow model, days since last halving, realized price distance, and what phase of the cycle we are in.' },
       { label: 'Macro Crypto Scan', prompt: 'Run a macro crypto scan using Raoul Pal framework. Assess global M2 trend, DXY direction, ISM PMI cycle position, Fed liquidity conditions, and yen carry trade status. Is the macro environment favorable or unfavorable for crypto?' },
       { label: 'Derivatives Scan', prompt: 'Run a derivatives positioning scan using Arthur Hayes framework. Check Bitcoin and Ethereum funding rates, open interest trend, leverage risk, basis in futures markets. Are markets overleveraged long, overleveraged short, or neutral?' },
       { label: 'On-Chain Scan', prompt: 'Run an on-chain health scan for Bitcoin. Check active address growth, new address growth, long-term holder accumulation vs distribution, miner selling pressure, exchange reserve trend. Is the network growing, stable, or contracting?' },
@@ -193,17 +219,19 @@ const CRYPTO_SECTIONS: SidebarSection[] = [
     id: 'cryptodata',
     title: 'GET DATA',
     items: [
-      { label: 'Crypto Prices', prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
-      { label: 'Fear & Greed Index', prompt: 'What is the current crypto Fear and Greed Index and what does it mean for market sentiment?' },
+      { label: 'Crypto Prices', icon: '💹', prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
+      { label: 'Fear & Greed', icon: '😨', prompt: '', isFearGreed: true },
+      { label: 'Crypto News', icon: '📰', prompt: '', isNews: true },
     ],
   },
 ]
 
 export default function Home() {
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'chat' | 'pine' | 'watchlist'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'pine' | 'watchlist' | 'portfolio' | 'training'>('chat')
   const [unreadAlerts, setUnreadAlerts] = useState(0)
   const [activePineScript, setActivePineScript] = useState<{ name: string; code: string } | null>(null)
   const pineCodeInjected = useRef(false)
@@ -213,6 +241,14 @@ export default function Home() {
   const [tickerInput, setTickerInput] = useState('')
   const tickerInputRef = useRef<HTMLInputElement>(null)
   const [showEarningsCalendar, setShowEarningsCalendar] = useState(false)
+  const [showMovers, setShowMovers] = useState(false)
+  const [showFearGreed, setShowFearGreed] = useState(false)
+  const [showAIPicks, setShowAIPicks] = useState(false)
+  const [showIPO, setShowIPO] = useState(false)
+  const [showNews, setShowNews] = useState(false)
+  const [showChart, setShowChart] = useState(false)
+  const [chartTicker, setChartTicker] = useState('')
+  const [showEconCalendar, setShowEconCalendar] = useState(false)
   const [analysisPopup, setAnalysisPopup] = useState<'stock' | 'crypto' | null>(null)
   const [analysisSymbol, setAnalysisSymbol] = useState('')
   const [councilChimeIn, setCouncilChimeIn] = useState(false)
@@ -392,9 +428,46 @@ Be direct and factual. Use numbers.`
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean) {
     if (isCalendar) {
       setShowEarningsCalendar(true)
+      return
+    }
+    if (isMovers) {
+      router.push('/movers')
+      return
+    }
+    if (isFearGreed) {
+      router.push('/fear-greed')
+      return
+    }
+    if (isAIPicks) {
+      router.push('/ai-picks')
+      return
+    }
+    if (isIPO) {
+      router.push('/ipo')
+      return
+    }
+    if (isNews) {
+      router.push('/news')
+      return
+    }
+    if (isEconCalendar) {
+      router.push('/economic-calendar')
+      return
+    }
+    if (isCalculators) {
+      router.push('/calculators')
+      return
+    }
+    if (isPatterns) {
+      router.push('/patterns')
+      return
+    }
+    if (isChart) {
+      setChartTicker('')
+      setShowChart(true)
       return
     }
     if (isAnalysis) {
@@ -521,6 +594,19 @@ Be direct and factual. Use numbers.`
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {showEarningsCalendar && <EarningsCalendar onClose={() => setShowEarningsCalendar(false)} />}
+      {showMovers && <MarketMovers onClose={() => setShowMovers(false)} />}
+      {showFearGreed && <FearGreedGauge onClose={() => setShowFearGreed(false)} />}
+      {showAIPicks && <AIPicks onClose={() => setShowAIPicks(false)} />}
+      {showIPO && <IPOCalendar onClose={() => setShowIPO(false)} />}
+      {showNews && <NewsFeed onClose={() => setShowNews(false)} />}
+      {showEconCalendar && <EconomicCalendar onClose={() => setShowEconCalendar(false)} />}
+      {showChart && (
+        <ChartModal
+          ticker={chartTicker || 'SPY'}
+          isCrypto={sidebarMode === 'crypto'}
+          onClose={() => setShowChart(false)}
+        />
+      )}
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{
@@ -628,10 +714,13 @@ Be direct and factual. Use numbers.`
             { id: 'chat', label: '💬 Council Chat' },
             { id: 'pine', label: '📈 Pine Script' },
             { id: 'watchlist', label: '👁 Watchlist' },
+            { id: 'portfolio', label: '💼 Portfolio' },
+            { id: 'training', label: '📚 Training' },
           ] as const).map(tab => (
             <button
               key={tab.id}
               onClick={() => {
+                if (tab.id === 'training') { router.push('/training'); return }
                 setActiveTab(tab.id)
                 if (tab.id === 'watchlist') setUnreadAlerts(0)
               }}
@@ -669,12 +758,12 @@ Be direct and factual. Use numbers.`
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* ── Left Sidebar ────────────────────────────────────────────── */}
-        {activeTab === 'chat' && (
+        {(activeTab === 'chat') && (
           <div style={{
-            width: sidebarCollapsed ? '36px' : '210px',
-            minWidth: sidebarCollapsed ? '36px' : '210px',
-            borderRight: '1px solid #1a1a1a',
-            background: '#080808',
+            width: sidebarCollapsed ? '36px' : '252px',
+            minWidth: sidebarCollapsed ? '36px' : '252px',
+            borderRight: '1px solid #161616',
+            background: '#060606',
             display: 'flex',
             flexDirection: 'column',
             transition: 'width 0.2s, min-width 0.2s',
@@ -689,34 +778,34 @@ Be direct and factual. Use numbers.`
               style={{
                 background: 'transparent',
                 border: 'none',
-                borderBottom: '1px solid #1a1a1a',
-                color: '#333',
+                borderBottom: '1px solid #111',
+                color: '#2a2a2a',
                 cursor: 'pointer',
-                padding: '10px',
-                fontSize: '14px',
-                textAlign: 'right',
+                padding: '9px 12px',
+                fontSize: '13px',
                 flexShrink: 0,
                 fontFamily: 'inherit',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: sidebarCollapsed ? 'center' : 'flex-end',
               }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#666')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#333')}
+              onMouseEnter={e => (e.currentTarget.style.color = '#555')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#2a2a2a')}
             >
               {sidebarCollapsed ? '›' : '‹'}
             </button>
 
             {!sidebarCollapsed && (
-              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingBottom: '16px' }}>
 
                 {/* Mode selector */}
                 <div style={{
                   display: 'flex',
-                  margin: '10px 10px 6px',
+                  margin: '10px 10px 8px',
                   borderRadius: '8px',
                   overflow: 'hidden',
-                  border: '1px solid #1f1f1f',
+                  border: '1px solid #1a1a1a',
+                  background: '#0a0a0a',
                   flexShrink: 0,
                 }}>
                   {(['stocks', 'crypto'] as const).map(mode => (
@@ -725,13 +814,13 @@ Be direct and factual. Use numbers.`
                       onClick={() => switchSidebarMode(mode)}
                       style={{
                         flex: 1,
-                        padding: '7px 0',
+                        padding: '8px 0',
                         background: sidebarMode === mode ? (mode === 'stocks' ? '#1a472a' : '#451a03') : 'transparent',
                         border: 'none',
-                        color: sidebarMode === mode ? (mode === 'stocks' ? '#7ec8a0' : '#fbbf24') : '#444',
-                        fontSize: '10px',
+                        color: sidebarMode === mode ? (mode === 'stocks' ? '#7ec8a0' : '#fbbf24') : '#3a3a3a',
+                        fontSize: '11px',
                         fontWeight: 700,
-                        letterSpacing: '0.08em',
+                        letterSpacing: '0.07em',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
                         transition: 'all 0.15s',
@@ -744,7 +833,9 @@ Be direct and factual. Use numbers.`
                 </div>
 
                 {/* Sections */}
-                {currentSections.map(section => (
+                {currentSections.map(section => {
+                  const isOpen = expandedSections.has(section.id)
+                  return (
                   <div key={section.id} style={{ flexShrink: 0 }}>
 
                     {/* Section header */}
@@ -755,73 +846,82 @@ Be direct and factual. Use numbers.`
                         background: 'transparent',
                         border: 'none',
                         borderTop: '1px solid #111',
-                        padding: '8px 12px',
+                        padding: '10px 14px 8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         cursor: 'pointer',
-                        color: expandedSections.has(section.id) ? accentText : '#444',
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        letterSpacing: '0.1em',
+                        color: isOpen ? accentText : '#383838',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        letterSpacing: '0.13em',
                         fontFamily: 'inherit',
                         textAlign: 'left',
-                        transition: 'color 0.15s',
+                        textTransform: 'uppercase',
                       }}
                       onMouseEnter={e => (e.currentTarget.style.color = '#888')}
-                      onMouseLeave={e => (e.currentTarget.style.color = expandedSections.has(section.id) ? accentText : '#444')}
+                      onMouseLeave={e => (e.currentTarget.style.color = isOpen ? accentText : '#383838')}
                     >
                       <span>{section.title}</span>
-                      <span style={{ fontSize: '10px', opacity: 0.6 }}>
-                        {expandedSections.has(section.id) ? '▾' : '▸'}
-                      </span>
+                      <span style={{ fontSize: '10px', opacity: 0.4 }}>{isOpen ? '▾' : '▸'}</span>
                     </button>
 
                     {/* Section items */}
-                    {expandedSections.has(section.id) && (
-                      <div style={{ paddingBottom: '4px' }}>
-                        {section.items.map(item => (
+                    {isOpen && (
+                      <div style={{ padding: '0 8px 10px' }}>
+                        {section.items.map(item => {
+                          const isFeature = !!(item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks || item.isIPO || item.isNews || item.isChart || item.isEconCalendar || item.isAnalysis || item.isCalculators || item.isPatterns)
+                          return (
                           <button
                             key={item.label}
                             onClick={() => {
-                              handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar)
+                              handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns)
                               if (activeTab !== 'chat') setActiveTab('chat')
                             }}
                             disabled={isLoading}
                             style={{
                               width: '100%',
-                              background: 'transparent',
-                              border: 'none',
-                              padding: '5px 14px 5px 16px',
-                              color: '#555',
-                              fontSize: '12px',
+                              background: isFeature ? accentBg : 'transparent',
+                              border: isFeature ? `1px solid ${accentColor}22` : '1px solid transparent',
+                              borderRadius: '7px',
+                              padding: isFeature ? '7px 10px' : '5px 8px',
+                              marginBottom: isFeature ? '4px' : '1px',
+                              color: isFeature ? accentText : '#909090',
+                              fontSize: isFeature ? '12px' : '12px',
+                              fontWeight: isFeature ? 600 : 400,
                               cursor: isLoading ? 'default' : 'pointer',
                               textAlign: 'left',
                               fontFamily: 'inherit',
-                              lineHeight: 1.4,
-                              transition: 'color 0.1s, background 0.1s',
-                              borderLeft: `2px solid transparent`,
+                              lineHeight: 1.35,
+                              transition: 'all 0.12s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '7px',
                             }}
                             onMouseEnter={e => {
                               if (!isLoading) {
-                                e.currentTarget.style.color = '#ccc'
-                                e.currentTarget.style.background = '#111'
-                                e.currentTarget.style.borderLeftColor = accentColor
+                                e.currentTarget.style.color = '#e5e5e5'
+                                e.currentTarget.style.background = isFeature ? accentColor : '#141414'
+                                e.currentTarget.style.borderColor = isFeature ? accentColor : 'transparent'
                               }
                             }}
                             onMouseLeave={e => {
-                              e.currentTarget.style.color = '#555'
-                              e.currentTarget.style.background = 'transparent'
-                              e.currentTarget.style.borderLeftColor = 'transparent'
+                              e.currentTarget.style.color = isFeature ? accentText : '#909090'
+                              e.currentTarget.style.background = isFeature ? accentBg : 'transparent'
+                              e.currentTarget.style.borderColor = isFeature ? `${accentColor}22` : 'transparent'
                             }}
                           >
-                            {item.label}
+                            {item.icon && (
+                              <span style={{ fontSize: '12px', flexShrink: 0, opacity: isFeature ? 1 : 0.6 }}>{item.icon}</span>
+                            )}
+                            <span>{item.label}</span>
                           </button>
-                        ))}
+                        )})}
                       </div>
                     )}
                   </div>
-                ))}
+                )})}
+
 
                 <div style={{ flex: 1 }} />
               </div>
@@ -898,6 +998,11 @@ Be direct and factual. Use numbers.`
                 onSwitchToChat={() => setActiveTab('chat')}
               />
             </div>
+
+          {/* Portfolio Tab */}
+          <div style={{ flex: 1, overflow: 'hidden', display: activeTab === 'portfolio' ? 'flex' : 'none', flexDirection: 'column' }}>
+            <PortfolioTab onSendMessage={sendMessageWithText} onSwitchToChat={() => setActiveTab('chat')} />
+          </div>
 
           {/* ── Chat Messages ──────────────────────────────────────────── */}
           <div style={{
@@ -984,16 +1089,18 @@ Be direct and factual. Use numbers.`
                         </button>
                       </div>
                     )}
-                    <div style={{
-                      fontSize: '14px', lineHeight: 1.75,
-                      color: msg.role === 'user' ? '#bbb' : '#d4d4d4',
-                      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                    }}>
-                      {msg.content}
-                      {isLoading && i === messages.length - 1 && msg.role === 'assistant' && msg.content === '' && (
-                        <span style={{ display: 'inline-block', width: '8px', height: '14px', background: '#2d6a4f', borderRadius: '2px', animation: 'blink 1s step-end infinite' }} />
-                      )}
-                    </div>
+                    {msg.role === 'user' ? (
+                      <div style={{ fontSize: '14px', lineHeight: 1.75, color: '#bbb', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
+                        <MarkdownRenderer
+                          content={msg.content}
+                          isStreaming={isLoading && i === messages.length - 1 && msg.content === ''}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))

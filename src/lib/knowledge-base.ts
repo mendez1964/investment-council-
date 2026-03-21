@@ -443,11 +443,9 @@ export function getRelevantKnowledge(userMessage: string): string {
     }
   }
 
-  // Always load a small core context if nothing specific matched
+  // If nothing matched, load only risk management as a lightweight default
+  // Do NOT auto-load council framework files — those are only loaded when explicitly requested
   if (filesToLoad.size === 0) {
-    // General question - load high-level framework summaries
-    filesToLoad.add('investors/buffett-philosophy.md')
-    filesToLoad.add('investors/dalio-philosophy.md')
     filesToLoad.add('risk/risk-management-rules.md')
   }
 
