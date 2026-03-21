@@ -15,10 +15,10 @@ interface EconEvent {
   unit: string
 }
 
-const IMPACT_STYLE: Record<string, { color: string; bg: string; dot: string }> = {
-  high:   { color: '#f87171', bg: '#2e0505', dot: '#f87171' },
-  medium: { color: '#fbbf24', bg: '#2d1f00', dot: '#fbbf24' },
-  low:    { color: '#666',    bg: '#1a1a1a', dot: '#555' },
+const IMPACT_STYLE: Record<string, { color: string; bg: string }> = {
+  high:   { color: '#dc2626', bg: '#fee2e2' },
+  medium: { color: '#d97706', bg: '#fef3c7' },
+  low:    { color: '#6b7280', bg: '#f3f4f6' },
 }
 
 const KEY_EVENTS = ['fomc', 'federal reserve', 'cpi', 'nonfarm', 'gdp', 'unemployment', 'pce', 'ppi', 'retail sales', 'ism', 'fed funds', 'interest rate']
@@ -39,10 +39,10 @@ function formatTime(time: string): string {
 }
 
 function outcomeColor(actual: string | null, estimate: string | null): string {
-  if (!actual || !estimate) return '#777'
+  if (!actual || !estimate) return '#6b7280'
   const a = parseFloat(actual), e = parseFloat(estimate)
-  if (isNaN(a) || isNaN(e)) return '#777'
-  return a >= e ? '#4ade80' : '#f87171'
+  if (isNaN(a) || isNaN(e)) return '#6b7280'
+  return a >= e ? '#16a34a' : '#dc2626'
 }
 
 export default function EconomicCalendarPage() {
@@ -102,28 +102,35 @@ export default function EconomicCalendarPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', color: '#e5e5e5', fontFamily: 'inherit' }}>
+    <div style={{ minHeight: '100vh', background: '#f4f4f5', color: '#111', fontFamily: 'inherit' }}>
 
       {/* Top bar */}
-      <div style={{ borderBottom: '1px solid #1a1a1a', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#0f0f0f', flexShrink: 0 }}>
+      <div style={{ borderBottom: '1px solid #e4e4e7', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#ffffff' }}>
         <button
           onClick={() => router.back()}
-          style={{ background: 'transparent', border: '1px solid #2a2a2a', borderRadius: '6px', color: '#888', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
-          onMouseLeave={e => e.currentTarget.style.color = '#888'}
+          style={{ background: 'transparent', border: '1px solid #d4d4d8', borderRadius: '6px', color: '#555', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#111'; e.currentTarget.style.borderColor = '#a1a1aa' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = '#d4d4d8' }}
         >← Back</button>
-        <div style={{ fontSize: '16px', fontWeight: 700 }}>🏦 Economic Calendar</div>
-        <div style={{ fontSize: '11px', color: '#777' }}>US Events · ForexFactory · Times in ET</div>
+        <div style={{ fontSize: '16px', fontWeight: 700, color: '#111' }}>🏦 Economic Calendar</div>
+        <div style={{ fontSize: '11px', color: '#6b7280' }}>US Events · ForexFactory · Times in ET</div>
 
         {/* Impact filter */}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', background: '#f4f4f5', borderRadius: '8px', padding: '3px' }}>
           {([
             { id: 'high',   label: '🔴 High' },
             { id: 'medium', label: '🟡 + Medium' },
             { id: 'all',    label: 'All' },
           ] as const).map(f => (
             <button key={f.id} onClick={() => setImpactFilter(f.id)}
-              style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: '11px', fontWeight: 600, background: impactFilter === f.id ? '#222' : 'transparent', color: impactFilter === f.id ? '#e5e5e5' : '#777' }}
+              style={{
+                padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: '11px', fontWeight: 600,
+                background: impactFilter === f.id ? '#ffffff' : 'transparent',
+                color: impactFilter === f.id ? '#111' : '#6b7280',
+                boxShadow: impactFilter === f.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s',
+              }}
             >{f.label}</button>
           ))}
         </div>
@@ -134,36 +141,36 @@ export default function EconomicCalendarPage() {
         {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '32px' }}>
           {[
-            { label: 'High Impact Upcoming', value: upcomingHigh, color: '#f87171' },
-            { label: 'High Impact This Week', value: thisWeekHigh, color: '#fbbf24' },
-            { label: 'Total Events Loaded', value: events.length, color: '#7ec8a0' },
+            { label: 'High Impact Upcoming', value: upcomingHigh, color: '#dc2626', bg: '#fff', border: '#fecaca' },
+            { label: 'High Impact This Week', value: thisWeekHigh, color: '#d97706', bg: '#fff', border: '#fde68a' },
+            { label: 'Total Events Loaded',  value: events.length, color: '#16a34a', bg: '#fff', border: '#bbf7d0' },
           ].map(s => (
-            <div key={s.label} style={{ background: '#141414', border: '1px solid #222', borderRadius: '10px', padding: '16px 20px' }}>
-              <div style={{ fontSize: '24px', fontWeight: 700, color: s.color, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
-              <div style={{ fontSize: '11px', color: '#888', marginTop: '4px' }}>{s.label}</div>
+            <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: '10px', padding: '16px 20px' }}>
+              <div style={{ fontSize: '28px', fontWeight: 700, color: s.color, fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
+              <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '4px' }}>{s.label}</div>
             </div>
           ))}
         </div>
 
         {/* Legend */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'center' }}>
-          <div style={{ fontSize: '10px', color: '#777', fontWeight: 700, letterSpacing: '0.08em' }}>LEGEND:</div>
-          {[{ color: '#4ade80', label: 'Beat Estimate' }, { color: '#f87171', label: 'Missed Estimate' }, { color: '#888', label: 'Pending' }].map(l => (
-            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#888' }}>
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '16px', alignItems: 'center', background: '#fff', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '10px 16px' }}>
+          <div style={{ fontSize: '10px', color: '#6b7280', fontWeight: 700, letterSpacing: '0.08em' }}>LEGEND:</div>
+          {[{ color: '#16a34a', label: 'Beat Estimate' }, { color: '#dc2626', label: 'Missed Estimate' }, { color: '#9ca3af', label: 'Pending' }].map(l => (
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151' }}>
               <div style={{ width: '8px', height: '8px', borderRadius: '2px', background: l.color }} />
               {l.label}
             </div>
           ))}
-          <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#777' }}>
-            <span style={{ borderLeft: '3px solid #2d6a4f', paddingLeft: '6px' }}>Key market-moving events</span>
+          <div style={{ marginLeft: 'auto', fontSize: '11px', color: '#6b7280' }}>
+            <span style={{ borderLeft: '3px solid #16a34a', paddingLeft: '6px' }}>Key market-moving events</span>
           </div>
         </div>
 
         {/* Events */}
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#777', fontSize: '14px' }}>Loading economic data...</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#6b7280', fontSize: '14px' }}>Loading economic data...</div>
         ) : sortedDates.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '80px', color: '#777', fontSize: '14px' }}>No events found for this filter</div>
+          <div style={{ textAlign: 'center', padding: '80px', color: '#6b7280', fontSize: '14px' }}>No events found for this filter</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {sortedDates.map(date => {
@@ -183,24 +190,26 @@ export default function EconomicCalendarPage() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: '12px',
                       padding: '12px 16px', borderRadius: '8px',
-                      background: isToday ? '#0e1f14' : '#161616',
-                      border: `1px solid ${isToday ? '#2d6a4f' : '#222'}`,
-                      cursor: 'pointer', marginBottom: isExpanded ? '4px' : '0',
-                      opacity: isPast && !isToday ? 0.65 : 1,
+                      background: isToday ? '#f0fdf4' : '#ffffff',
+                      border: `1px solid ${isToday ? '#86efac' : '#e4e4e7'}`,
+                      cursor: 'pointer', marginBottom: isExpanded ? '2px' : '0',
+                      opacity: isPast && !isToday ? 0.6 : 1,
                     }}
+                    onMouseEnter={e => { if (!isToday) (e.currentTarget as HTMLDivElement).style.background = '#fafafa' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = isToday ? '#f0fdf4' : '#ffffff' }}
                   >
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 700, color: isToday ? '#7ec8a0' : isPast ? '#777' : '#d0d0d0' }}>
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: isToday ? '#15803d' : isPast ? '#9ca3af' : '#111' }}>
                         {dateLabel}
-                        {isToday && <span style={{ marginLeft: '10px', fontSize: '10px', background: '#1a472a', color: '#7ec8a0', borderRadius: '4px', padding: '2px 8px', fontWeight: 700 }}>TODAY</span>}
-                        {isPast && !isToday && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#555' }}>PAST</span>}
+                        {isToday && <span style={{ marginLeft: '10px', fontSize: '10px', background: '#dcfce7', color: '#15803d', borderRadius: '4px', padding: '2px 8px', fontWeight: 700 }}>TODAY</span>}
+                        {isPast && !isToday && <span style={{ marginLeft: '8px', fontSize: '10px', color: '#9ca3af' }}>PAST</span>}
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      {highCount > 0 && <span style={{ fontSize: '10px', color: '#f87171', background: '#2e0505', borderRadius: '4px', padding: '2px 8px', fontWeight: 700 }}>{highCount} HIGH</span>}
-                      {medCount > 0 && <span style={{ fontSize: '10px', color: '#fbbf24', background: '#2d1f00', borderRadius: '4px', padding: '2px 8px', fontWeight: 600 }}>{medCount} MED</span>}
-                      <span style={{ fontSize: '11px', color: '#666' }}>{dayEvents.length} events</span>
-                      <span style={{ fontSize: '12px', color: '#666', width: '16px', textAlign: 'center' }}>{isExpanded ? '▲' : '▼'}</span>
+                      {highCount > 0 && <span style={{ fontSize: '10px', color: '#dc2626', background: '#fee2e2', borderRadius: '4px', padding: '2px 8px', fontWeight: 700 }}>{highCount} HIGH</span>}
+                      {medCount > 0 && <span style={{ fontSize: '10px', color: '#d97706', background: '#fef3c7', borderRadius: '4px', padding: '2px 8px', fontWeight: 600 }}>{medCount} MED</span>}
+                      <span style={{ fontSize: '11px', color: '#9ca3af' }}>{dayEvents.length} events</span>
+                      <span style={{ fontSize: '12px', color: '#9ca3af', width: '16px', textAlign: 'center' }}>{isExpanded ? '▲' : '▼'}</span>
                     </div>
                   </div>
 
@@ -221,45 +230,36 @@ export default function EconomicCalendarPage() {
                               gridTemplateColumns: '80px 1fr 90px 90px 90px 90px',
                               gap: '0', alignItems: 'center',
                               padding: '10px 16px',
-                              background: isKey ? '#0e1a12' : '#141414',
+                              background: isKey ? '#f0fdf4' : '#ffffff',
                               borderRadius: '6px',
-                              borderLeft: `3px solid ${isKey ? '#2d6a4f' : '#222'}`,
+                              borderLeft: `3px solid ${isKey ? '#16a34a' : '#e4e4e7'}`,
+                              border: `1px solid ${isKey ? '#bbf7d0' : '#f0f0f0'}`,
+                              borderLeftWidth: '3px',
                             }}
                           >
-                            {/* Time */}
-                            <div style={{ fontSize: '11px', color: '#777', fontVariantNumeric: 'tabular-nums' }}>{timeStr} ET</div>
-
-                            {/* Event name */}
+                            <div style={{ fontSize: '11px', color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>{timeStr} ET</div>
                             <div>
-                              <span style={{ fontSize: '13px', fontWeight: isKey ? 700 : 400, color: isKey ? '#e5e5e5' : '#b0b0b0' }}>{ev.event}</span>
+                              <span style={{ fontSize: '13px', fontWeight: isKey ? 700 : 400, color: isKey ? '#111' : '#374151' }}>{ev.event}</span>
                             </div>
-
-                            {/* Impact badge */}
                             <div>
                               <span style={{ fontSize: '9px', fontWeight: 800, color: imp.color, background: imp.bg, borderRadius: '4px', padding: '2px 7px', letterSpacing: '0.05em' }}>
                                 {(ev.impact ?? '').toUpperCase()}
                               </span>
                             </div>
-
-                            {/* Previous */}
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px', letterSpacing: '0.05em' }}>PREV</div>
-                              <div style={{ fontSize: '12px', color: '#999', fontVariantNumeric: 'tabular-nums' }}>
+                              <div style={{ fontSize: '9px', color: '#9ca3af', marginBottom: '2px', letterSpacing: '0.05em' }}>PREV</div>
+                              <div style={{ fontSize: '12px', color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
                                 {ev.previous != null ? `${ev.previous}${ev.unit ?? ''}` : '—'}
                               </div>
                             </div>
-
-                            {/* Estimate */}
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px', letterSpacing: '0.05em' }}>EST</div>
-                              <div style={{ fontSize: '12px', color: '#bbb', fontVariantNumeric: 'tabular-nums' }}>
+                              <div style={{ fontSize: '9px', color: '#9ca3af', marginBottom: '2px', letterSpacing: '0.05em' }}>EST</div>
+                              <div style={{ fontSize: '12px', color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
                                 {ev.estimate != null ? `${ev.estimate}${ev.unit ?? ''}` : '—'}
                               </div>
                             </div>
-
-                            {/* Actual */}
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '9px', color: '#666', marginBottom: '2px', letterSpacing: '0.05em' }}>ACTUAL</div>
+                              <div style={{ fontSize: '9px', color: '#9ca3af', marginBottom: '2px', letterSpacing: '0.05em' }}>ACTUAL</div>
                               <div style={{ fontSize: '13px', fontWeight: 700, color: actColor, fontVariantNumeric: 'tabular-nums' }}>
                                 {ev.actual != null ? `${ev.actual}${ev.unit ?? ''}` : '—'}
                               </div>
@@ -275,7 +275,7 @@ export default function EconomicCalendarPage() {
           </div>
         )}
 
-        <div style={{ marginTop: '40px', padding: '16px', borderTop: '1px solid #1a1a1a', fontSize: '11px', color: '#555', textAlign: 'center' }}>
+        <div style={{ marginTop: '40px', padding: '16px', borderTop: '1px solid #e4e4e7', fontSize: '11px', color: '#9ca3af', textAlign: 'center' }}>
           Source: ForexFactory · US USD events · Updated hourly · All times Eastern
         </div>
       </div>
