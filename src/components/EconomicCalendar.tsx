@@ -93,7 +93,7 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '12px',
+          background: '#111', border: '1px solid #222', borderRadius: '12px',
           padding: '22px 24px', width: '780px', maxWidth: '97vw', maxHeight: '92vh',
           display: 'flex', flexDirection: 'column',
           boxShadow: '0 24px 80px rgba(0,0,0,0.9)',
@@ -102,8 +102,8 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', flexShrink: 0 }}>
           <div style={{ fontSize: '15px', fontWeight: 700, color: '#e5e5e5', flex: 1 }}>🏦 Economic Calendar</div>
-          <div style={{ fontSize: '10px', color: '#333', marginRight: '12px' }}>US Events · Next 60 Days</div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
+          <div style={{ fontSize: '10px', color: '#666', marginRight: '12px' }}>US Events · Next 60 Days</div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#888', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>×</button>
         </div>
 
         {/* Impact filter */}
@@ -119,15 +119,15 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
               style={{
                 padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '11px', fontWeight: 600,
-                background: impactFilter === f.id ? '#1a1a1a' : 'transparent',
-                color: impactFilter === f.id ? '#e5e5e5' : '#333',
+                background: impactFilter === f.id ? '#222' : 'transparent',
+                color: impactFilter === f.id ? '#e5e5e5' : '#666',
               }}
             >{f.label}</button>
           ))}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', fontSize: '9px', color: '#333' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px', fontSize: '9px', color: '#777' }}>
             <span><span style={{ color: '#4ade80' }}>■</span> Beat</span>
             <span><span style={{ color: '#f87171' }}>■</span> Miss</span>
-            <span><span style={{ color: '#888' }}>■</span> Pending</span>
+            <span><span style={{ color: '#aaa' }}>■</span> Pending</span>
           </div>
         </div>
 
@@ -158,13 +158,13 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
                       style={{
                         display: 'flex', alignItems: 'center', gap: '10px',
                         padding: '8px 10px', borderRadius: '6px',
-                        background: isToday ? '#0a1a10' : '#080808',
-                        border: `1px solid ${isToday ? '#1a472a' : '#111'}`,
+                        background: isToday ? '#0e1f14' : '#161616',
+                        border: `1px solid ${isToday ? '#2d6a4f' : '#222'}`,
                         cursor: 'pointer', marginBottom: '2px',
                         opacity: isPast ? 0.6 : 1,
                       }}
                     >
-                      <div style={{ fontSize: '11px', fontWeight: 700, color: isToday ? '#7ec8a0' : isPast ? '#333' : '#888', flex: 1 }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: isToday ? '#7ec8a0' : isPast ? '#666' : '#c0c0c0', flex: 1 }}>
                         {dateLabel.toUpperCase()}
                         {isToday && <span style={{ marginLeft: '8px', fontSize: '9px', background: '#1a472a', color: '#7ec8a0', borderRadius: '4px', padding: '1px 6px' }}>TODAY</span>}
                       </div>
@@ -173,8 +173,8 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
                           {highCount} HIGH
                         </span>
                       )}
-                      <span style={{ fontSize: '9px', color: '#333' }}>{dayEvents.length} events</span>
-                      <span style={{ fontSize: '12px', color: '#333' }}>{isExpanded ? '▲' : '▼'}</span>
+                      <span style={{ fontSize: '9px', color: '#666' }}>{dayEvents.length} events</span>
+                      <span style={{ fontSize: '12px', color: '#555' }}>{isExpanded ? '▲' : '▼'}</span>
                     </div>
 
                     {/* Event rows */}
@@ -194,17 +194,17 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
                                 gridTemplateColumns: '52px 1fr 80px 80px 80px 70px',
                                 gap: '8px', alignItems: 'center',
                                 padding: '8px 12px',
-                                background: isKey ? '#09120e' : '#080808',
+                                background: isKey ? '#0e1a12' : '#141414',
                                 borderRadius: '6px',
-                                borderLeft: isKey ? '3px solid #1a472a' : '3px solid #111',
+                                borderLeft: isKey ? '3px solid #2d6a4f' : '3px solid #222',
                               }}
                             >
                               {/* Time */}
-                              <div style={{ fontSize: '10px', color: '#444', fontVariantNumeric: 'tabular-nums' }}>{timeStr} ET</div>
+                              <div style={{ fontSize: '10px', color: '#777', fontVariantNumeric: 'tabular-nums' }}>{timeStr} ET</div>
 
                               {/* Event name */}
                               <div>
-                                <div style={{ fontSize: '12px', fontWeight: isKey ? 700 : 500, color: isKey ? '#e5e5e5' : '#888' }}>{ev.event}</div>
+                                <div style={{ fontSize: '12px', fontWeight: isKey ? 700 : 500, color: isKey ? '#e5e5e5' : '#b0b0b0' }}>{ev.event}</div>
                               </div>
 
                               {/* Impact */}
@@ -214,23 +214,23 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
 
                               {/* Previous */}
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '8px', color: '#2a2a2a', marginBottom: '1px' }}>PREV</div>
-                                <div style={{ fontSize: '11px', color: '#444', fontVariantNumeric: 'tabular-nums' }}>
+                                <div style={{ fontSize: '8px', color: '#555', marginBottom: '1px' }}>PREV</div>
+                                <div style={{ fontSize: '11px', color: '#888', fontVariantNumeric: 'tabular-nums' }}>
                                   {ev.previous != null ? `${ev.previous}${ev.unit ?? ''}` : '—'}
                                 </div>
                               </div>
 
                               {/* Estimate */}
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '8px', color: '#2a2a2a', marginBottom: '1px' }}>EST</div>
-                                <div style={{ fontSize: '11px', color: '#666', fontVariantNumeric: 'tabular-nums' }}>
+                                <div style={{ fontSize: '8px', color: '#555', marginBottom: '1px' }}>EST</div>
+                                <div style={{ fontSize: '11px', color: '#aaa', fontVariantNumeric: 'tabular-nums' }}>
                                   {ev.estimate != null ? `${ev.estimate}${ev.unit ?? ''}` : '—'}
                                 </div>
                               </div>
 
                               {/* Actual */}
                               <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: '8px', color: '#2a2a2a', marginBottom: '1px' }}>ACTUAL</div>
+                                <div style={{ fontSize: '8px', color: '#555', marginBottom: '1px' }}>ACTUAL</div>
                                 <div style={{ fontSize: '12px', fontWeight: 700, color: actColor, fontVariantNumeric: 'tabular-nums' }}>
                                   {ev.actual != null ? `${ev.actual}${ev.unit ?? ''}` : '—'}
                                 </div>
@@ -247,7 +247,7 @@ export default function EconomicCalendar({ onClose }: { onClose: () => void }) {
           )}
         </div>
 
-        <div style={{ fontSize: '9px', color: '#1a1a1a', textAlign: 'center', marginTop: '10px', flexShrink: 0 }}>
+        <div style={{ fontSize: '9px', color: '#555', textAlign: 'center', marginTop: '10px', flexShrink: 0 }}>
           Finnhub · US events · Updated hourly · Times in ET
         </div>
       </div>
