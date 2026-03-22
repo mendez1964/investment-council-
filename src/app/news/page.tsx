@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { trackPageView } from '@/lib/analytics'
 
 interface Article {
   id: number
@@ -46,6 +47,8 @@ export default function NewsPage() {
   const [category, setCategory] = useState('general')
   const [activeTicker, setActiveTicker] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+
+  useEffect(() => { trackPageView('/news') }, [])
 
   useEffect(() => {
     let cancelled = false

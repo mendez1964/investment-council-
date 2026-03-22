@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { trackPageView } from '@/lib/analytics'
 
 interface FGEntry {
   value: string
@@ -68,6 +69,8 @@ export default function FearGreedPage() {
   const [entries, setEntries] = useState<FGEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [dataMode, setDataMode] = useState<'crypto' | 'stock'>('crypto')
+
+  useEffect(() => { trackPageView('/fear-greed') }, [])
 
   useEffect(() => {
     fetch('/api/fear-greed')

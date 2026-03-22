@@ -3,6 +3,7 @@ import { fetchLiveData } from '@/lib/live-data'
 import { getQuote } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -107,6 +108,18 @@ Rules: ${stocksRule}, crypto=EXACTLY 10, bias="bullish" or "bearish", confidence
 
   const rawText = response.content[0].type === 'text' ? response.content[0].text : ''
   console.log('[ai-picks] response preview:', rawText.slice(0, 150))
+
+  const inputTokens = response.usage.input_tokens
+  const outputTokens = response.usage.output_tokens
+  await logApiUsage(supabase, {
+    apiName: 'claude',
+    endpoint: 'ai-picks-generate',
+    tokensInput: inputTokens,
+    tokensOutput: outputTokens,
+    costUsd: estimateClaudeCost(inputTokens, outputTokens),
+    success: true,
+  })
+
   const parsed = extractJSON(rawText)
 
   const stocks: any[] = weekend ? [] : (parsed.stocks ?? []).slice(0, 10)

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import type { IPOEvent } from '@/lib/finnhub'
+import { trackPageView } from '@/lib/analytics'
 
 const STATUS_STYLE: Record<string, { color: string; bg: string; label: string }> = {
   expected:  { color: '#d97706', bg: '#fef3c7', label: 'EXPECTED' },
@@ -50,6 +51,8 @@ export default function IPOPage() {
   const [ipos, setIpos] = useState<IPOEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'expected' | 'priced' | 'filed'>('all')
+
+  useEffect(() => { trackPageView('/ipo') }, [])
 
   useEffect(() => {
     fetch('/api/ipo')

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { trackPageView } from '@/lib/analytics'
 
 interface Mover {
   ticker: string
@@ -27,6 +28,8 @@ export default function MoversPage() {
   const [count, setCount] = useState(10)
   const [customCount, setCustomCount] = useState('')
   const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+
+  useEffect(() => { trackPageView('/movers') }, [])
 
   useEffect(() => {
     fetch('/api/movers')

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { trackPageView } from '@/lib/analytics'
 
 interface EconEvent {
   event: string
@@ -54,6 +55,8 @@ export default function EconomicCalendarPage() {
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+  useEffect(() => { trackPageView('/economic-calendar') }, [])
 
   useEffect(() => {
     fetch('/api/economic/calendar')

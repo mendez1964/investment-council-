@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
 import { getQuote } from '@/lib/finnhub'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -113,6 +114,18 @@ Rules:
 
   const rawText = response.content[0].type === 'text' ? response.content[0].text : ''
   console.log('[ai-options] response preview:', rawText.slice(0, 200))
+
+  const inputTokens = response.usage.input_tokens
+  const outputTokens = response.usage.output_tokens
+  await logApiUsage(supabase, {
+    apiName: 'claude',
+    endpoint: 'ai-options-generate',
+    tokensInput: inputTokens,
+    tokensOutput: outputTokens,
+    costUsd: estimateClaudeCost(inputTokens, outputTokens),
+    success: true,
+  })
+
   const parsed = extractJSON(rawText)
   const trades: any[] = (parsed.trades ?? []).slice(0, 10)
 

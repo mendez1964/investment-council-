@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { trackPageView, trackFeature } from '@/lib/analytics'
 
 interface Pick {
   id: number
@@ -529,6 +530,8 @@ export default function AIPicksPage() {
   const [error, setError] = useState<string | null>(null)
   const [optionsError, setOptionsError] = useState<string | null>(null)
 
+  useEffect(() => { trackPageView('/ai-picks') }, [])
+
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -627,7 +630,7 @@ export default function AIPicksPage() {
           ] as const).map(t => (
             <button
               key={t.key}
-              onClick={() => setTab(t.key)}
+              onClick={() => { setTab(t.key); trackFeature(`${t.key}_tab`) }}
               style={{
                 padding: '7px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                 fontFamily: 'inherit', fontSize: '12px', fontWeight: 700, letterSpacing: '0.03em',
