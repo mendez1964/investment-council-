@@ -26,6 +26,7 @@ export type SidebarItem = {
   isEconCalendar?: boolean
   isCalculators?: boolean
   isPatterns?: boolean
+  isCryptoDashboard?: boolean
 }
 
 export type SidebarSection = { id: string; title: string; items: SidebarItem[] }
@@ -79,6 +80,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'DeFi Ecosystem Scan': Layers,
   'Crypto Prices': TrendingUp,
   'Crypto News': Newspaper,
+  'Crypto Dashboard': BarChart2,
 }
 
 const PERSON_LABELS = new Set([
@@ -98,7 +100,7 @@ function isFeatureItem(item: SidebarItem) {
   return !!(
     item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks ||
     item.isIPO || item.isNews || item.isChart || item.isEconCalendar ||
-    item.isAnalysis || item.isCalculators || item.isPatterns
+    item.isAnalysis || item.isCalculators || item.isPatterns || item.isCryptoDashboard
   )
 }
 
