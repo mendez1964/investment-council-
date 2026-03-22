@@ -389,6 +389,49 @@ Be direct and factual. Use numbers.`
     await sendMessageWithText(input)
   }
 
+  async function savePDF(content: string) {
+    const { jsPDF } = await import('jspdf')
+    const doc = new jsPDF({ unit: 'pt', format: 'letter' })
+
+    const pageW = doc.internal.pageSize.getWidth()
+    const pageH = doc.internal.pageSize.getHeight()
+    const margin = 56
+    const usableW = pageW - margin * 2
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+
+    // Header
+    doc.setFontSize(8)
+    doc.setTextColor(150)
+    doc.text('INVESTMENT COUNCIL — RESEARCH OUTPUT', margin, 40)
+    doc.setFontSize(8)
+    doc.text(dateStr.toUpperCase(), pageW - margin, 40, { align: 'right' })
+    doc.setDrawColor(220)
+    doc.line(margin, 48, pageW - margin, 48)
+
+    // Body
+    doc.setFontSize(11)
+    doc.setTextColor(30)
+    const lines = doc.splitTextToSize(content, usableW)
+    let y = 68
+    for (const line of lines) {
+      if (y > pageH - 60) {
+        doc.addPage()
+        y = 48
+      }
+      doc.text(line, margin, y)
+      y += 16
+    }
+
+    // Footer
+    doc.setFontSize(8)
+    doc.setTextColor(170)
+    doc.line(margin, pageH - 40, pageW - margin, pageH - 40)
+    doc.text('For educational purposes only. Not financial advice. Past performance is not indicative of future results.', margin, pageH - 28)
+
+    const filename = `investment-council-${new Date().toISOString().slice(0, 10)}.pdf`
+    doc.save(filename)
+  }
+
   function printMessage(content: string) {
     const win = window.open('', '_blank', 'width=800,height=600')
     if (!win) return
@@ -910,7 +953,7 @@ Be direct and factual. Use numbers.`
 
                   <div style={{ flex: 1 }}>
                     {msg.role === 'assistant' && msg.content && (
-                      <div style={{ marginBottom: '8px' }}>
+                      <div style={{ marginBottom: '8px', display: 'flex', gap: '6px' }}>
                         <button
                           onClick={() => printMessage(msg.content)}
                           style={{
@@ -921,6 +964,17 @@ Be direct and factual. Use numbers.`
                           }}
                         >
                           🖨︎ Print
+                        </button>
+                        <button
+                          onClick={() => savePDF(msg.content)}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                            background: '#1e3a5f', border: 'none', borderRadius: '5px',
+                            padding: '4px 12px', color: '#fff', fontSize: '12px',
+                            fontWeight: 600, cursor: 'pointer', letterSpacing: '0.02em',
+                          }}
+                        >
+                          📄 Save PDF
                         </button>
                       </div>
                     )}
