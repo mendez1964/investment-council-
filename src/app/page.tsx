@@ -914,37 +914,54 @@ Be direct and factual. Use numbers.`
                   </div>
                 </div>
 
-                <div style={{
-                  display: 'grid', gridTemplateColumns: '1fr 1fr',
-                  gap: '10px', width: '100%', maxWidth: '560px',
-                }}>
-                  {[
-                    { label: 'Pre-market briefing', prompt: 'Give me a pre-market briefing for today.' },
-                    { label: 'Analyze a stock', prompt: 'Analyze NVDA using all ten frameworks.' },
-                    { label: 'Crypto council view', prompt: 'Give me the full crypto council view right now.' },
-                    { label: 'Risk check', prompt: 'What are the biggest macro risks in the market right now?' },
-                  ].map(({ label, prompt }) => (
-                    <button
-                      key={label}
-                      onClick={() => { setInput(prompt); textareaRef.current?.focus() }}
-                      style={{
-                        background: '#111', border: '1px solid #1f1f1f',
-                        borderRadius: '8px', padding: '12px 14px',
-                        color: '#888', fontSize: '13px', cursor: 'pointer',
-                        textAlign: 'left', lineHeight: 1.4, transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => {
-                        (e.target as HTMLButtonElement).style.borderColor = '#2d6a4f'
-                        ;(e.target as HTMLButtonElement).style.color = '#aaa'
-                      }}
-                      onMouseLeave={e => {
-                        (e.target as HTMLButtonElement).style.borderColor = '#1f1f1f'
-                        ;(e.target as HTMLButtonElement).style.color = '#888'
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div style={{ textAlign: 'center', marginTop: '-16px' }}>
+                  <div style={{ fontSize: '11px', color: '#333', marginBottom: '12px', letterSpacing: '0.04em' }}>
+                    Try one to see the council in action — or ask anything below
+                  </div>
+                  <div style={{
+                    display: 'flex', flexWrap: 'wrap', gap: '8px',
+                    justifyContent: 'center', maxWidth: '600px',
+                  }}>
+                    {(sidebarMode === 'stocks' ? [
+                      { label: 'Pre-Market Briefing', prompt: `Give me today's pre-market briefing. Include market snapshot, overnight futures, key levels to watch, and top risks for the session.` },
+                      { label: 'Full Council Scan', prompt: 'Run a full investment council scan of the current market. I want every advisor framework applied — macro, technical, sentiment, risk, and opportunity.' },
+                      { label: 'Market Health Check', prompt: 'Give me a full market health check right now. Cover breadth, momentum, credit spreads, volatility, and whether this is a healthy or deteriorating market.' },
+                      { label: 'Sector Rotation', prompt: 'Where is money rotating right now? Which sectors are leading, which are lagging, and where should I be positioned?' },
+                      { label: 'Fear & Greed + Volatility', prompt: 'What is the current fear and greed reading and what does volatility tell us? Is this a buy-the-dip moment or time to reduce risk?' },
+                      { label: 'Best Setup Right Now', prompt: 'What is the single best trade setup in the market right now? Give me ticker, direction, entry, stop, and target with full reasoning.' },
+                    ] : [
+                      { label: 'Morning Crypto Briefing', prompt: 'Give me a full morning crypto briefing. Cover BTC price and dominance, ETH, altcoin season status, fear and greed, key levels, and what to watch today.' },
+                      { label: 'Is It Alt Season?', prompt: 'Is it alt season right now? Give me BTC dominance trend, ETH/BTC ratio, altcoin season index, and which sectors of crypto are leading.' },
+                      { label: 'BTC Dominance Check', prompt: 'Give me a deep dive on Bitcoin dominance right now. Where are we in the cycle, what does dominance tell us about capital rotation, and what should I do with my portfolio?' },
+                      { label: 'Full Crypto Council', prompt: 'Run the full crypto investment council right now. Every advisor framework applied to the current crypto market — on-chain, macro, sentiment, technical, and cycle analysis.' },
+                      { label: 'On-Chain Health', prompt: 'What is the current on-chain health of Bitcoin and Ethereum? Cover MVRV, realized price, active addresses, exchange flows, and what it all means.' },
+                      { label: 'Cycle Position', prompt: 'Where are we in the crypto market cycle right now? Give me the full picture — on-chain signals, historical patterns, institutional flows, and what typically happens next.' },
+                    ]).map(({ label, prompt }) => (
+                      <button
+                        key={label}
+                        onClick={() => !isLoading && sendMessageWithText(prompt)}
+                        style={{
+                          background: '#0d0d0d', border: `1px solid ${sidebarMode === 'stocks' ? '#1a472a' : '#451a03'}`,
+                          borderRadius: '20px', padding: '7px 14px',
+                          color: sidebarMode === 'stocks' ? '#4a9a6a' : '#d97706',
+                          fontSize: '12px', cursor: isLoading ? 'default' : 'pointer',
+                          lineHeight: 1.4, transition: 'all 0.15s', fontFamily: 'inherit',
+                        }}
+                        onMouseEnter={e => {
+                          if (!isLoading) {
+                            e.currentTarget.style.background = sidebarMode === 'stocks' ? '#1a472a' : '#451a03'
+                            e.currentTarget.style.color = sidebarMode === 'stocks' ? '#7ec8a0' : '#fbbf24'
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = '#0d0d0d'
+                          e.currentTarget.style.color = sidebarMode === 'stocks' ? '#4a9a6a' : '#d97706'
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : (
