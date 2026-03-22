@@ -6,7 +6,7 @@ import {
   TrendingUp, Zap, CalendarDays, Newspaper, ScanLine, User, Users,
   Microscope, Calculator, Shield, Target, Scissors, BarChart2,
   UserCheck, Building2, FileText, BarChart, Rocket, Sparkles, LineChart,
-  CandlestickChart, Bitcoin, Link, Waves, Hexagon, Layers,
+  CandlestickChart, Bitcoin, Link, Waves, Hexagon, Layers, Bell,
   ChevronDown, ChevronRight, X, type LucideIcon,
 } from 'lucide-react'
 
@@ -27,6 +27,7 @@ export type SidebarItem = {
   isCalculators?: boolean
   isPatterns?: boolean
   isCryptoDashboard?: boolean
+  isAlerts?: boolean
 }
 
 export type SidebarSection = { id: string; title: string; items: SidebarItem[] }
@@ -83,6 +84,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'Crypto Prices': TrendingUp,
   'Crypto News': Newspaper,
   'Crypto Dashboard': BarChart2,
+  'Email Alerts': Bell,
 }
 
 const PERSON_LABELS = new Set([
@@ -102,7 +104,8 @@ function isFeatureItem(item: SidebarItem) {
   return !!(
     item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks ||
     item.isIPO || item.isNews || item.isChart || item.isEconCalendar ||
-    item.isAnalysis || item.isCalculators || item.isPatterns || item.isCryptoDashboard
+    item.isAnalysis || item.isCalculators || item.isPatterns || item.isCryptoDashboard ||
+    item.isAlerts
   )
 }
 

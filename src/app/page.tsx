@@ -24,7 +24,7 @@ interface Message {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean }
+type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 const STOCKS_SECTIONS: SidebarSection[] = [
@@ -150,6 +150,7 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
       { label: 'Market Movers', icon: '⚡', prompt: '', isMovers: true },
       { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true },
       { label: 'Chart a Ticker', icon: '📈', prompt: '', isChart: true },
+      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true },
     ],
   },
   {
@@ -227,6 +228,7 @@ const CRYPTO_SECTIONS: SidebarSection[] = [
       { label: 'Crypto Prices', icon: '💹', prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
       { label: 'Fear & Greed', icon: '😨', prompt: '', isFearGreed: true },
       { label: 'Crypto News', icon: '📰', prompt: '', isNews: true },
+      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true },
     ],
   },
 ]
@@ -476,7 +478,7 @@ Be direct and factual. Use numbers.`
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean) {
     if (isCalendar) {
       setShowEarningsCalendar(true)
       return
@@ -515,6 +517,10 @@ Be direct and factual. Use numbers.`
     }
     if (isCryptoDashboard) {
       router.push('/crypto-dashboard')
+      return
+    }
+    if (isAlerts) {
+      router.push('/alerts')
       return
     }
     if (isChart) {
@@ -641,7 +647,7 @@ Be direct and factual. Use numbers.`
   const currentSections = sidebarMode === 'stocks' ? STOCKS_SECTIONS : CRYPTO_SECTIONS
 
   function handleSidebarItemClick(item: SidebarItemType) {
-    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard)
+    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts)
     if (activeTab !== 'chat') setActiveTab('chat')
     setSidebarMobileOpen(false)
   }
