@@ -523,21 +523,17 @@ export default function AIPicksPage() {
   const router = useRouter()
   const [data, setData] = useState<APIResponse | null>(null)
   const [loading, setLoading] = useState(true)
-  const [generating, setGenerating] = useState(false)
   const [optionsData, setOptionsData] = useState<OptionsAPIResponse | null>(null)
   const [optionsLoading, setOptionsLoading] = useState(false)
-  const [optionsGenerating, setOptionsGenerating] = useState(false)
   const [tab, setTab] = useState<'stocks' | 'crypto' | 'options'>('stocks')
   const [error, setError] = useState<string | null>(null)
   const [optionsError, setOptionsError] = useState<string | null>(null)
 
-  const load = useCallback(async (refresh = false) => {
-    if (refresh) setGenerating(true)
-    else setLoading(true)
+  const load = useCallback(async () => {
+    setLoading(true)
     setError(null)
     try {
-      const url = refresh ? '/api/ai-picks?refresh=true' : '/api/ai-picks'
-      const res = await fetch(url)
+      const res = await fetch('/api/ai-picks')
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const d = await res.json()
       if (d.error) throw new Error(d.error)
@@ -546,17 +542,14 @@ export default function AIPicksPage() {
       setError(e instanceof Error ? e.message : 'Failed to load picks')
     } finally {
       setLoading(false)
-      setGenerating(false)
     }
   }, [])
 
-  const loadOptions = useCallback(async (refresh = false) => {
-    if (refresh) setOptionsGenerating(true)
-    else setOptionsLoading(true)
+  const loadOptions = useCallback(async () => {
+    setOptionsLoading(true)
     setOptionsError(null)
     try {
-      const url = refresh ? '/api/ai-picks/options?refresh=true' : '/api/ai-picks/options'
-      const res = await fetch(url)
+      const res = await fetch('/api/ai-picks/options')
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const d = await res.json()
       if (d.error) throw new Error(d.error)
@@ -565,13 +558,11 @@ export default function AIPicksPage() {
       setOptionsError(e instanceof Error ? e.message : 'Failed to load options')
     } finally {
       setOptionsLoading(false)
-      setOptionsGenerating(false)
     }
   }, [])
 
   useEffect(() => { load() }, [load])
 
-  // Load options when tab is first selected
   useEffect(() => {
     if (tab === 'options' && !optionsData && !optionsLoading) {
       loadOptions()
@@ -589,9 +580,6 @@ export default function AIPicksPage() {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const nextPickDate = tomorrow.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 
-  const isRefreshing = tab === 'options' ? optionsGenerating : generating
-  const handleRefresh = () => tab === 'options' ? loadOptions(true) : load(true)
-
   return (
     <div style={{ minHeight: '100vh', background: '#f4f4f5', color: '#111827', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
@@ -608,24 +596,6 @@ export default function AIPicksPage() {
         <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.03em' }}>
           Next picks: <span style={{ color: '#6b7280' }}>{nextPickDate}</span>
         </div>
-        {(data?.is_cached || optionsData?.is_cached) && (
-          <div style={{ fontSize: '9px', color: '#9ca3af', background: '#f4f4f5', borderRadius: '4px', padding: '2px 7px', letterSpacing: '0.05em', border: '1px solid #e4e4e7' }}>
-            CACHED
-          </div>
-        )}
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing || loading || optionsLoading}
-          style={{
-            background: isRefreshing || loading ? '#f4f4f5' : '#dcfce7',
-            border: 'none', borderRadius: '6px',
-            padding: '4px 12px', color: isRefreshing || loading ? '#d1d5db' : '#16a34a',
-            fontSize: '11px', fontWeight: 600, cursor: isRefreshing || loading ? 'default' : 'pointer',
-            fontFamily: 'inherit', letterSpacing: '0.04em',
-          }}
-        >
-          {isRefreshing ? '⟳ Generating...' : '↻ Refresh'}
-        </button>
       </div>
 
       {/* Content */}
@@ -686,7 +656,7 @@ export default function AIPicksPage() {
               <div style={{ textAlign: 'center', padding: '60px', color: '#dc2626', fontSize: '13px' }}>{optionsError}</div>
             ) : !optionsData?.picks.length ? (
               <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280', fontSize: '13px' }}>
-                No options trades — click Refresh to generate
+                No options trades available — check back Monday
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
@@ -705,7 +675,7 @@ export default function AIPicksPage() {
               <div style={{ textAlign: 'center', padding: '60px', color: '#dc2626', fontSize: '13px' }}>{error}</div>
             ) : (tab === 'stocks' ? stocks : cryptos).length === 0 ? (
               <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280', fontSize: '13px' }}>
-                No picks available — click Refresh to generate
+                No picks available — check back tomorrow
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: '8px' }}>
