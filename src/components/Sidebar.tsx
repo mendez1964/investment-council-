@@ -63,6 +63,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'Chart a Ticker': LineChart,
   'Financial Calculators': Calculator,
   'Candlestick Patterns': CandlestickChart,
+  'Morning Crypto Briefing': Sunrise,
+  'End of Day Crypto Recap': Sunset,
   'Full Crypto Council': Users,
   'Bitcoin Deep Dive': Bitcoin,
   'Ethereum & DeFi': Hexagon,
