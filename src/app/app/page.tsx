@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+import { PRICES } from '@/lib/stripe-prices'
 import MarkdownRenderer from '@/components/MarkdownRenderer'
 import PineScriptTab from '@/components/PineScriptTab'
 import WatchlistTab from '@/components/WatchlistTab'
@@ -272,15 +273,36 @@ export default function Home() {
 
   // Auth
   const [user, setUser] = useState<any>(null)
+  const [userTier, setUserTier] = useState<'free' | 'trader' | 'pro'>('free')
   const supabase = createBrowserSupabaseClient()
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
+    supabase.auth.getUser().then(async ({ data }) => {
+      const u = data.user ?? null
+      setUser(u)
+      if (u) {
+        const res = await fetch('/api/user/profile')
+        if (res.ok) {
+          const profile = await res.json()
+          setUserTier(profile.tier ?? 'free')
+        }
+      }
+    })
   }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  async function handleUpgrade(priceId: string) {
+    const res = await fetch('/api/stripe/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priceId }),
+    })
+    const data = await res.json()
+    if (data.url) window.location.href = data.url
   }
 
   // Cost tracking
@@ -808,6 +830,31 @@ Be direct and factual. Use numbers.`
             </span>
           </div>
         </div>
+
+        {/* Upgrade button — only shown on free tier */}
+        {userTier === 'free' && (
+          <button
+            onClick={() => handleUpgrade(PRICES.trader.monthly)}
+            style={{
+              marginLeft: '8px',
+              background: '#2d6a4f',
+              border: 'none',
+              borderRadius: '6px',
+              padding: '4px 12px',
+              color: '#7ec8a0',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              letterSpacing: '0.04em',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#3a8a65'}
+            onMouseLeave={e => e.currentTarget.style.background = '#2d6a4f'}
+          >
+            Upgrade
+          </button>
+        )}
 
         {/* Logout */}
         <button
