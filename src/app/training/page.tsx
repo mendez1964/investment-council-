@@ -378,7 +378,7 @@ export default function TrainingPage() {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f5f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: 'inherit' }}>
         <div style={{ position: 'fixed', top: '16px', left: '16px' }}>
-          <button onClick={() => router.push('/')} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px', padding: '6px 12px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+          <button onClick={() => router.push('/app')} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px', padding: '6px 12px', color: '#555', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
         </div>
 
         <div style={{ background: '#ffffff', border: '1px solid #e5e5e5', borderRadius: '16px', padding: '40px', width: '100%', maxWidth: '520px', boxShadow: '0 2px 16px rgba(0,0,0,0.06)' }}>
@@ -510,7 +510,7 @@ export default function TrainingPage() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#ffffff', fontFamily: 'inherit', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '10px 20px', borderBottom: '1px solid #e5e5e5', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0, background: '#ffffff', boxShadow: '0 1px 0 #e5e5e5' }}>
-        <button onClick={() => router.push('/')} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px', padding: '4px 10px', color: '#666', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+        <button onClick={() => router.push('/app')} style={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px', padding: '4px 10px', color: '#666', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
         <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'linear-gradient(135deg, #2d6a4f, #4a9a70)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>📚</div>
         <div style={{ fontSize: '13px', fontWeight: 600, color: '#111' }}>Investment Council Training</div>
         <div style={{ flex: 1 }} />
