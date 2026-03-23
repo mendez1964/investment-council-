@@ -32,6 +32,13 @@ type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 const STOCKS_SECTIONS: SidebarSection[] = [
   {
+    id: 'ai-picks',
+    title: 'AI PICKS',
+    items: [
+      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
+    ],
+  },
+  {
     id: 'analyze',
     title: 'ANALYZE',
     items: [
@@ -151,7 +158,6 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
       { label: 'Earnings Calendar', icon: '📅', prompt: '', isCalendar: true },
       { label: 'IPO Calendar', icon: '🚀', prompt: '', isIPO: true },
       { label: 'Market Movers', icon: '⚡', prompt: '', isMovers: true },
-      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
       { label: 'Chart a Ticker', icon: '📈', prompt: '', isChart: true },
       { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true, tier: 'trader' as const },
     ],
@@ -267,7 +273,7 @@ export default function Home() {
   // Sidebar state
   const [sidebarMode, setSidebarMode] = useState<'stocks' | 'crypto'>('stocks')
   const [sidebarMobileOpen, setSidebarMobileOpen] = useState(false)
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['analyze', 'market']))
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['ai-picks', 'analyze', 'market']))
 
   // Pine Script code coming back from chat → editor
   const [pendingPineCode, setPendingPineCode] = useState<string | null>(null)
