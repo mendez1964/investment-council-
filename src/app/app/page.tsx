@@ -810,30 +810,28 @@ Be direct and factual. Use numbers.`
         </div>
 
         {/* Logout */}
-        {user && (
-          <button
-            onClick={handleLogout}
-            title={`Logged in as ${user.email}`}
-            style={{
-              marginLeft: '8px',
-              background: 'transparent',
-              border: '1px solid #1f1f1f',
-              borderRadius: '6px',
-              padding: '4px 10px',
-              color: '#444',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              letterSpacing: '0.04em',
-              whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = '#3a1010' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
-          >
-            Log out
-          </button>
-        )}
+        <button
+          onClick={handleLogout}
+          title={user ? `Logged in as ${user.email}` : 'Log out'}
+          style={{
+            marginLeft: '8px',
+            background: 'transparent',
+            border: '1px solid #1f1f1f',
+            borderRadius: '6px',
+            padding: '4px 10px',
+            color: '#444',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = '#3a1010' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
+        >
+          Log out
+        </button>
 
         {/* Tab buttons */}
         <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
