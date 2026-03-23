@@ -1,10 +1,25 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { getSystemPrompt, getRelevantKnowledge, getRelevantPineKnowledge } from '@/lib/knowledge-base'
 import { fetchLiveData } from '@/lib/live-data'
+import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
+
+const FREE_DAILY_LIMIT = 5
+
+function streamText(text: string): Response {
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream({
+    start(controller) {
+      controller.enqueue(encoder.encode(text))
+      controller.close()
+    },
+  })
+  return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+}
 
 export async function POST(request: Request) {
   try {
@@ -13,6 +28,52 @@ export async function POST(request: Request) {
     if (!messages || !Array.isArray(messages)) {
       return Response.json({ error: 'Invalid request' }, { status: 400 })
     }
+
+    // ── Tier & query-count enforcement ────────────────────────────────────────
+    try {
+      const authClient = createServerSupabaseClientAuth()
+      const { data: { user } } = await authClient.auth.getUser()
+
+      if (user) {
+        const db = createServerSupabaseClient()
+        const { data: profile } = await db
+          .from('profiles')
+          .select('tier, query_count_today, query_reset_date')
+          .eq('id', user.id)
+          .single()
+
+        if (profile) {
+          const today = new Date().toISOString().split('T')[0]
+          const isNewDay = profile.query_reset_date !== today
+
+          // Reset count if it's a new day
+          if (isNewDay) {
+            await db.from('profiles').update({
+              query_count_today: 0,
+              query_reset_date: today,
+            }).eq('id', user.id)
+            profile.query_count_today = 0
+          }
+
+          // Enforce free tier limit
+          if (profile.tier === 'free' && profile.query_count_today >= FREE_DAILY_LIMIT) {
+            return streamText(
+              `**Daily limit reached**\n\nFree accounts are limited to ${FREE_DAILY_LIMIT} queries per day. You've used all ${FREE_DAILY_LIMIT} today.\n\n**Upgrade to Trader ($29.99/mo)** for unlimited queries, all frameworks, AI daily picks, and email alerts.\n\nYour limit resets at midnight.`
+            )
+          }
+
+          // Increment query count
+          await db.from('profiles').update({
+            query_count_today: (profile.query_count_today ?? 0) + 1,
+            query_reset_date: today,
+          }).eq('id', user.id)
+        }
+      }
+    } catch (err) {
+      // Don't block the request if tier check fails
+      console.error('[tier-check] failed:', (err as Error).message)
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Get the latest user message
     const latestUserMessage = messages

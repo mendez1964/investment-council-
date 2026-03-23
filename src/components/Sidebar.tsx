@@ -7,12 +7,13 @@ import {
   Microscope, Calculator, Shield, Target, Scissors, BarChart2,
   UserCheck, Building2, FileText, BarChart, Rocket, Sparkles, LineChart,
   CandlestickChart, Bitcoin, Link, Waves, Hexagon, Layers, Bell,
-  ChevronDown, ChevronRight, X, type LucideIcon,
+  ChevronDown, ChevronRight, X, Lock, type LucideIcon,
 } from 'lucide-react'
 
 export type SidebarItem = {
   label: string
   prompt: string
+  tier?: 'trader' | 'pro'  // minimum tier required
   icon?: string
   needsTicker?: boolean
   isAnalysis?: 'stock' | 'crypto'
@@ -119,11 +120,21 @@ interface SidebarProps {
   isLoading: boolean
   mobileOpen: boolean
   onMobileClose: () => void
+  userTier?: 'free' | 'trader' | 'pro'
+  onUpgradeClick?: () => void
+}
+
+function isLocked(item: SidebarItem, userTier: 'free' | 'trader' | 'pro') {
+  if (!item.tier) return false
+  if (item.tier === 'trader') return userTier === 'free'
+  if (item.tier === 'pro') return userTier !== 'pro'
+  return false
 }
 
 function SidebarContent({
   mode, onModeChange, sections, expandedSections, onToggleSection,
   onItemClick, isLoading, collapsed, setCollapsed, isMobile, onClose,
+  userTier = 'free', onUpgradeClick,
 }: {
   mode: 'stocks' | 'crypto'
   onModeChange: (mode: 'stocks' | 'crypto') => void
@@ -136,6 +147,8 @@ function SidebarContent({
   setCollapsed: (v: boolean) => void
   isMobile: boolean
   onClose?: () => void
+  userTier?: 'free' | 'trader' | 'pro'
+  onUpgradeClick?: () => void
 }) {
   const accentColor = mode === 'stocks' ? '#2d6a4f' : '#b45309'
   const accentText = mode === 'stocks' ? '#7ec8a0' : '#fbbf24'
@@ -317,12 +330,16 @@ function SidebarContent({
                       const Icon = getIcon(item)
                       const feature = isFeatureItem(item)
                       const isPerson = PERSON_LABELS.has(item.label)
+                      const locked = isLocked(item, userTier)
 
                       return (
                         <button
                           key={item.label}
-                          onClick={() => !isLoading && onItemClick(item)}
-                          disabled={isLoading}
+                          onClick={() => {
+                            if (locked) { onUpgradeClick?.(); return }
+                            if (!isLoading) onItemClick(item)
+                          }}
+                          disabled={isLoading && !locked}
                           style={{
                             width: '100%',
                             background: feature ? `${accentColor}22` : 'transparent',
@@ -330,7 +347,7 @@ function SidebarContent({
                             borderRadius: '7px',
                             padding: feature ? '8px 10px' : isPerson ? '4px 10px' : '5px 10px',
                             marginBottom: feature ? '3px' : '1px',
-                            color: feature ? accentText : isPerson ? '#718096' : '#8892a4',
+                            color: locked ? '#3a4055' : feature ? accentText : isPerson ? '#718096' : '#8892a4',
                             fontSize: isPerson ? '11.5px' : '12.5px',
                             fontWeight: feature ? 600 : 400,
                             cursor: isLoading ? 'default' : 'pointer',
@@ -341,8 +358,10 @@ function SidebarContent({
                             gap: '8px',
                             lineHeight: 1.3,
                             transition: 'all 0.1s',
+                            opacity: locked ? 0.6 : 1,
                           }}
                           onMouseEnter={e => {
+                            if (locked) { e.currentTarget.style.color = '#fbbf24'; return }
                             if (!isLoading) {
                               e.currentTarget.style.color = '#e2e8f0'
                               e.currentTarget.style.background = feature ? `${accentColor}44` : '#1a1f2e'
@@ -350,7 +369,7 @@ function SidebarContent({
                             }
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.color = feature ? accentText : isPerson ? '#718096' : '#8892a4'
+                            e.currentTarget.style.color = locked ? '#3a4055' : feature ? accentText : isPerson ? '#718096' : '#8892a4'
                             e.currentTarget.style.background = feature ? `${accentColor}22` : 'transparent'
                             e.currentTarget.style.borderColor = feature ? `${accentColor}40` : 'transparent'
                           }}
@@ -360,6 +379,7 @@ function SidebarContent({
                             style={{ flexShrink: 0, opacity: feature ? 0.9 : isPerson ? 0.6 : 0.65 }}
                           />
                           <span style={{ flex: 1 }}>{item.label}</span>
+                          {locked && <Lock size={10} style={{ flexShrink: 0, opacity: 0.5 }} />}
                         </button>
                       )
                     })}
@@ -376,7 +396,7 @@ function SidebarContent({
 
 export default function Sidebar({
   mode, onModeChange, sections, expandedSections, onToggleSection,
-  onItemClick, isLoading, mobileOpen, onMobileClose,
+  onItemClick, isLoading, mobileOpen, onMobileClose, userTier, onUpgradeClick,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -388,7 +408,7 @@ export default function Sidebar({
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const sharedProps = { mode, onModeChange, sections, expandedSections, onToggleSection, onItemClick, isLoading }
+  const sharedProps = { mode, onModeChange, sections, expandedSections, onToggleSection, onItemClick, isLoading, userTier, onUpgradeClick }
 
   return (
     <>

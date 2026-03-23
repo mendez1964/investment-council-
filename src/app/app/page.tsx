@@ -26,7 +26,7 @@ interface Message {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean }
+type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 const STOCKS_SECTIONS: SidebarSection[] = [
@@ -150,9 +150,9 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
       { label: 'Earnings Calendar', icon: '📅', prompt: '', isCalendar: true },
       { label: 'IPO Calendar', icon: '🚀', prompt: '', isIPO: true },
       { label: 'Market Movers', icon: '⚡', prompt: '', isMovers: true },
-      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true },
+      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
       { label: 'Chart a Ticker', icon: '📈', prompt: '', isChart: true },
-      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true },
+      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true, tier: 'trader' as const },
     ],
   },
   {
@@ -230,7 +230,7 @@ const CRYPTO_SECTIONS: SidebarSection[] = [
       { label: 'Crypto Prices', icon: '💹', prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
       { label: 'Fear & Greed', icon: '😨', prompt: '', isFearGreed: true },
       { label: 'Crypto News', icon: '📰', prompt: '', isNews: true },
-      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true },
+      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true, tier: 'trader' as const },
     ],
   },
 ]
@@ -941,6 +941,8 @@ Be direct and factual. Use numbers.`
             isLoading={isLoading}
             mobileOpen={sidebarMobileOpen}
             onMobileClose={() => setSidebarMobileOpen(false)}
+            userTier={userTier}
+            onUpgradeClick={() => handleUpgrade(PRICES.trader.monthly)}
           />
         )}
 
