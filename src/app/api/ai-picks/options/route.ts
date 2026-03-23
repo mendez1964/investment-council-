@@ -161,7 +161,7 @@ Rules:
 
 function calcOptionsStats(picks: any[]) {
   const ev = picks.filter(p => p.outcome === 'win' || p.outcome === 'loss')
-    .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .sort((a: any, b: any) => new Date(b.pick_date).getTime() - new Date(a.pick_date).getTime() || new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
   const wins = ev.filter(p => p.outcome === 'win')
   const losses = ev.filter(p => p.outcome === 'loss')
   const total = ev.length
@@ -176,12 +176,25 @@ function calcOptionsStats(picks: any[]) {
     else if (p.outcome === streakType) streakCount++
     else break
   }
+  // By date breakdown
+  const dateMap: Record<string, { wins: number; losses: number; call_wins: number; call_total: number; put_wins: number; put_total: number }> = {}
+  for (const p of ev) {
+    const d = p.pick_date
+    if (!dateMap[d]) dateMap[d] = { wins: 0, losses: 0, call_wins: 0, call_total: 0, put_wins: 0, put_total: 0 }
+    if (p.outcome === 'win') dateMap[d].wins++; else dateMap[d].losses++
+    if (p.option_type === 'call') { dateMap[d].call_total++; if (p.outcome === 'win') dateMap[d].call_wins++ }
+    else { dateMap[d].put_total++; if (p.outcome === 'win') dateMap[d].put_wins++ }
+  }
+  const by_date = Object.entries(dateMap)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, d]) => ({ date, wins: d.wins, losses: d.losses, total: d.wins + d.losses, win_rate: ((d.wins / (d.wins + d.losses)) * 100), call_wins: d.call_wins, call_total: d.call_total, put_wins: d.put_wins, put_total: d.put_total }))
   return {
     wins: wins.length, losses: losses.length, total, win_rate: winRate,
     call_wins: callWins, call_total: callPicks.length,
     put_wins: putWins, put_total: putPicks.length,
     streak_type: streakType, streak_count: streakCount,
     recent: ev.slice(0, 30).map(p => ({ outcome: p.outcome, option_type: p.option_type })).reverse(),
+    by_date,
   }
 }
 

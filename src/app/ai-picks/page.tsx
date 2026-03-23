@@ -72,6 +72,7 @@ interface OptionsStats {
   streak_type: 'win' | 'loss' | null
   streak_count: number
   recent: Array<{ outcome: string; option_type: string }>
+  by_date: Array<{ date: string; wins: number; losses: number; total: number; win_rate: number; call_wins: number; call_total: number; put_wins: number; put_total: number }>
 }
 
 interface APIResponse {
@@ -520,6 +521,166 @@ function OptionsStatBar({ stats, loading }: { stats: OptionsStats | null; loadin
   )
 }
 
+function OptionsStatsModal({ stats, onClose }: { stats: OptionsStats; onClose: () => void }) {
+  const callWinPct = stats.call_total > 0 ? (stats.call_wins / stats.call_total) * 100 : null
+  const putWinPct = stats.put_total > 0 ? (stats.put_wins / stats.put_total) * 100 : null
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '12px', padding: '28px', maxWidth: '560px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <div>
+            <div style={{ fontSize: '18px', fontWeight: 800, color: '#111827' }}>⚡ Options AI Performance</div>
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>{stats.total} trades evaluated at expiry (ITM/OTM)</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: '20px', color: '#9ca3af', cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        {stats.total === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af', fontSize: '13px' }}>
+            No evaluated trades yet — check back after first expiry
+          </div>
+        ) : (
+          <>
+            {/* Top stats row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '20px' }}>
+              {/* Win Rate */}
+              <div style={{ background: '#f9fafb', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '6px' }}>WIN RATE</div>
+                <div style={{ fontSize: '28px', fontWeight: 900, color: stats.win_rate >= 55 ? '#16a34a' : stats.win_rate >= 45 ? '#d97706' : '#dc2626', lineHeight: 1 }}>
+                  {stats.win_rate.toFixed(1)}%
+                </div>
+                <div style={{ marginTop: '8px', background: '#e4e4e7', borderRadius: '3px', height: '5px' }}>
+                  <div style={{ height: '100%', borderRadius: '3px', background: stats.win_rate >= 55 ? '#16a34a' : stats.win_rate >= 45 ? '#d97706' : '#dc2626', width: `${Math.min(stats.win_rate, 100)}%`, transition: 'width 0.5s' }} />
+                </div>
+              </div>
+              {/* Record */}
+              <div style={{ background: '#f9fafb', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '6px' }}>RECORD</div>
+                <div style={{ fontSize: '22px', fontWeight: 800, lineHeight: 1 }}>
+                  <span style={{ color: '#16a34a' }}>{stats.wins}W</span>
+                  <span style={{ color: '#d1d5db', margin: '0 4px', fontSize: '16px' }}>–</span>
+                  <span style={{ color: '#dc2626' }}>{stats.losses}L</span>
+                </div>
+                <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '5px' }}>{stats.total} total</div>
+              </div>
+              {/* Streak */}
+              <div style={{ background: '#f9fafb', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '6px' }}>STREAK</div>
+                {stats.streak_type && stats.streak_count > 0 ? (
+                  <>
+                    <div style={{ fontSize: '22px', fontWeight: 800, color: stats.streak_type === 'win' ? '#16a34a' : '#dc2626', lineHeight: 1 }}>
+                      {stats.streak_type === 'win' ? '🔥' : '❄️'} {stats.streak_count}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '5px' }}>{stats.streak_type === 'win' ? 'win' : 'loss'} streak</div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '13px', color: '#d1d5db', marginTop: '8px' }}>—</div>
+                )}
+              </div>
+            </div>
+
+            {/* Calls vs Puts */}
+            <div style={{ background: '#f9fafb', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '14px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '12px' }}>BY OPTION TYPE</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {/* Calls */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#2563eb' }}>▲ CALLS</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#111827' }}>{callWinPct != null ? `${callWinPct.toFixed(1)}%` : '—'}</span>
+                  </div>
+                  <div style={{ background: '#e4e4e7', borderRadius: '3px', height: '6px' }}>
+                    <div style={{ height: '100%', borderRadius: '3px', background: '#2563eb', width: `${callWinPct ?? 0}%` }} />
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '3px' }}>{stats.call_wins}W – {stats.call_total - stats.call_wins}L of {stats.call_total}</div>
+                </div>
+                {/* Puts */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#9333ea' }}>▼ PUTS</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#111827' }}>{putWinPct != null ? `${putWinPct.toFixed(1)}%` : '—'}</span>
+                  </div>
+                  <div style={{ background: '#e4e4e7', borderRadius: '3px', height: '6px' }}>
+                    <div style={{ height: '100%', borderRadius: '3px', background: '#9333ea', width: `${putWinPct ?? 0}%` }} />
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '3px' }}>{stats.put_wins}W – {stats.put_total - stats.put_wins}L of {stats.put_total}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent performance dots */}
+            {stats.recent.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '8px' }}>LAST {stats.recent.length} TRADES</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                  {stats.recent.map((r, i) => (
+                    <div
+                      key={i}
+                      title={`${r.option_type} — ${r.outcome}`}
+                      style={{ width: '14px', height: '14px', borderRadius: '3px', background: r.outcome === 'win' ? '#16a34a' : r.outcome === 'loss' ? '#dc2626' : r.option_type === 'call' ? '#bfdbfe' : '#e9d5ff' }}
+                    />
+                  ))}
+                </div>
+                <div style={{ fontSize: '10px', color: '#d1d5db', marginTop: '5px' }}>Green = win · Red = loss · Blue = call pending · Purple = put pending</div>
+              </div>
+            )}
+
+            {/* By date table */}
+            {stats.by_date.length > 0 && (
+              <div>
+                <div style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '8px' }}>ROLLING HISTORY BY DATE</div>
+                <div style={{ border: '1px solid #e4e4e7', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                    <thead>
+                      <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e4e4e7' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', color: '#6b7280', fontWeight: 600, fontSize: '10px', letterSpacing: '0.05em' }}>DATE</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', color: '#16a34a', fontWeight: 600, fontSize: '10px', letterSpacing: '0.05em' }}>W</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', color: '#dc2626', fontWeight: 600, fontSize: '10px', letterSpacing: '0.05em' }}>L</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', color: '#6b7280', fontWeight: 600, fontSize: '10px', letterSpacing: '0.05em' }}>WIN%</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', color: '#2563eb', fontWeight: 600, fontSize: '10px', letterSpacing: '0.05em' }}>CALLS</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', color: '#9333ea', fontWeight: 600, fontSize: '10px', letterSpacing: '0.05em' }}>PUTS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stats.by_date.map((d, i) => {
+                        const dateLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                        const callPct = d.call_total > 0 ? ((d.call_wins / d.call_total) * 100).toFixed(0) + '%' : '—'
+                        const putPct = d.put_total > 0 ? ((d.put_wins / d.put_total) * 100).toFixed(0) + '%' : '—'
+                        return (
+                          <tr key={d.date} style={{ borderBottom: i < stats.by_date.length - 1 ? '1px solid #f0f0f0' : 'none', background: i % 2 === 0 ? '#ffffff' : '#fafafa' }}>
+                            <td style={{ padding: '9px 12px', color: '#374151', fontWeight: 600 }}>{dateLabel}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center', color: '#16a34a', fontWeight: 700 }}>{d.wins}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center', color: '#dc2626', fontWeight: 700 }}>{d.losses}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center' }}>
+                              <span style={{ fontWeight: 700, color: d.win_rate >= 55 ? '#16a34a' : d.win_rate >= 45 ? '#d97706' : '#dc2626' }}>
+                                {d.win_rate.toFixed(0)}%
+                              </span>
+                            </td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center', color: '#2563eb', fontSize: '11px' }}>{callPct}</td>
+                            <td style={{ padding: '9px 12px', textAlign: 'center', color: '#9333ea', fontSize: '11px' }}>{putPct}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AIPicksPage() {
   const router = useRouter()
   const [data, setData] = useState<APIResponse | null>(null)
@@ -529,6 +690,7 @@ export default function AIPicksPage() {
   const [tab, setTab] = useState<'stocks' | 'crypto' | 'options'>('stocks')
   const [error, setError] = useState<string | null>(null)
   const [optionsError, setOptionsError] = useState<string | null>(null)
+  const [showOptionsStats, setShowOptionsStats] = useState(false)
 
   useEffect(() => { trackPageView('/ai-picks') }, [])
 
@@ -585,6 +747,9 @@ export default function AIPicksPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f4f4f5', color: '#111827', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
+      {showOptionsStats && optionsData?.stats && optionsData.stats.by_date && (
+        <OptionsStatsModal stats={optionsData.stats} onClose={() => setShowOptionsStats(false)} />
+      )}
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid #e4e4e7', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#ffffff', flexShrink: 0 }}>
         <button
@@ -622,7 +787,7 @@ export default function AIPicksPage() {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', flexShrink: 0, alignItems: 'center' }}>
           {([
             { key: 'stocks', label: '📈 Stocks', activeColor: '#15803d', activeBg: '#dcfce7', count: stocks.length },
             { key: 'crypto', label: '₿ Crypto', activeColor: '#d97706', activeBg: '#fef3c7', count: cryptos.length },
@@ -645,6 +810,19 @@ export default function AIPicksPage() {
               )}
             </button>
           ))}
+          {tab === 'options' && optionsData?.stats && (optionsData.stats.total ?? 0) > 0 && (
+            <button
+              onClick={() => setShowOptionsStats(true)}
+              style={{
+                marginLeft: 'auto', padding: '7px 14px', borderRadius: '7px',
+                border: '1px solid #bfdbfe', cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: '12px', fontWeight: 700,
+                background: '#eff6ff', color: '#2563eb',
+              }}
+            >
+              📊 AI Stats
+            </button>
+          )}
         </div>
 
         {/* Picks grid */}
