@@ -837,22 +837,22 @@ Be direct and factual. Use numbers.`
             onClick={() => handleUpgrade(PRICES.trader.monthly)}
             style={{
               marginLeft: '8px',
-              background: '#2d6a4f',
-              border: 'none',
+              background: '#16a34a',
+              border: '1px solid #22c55e',
               borderRadius: '6px',
-              padding: '4px 12px',
-              color: '#7ec8a0',
-              fontSize: '11px',
+              padding: '5px 14px',
+              color: '#ffffff',
+              fontSize: '12px',
               fontWeight: 700,
               cursor: 'pointer',
               fontFamily: 'inherit',
               letterSpacing: '0.04em',
               whiteSpace: 'nowrap',
             }}
-            onMouseEnter={e => e.currentTarget.style.background = '#3a8a65'}
-            onMouseLeave={e => e.currentTarget.style.background = '#2d6a4f'}
+            onMouseEnter={e => e.currentTarget.style.background = '#15803d'}
+            onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}
           >
-            Upgrade
+            ⬆ Upgrade
           </button>
         )}
 
