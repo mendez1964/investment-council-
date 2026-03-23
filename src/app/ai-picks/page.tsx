@@ -88,6 +88,20 @@ interface OptionsAPIResponse {
   stats: OptionsStats | null
   is_cached: boolean
   generated_at: string
+  daily_date: string | null
+  weekly_date: string | null
+}
+
+function getPickDuration(pick: OptionsPick): 'daily' | 'weekly' {
+  if (!pick.expiry || !pick.pick_date) return 'weekly'
+  const days = Math.round(
+    (new Date(pick.expiry + 'T12:00:00').getTime() - new Date(pick.pick_date + 'T12:00:00').getTime()) / 86400000
+  )
+  return days <= 10 ? 'daily' : 'weekly'
+}
+
+function fmtDate(dateStr: string): string {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
 function ConfidenceDots({ value, color }: { value: number; color: string }) {
@@ -208,6 +222,7 @@ function PickCard({ pick }: { pick: Pick }) {
 }
 
 function OptionsPickCard({ pick }: { pick: OptionsPick }) {
+  const duration = getPickDuration(pick)
   const isCall = pick.option_type === 'call'
   const isWin = pick.outcome === 'win'
   const isLoss = pick.outcome === 'loss'
@@ -244,12 +259,22 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
     }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{
-          fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em',
-          color: accentColor, background: accentBg,
-          borderRadius: '4px', padding: '2px 6px',
-        }}>
-          {isCall ? '▲ CALL' : '▼ PUT'}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <div style={{
+            fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em',
+            color: accentColor, background: accentBg,
+            borderRadius: '4px', padding: '2px 6px',
+          }}>
+            {isCall ? '▲ CALL' : '▼ PUT'}
+          </div>
+          <div style={{
+            fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
+            color: duration === 'daily' ? '#0369a1' : '#7c3aed',
+            background: duration === 'daily' ? '#e0f2fe' : '#ede9fe',
+            borderRadius: '4px', padding: '2px 5px',
+          }}>
+            {duration === 'daily' ? 'DAILY' : 'WEEKLY'}
+          </div>
         </div>
         {!isPending && (
           <div style={{
@@ -839,13 +864,42 @@ export default function AIPicksPage() {
               <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280', fontSize: '13px' }}>
                 No options trades available — check back Monday
               </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
-                {optionsData.picks.map(pick => (
-                  <OptionsPickCard key={pick.id} pick={pick} />
-                ))}
-              </div>
-            )
+            ) : (() => {
+              const dailyPicks = optionsData.picks.filter(p => getPickDuration(p) === 'daily')
+              const weeklyPicks = optionsData.picks.filter(p => getPickDuration(p) === 'weekly')
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  {dailyPicks.length > 0 && (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', borderRadius: '5px', padding: '3px 8px', letterSpacing: '0.06em' }}>DAILY</span>
+                        {optionsData.daily_date && (
+                          <span style={{ fontSize: '11px', color: '#6b7280' }}>{fmtDate(optionsData.daily_date)}</span>
+                        )}
+                        <span style={{ fontSize: '10px', color: '#9ca3af' }}>· expires this Friday</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
+                        {dailyPicks.map(pick => <OptionsPickCard key={pick.id} pick={pick} />)}
+                      </div>
+                    </div>
+                  )}
+                  {weeklyPicks.length > 0 && (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '5px', padding: '3px 8px', letterSpacing: '0.06em' }}>WEEKLY</span>
+                        {optionsData.weekly_date && (
+                          <span style={{ fontSize: '11px', color: '#6b7280' }}>issued {fmtDate(optionsData.weekly_date)}</span>
+                        )}
+                        <span style={{ fontSize: '10px', color: '#9ca3af' }}>· expires ~3 weeks out</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
+                        {weeklyPicks.map(pick => <OptionsPickCard key={pick.id} pick={pick} />)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()
           ) : (
             loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px', gap: '12px' }}>
