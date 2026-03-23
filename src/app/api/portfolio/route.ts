@@ -2,6 +2,7 @@
 // POST — add a new holding
 
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 
 // ─── Quote helpers (copied from /api/watchlist/quotes) ───────────────────────
 
@@ -98,11 +99,18 @@ async function fetchAllQuotes(tickers: string[]): Promise<Record<string, any>> {
 
 export async function GET() {
   try {
+    const authClient = createServerSupabaseClientAuth()
+    const { data: { user } } = await authClient.auth.getUser()
+
     const supabase = createServerSupabaseClient()
-    const { data: holdings, error } = await supabase
+    const query = supabase
       .from('portfolio_holdings')
       .select('*')
       .order('added_at', { ascending: false })
+
+    if (user) query.eq('user_id', user.id)
+
+    const { data: holdings, error } = await query
 
     if (error) return Response.json({ error: error.message }, { status: 500 })
     if (!holdings || holdings.length === 0) {
@@ -163,6 +171,9 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const authClient = createServerSupabaseClientAuth()
+    const { data: { user } } = await authClient.auth.getUser()
+
     const body = await request.json()
     const { ticker, company_name, asset_type, shares, avg_cost, sector, notes } = body
 
@@ -181,6 +192,7 @@ export async function POST(request: Request) {
         avg_cost: Number(avg_cost),
         sector: sector || null,
         notes: notes || null,
+        user_id: user?.id ?? null,
       })
       .select()
       .single()

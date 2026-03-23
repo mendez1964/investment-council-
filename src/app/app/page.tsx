@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import MarkdownRenderer from '@/components/MarkdownRenderer'
 import PineScriptTab from '@/components/PineScriptTab'
 import WatchlistTab from '@/components/WatchlistTab'
@@ -268,6 +269,19 @@ export default function Home() {
 
   // Pine Script code coming back from chat → editor
   const [pendingPineCode, setPendingPineCode] = useState<string | null>(null)
+
+  // Auth
+  const [user, setUser] = useState<any>(null)
+  const supabase = createBrowserSupabaseClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUser(data.user ?? null))
+  }, [])
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   // Cost tracking
   const [sessionCost, setSessionCost] = useState(0)
@@ -795,6 +809,32 @@ Be direct and factual. Use numbers.`
           </div>
         </div>
 
+        {/* Logout */}
+        {user && (
+          <button
+            onClick={handleLogout}
+            title={`Logged in as ${user.email}`}
+            style={{
+              marginLeft: '8px',
+              background: 'transparent',
+              border: '1px solid #1f1f1f',
+              borderRadius: '6px',
+              padding: '4px 10px',
+              color: '#444',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              letterSpacing: '0.04em',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = '#3a1010' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
+          >
+            Log out
+          </button>
+        )}
+
         {/* Tab buttons */}
         <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
           {([
@@ -910,7 +950,7 @@ Be direct and factual. Use numbers.`
                     {(() => {
                       const h = new Date().getHours()
                       const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
-                      const name = 'Dag' // replace with user.name once auth is added
+                      const name = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'there'
                       return `${greeting}, ${name}.`
                     })()}
                   </div>

@@ -48,7 +48,7 @@ export default function LandingPage() {
               ))}
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => router.push('/app')} style={{
+              <button onClick={() => router.push('/login')} style={{
                 background: 'transparent', border: `1px solid ${BORDER}`,
                 borderRadius: '8px', padding: '8px 18px',
                 color: NAVY, fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
@@ -56,7 +56,7 @@ export default function LandingPage() {
               onMouseEnter={e => { e.currentTarget.style.borderColor = NAVY; e.currentTarget.style.background = '#f0f4f8' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.background = 'transparent' }}
               >Log in</button>
-              <button onClick={() => router.push('/app')} style={{
+              <button onClick={() => router.push('/login')} style={{
                 background: GOLD, border: 'none', borderRadius: '8px', padding: '8px 20px',
                 color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
               }}
@@ -111,7 +111,7 @@ export default function LandingPage() {
             </p>
 
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button onClick={() => router.push('/app')} style={{
+              <button onClick={() => router.push('/login')} style={{
                 background: GOLD, border: 'none', borderRadius: '10px',
                 padding: '14px 32px', color: '#fff', fontSize: '16px',
                 fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
@@ -120,7 +120,7 @@ export default function LandingPage() {
               onMouseEnter={e => { e.currentTarget.style.background = '#b8913d'; e.currentTarget.style.transform = 'translateY(-1px)' }}
               onMouseLeave={e => { e.currentTarget.style.background = GOLD; e.currentTarget.style.transform = 'translateY(0)' }}
               >Start Free — 7 Days Full Access</button>
-              <button onClick={() => router.push('/app')} style={{
+              <button onClick={() => router.push('/login')} style={{
                 background: 'transparent', border: '1px solid rgba(255,255,255,0.25)',
                 borderRadius: '10px', padding: '14px 32px',
                 color: '#fff', fontSize: '16px', fontWeight: 600,
@@ -294,7 +294,7 @@ export default function LandingPage() {
                 <div style={{ fontSize: '12px', fontWeight: 700, color: TEXT_MUTED, letterSpacing: '0.08em', marginBottom: '8px' }}>FREE</div>
                 <div style={{ fontSize: '40px', fontWeight: 800, color: NAVY, marginBottom: '4px' }}>$0</div>
                 <div style={{ fontSize: '13px', color: TEXT_MUTED, marginBottom: '24px' }}>Forever free</div>
-                <button onClick={() => router.push('/app')} style={{ width: '100%', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '10px', color: NAVY, fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
+                <button onClick={() => router.push('/login')} style={{ width: '100%', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '10px', color: NAVY, fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Get Started Free
                 </button>
                 {['5 council queries per day', 'Pre-Market Briefing', 'End of Day Summary', 'Portfolio tracker', 'Watchlist'].map(f => (
@@ -314,7 +314,7 @@ export default function LandingPage() {
                 </div>
                 {annual && <div style={{ fontSize: '13px', color: '#16a34a', fontWeight: 600, marginBottom: '4px' }}>Billed ${traderAnnual}/yr · save $60</div>}
                 <div style={{ fontSize: '13px', color: TEXT_MUTED, marginBottom: '24px' }}>7-day free trial</div>
-                <button onClick={() => router.push('/app')} style={{ width: '100%', background: NAVY, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
+                <button onClick={() => router.push('/login')} style={{ width: '100%', background: NAVY, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Start Free Trial
                 </button>
                 {['Unlimited council queries', 'All 18 investment frameworks', 'Full stocks & crypto analysis', 'AI daily picks — stocks & crypto', 'Sector rotation, macro, volatility', 'Charts, calendars & screeners', 'Email alerts — 7 types', 'Portfolio & watchlist', 'PDF export & print'].map(f => (
@@ -334,7 +334,7 @@ export default function LandingPage() {
                 </div>
                 {annual && <div style={{ fontSize: '13px', color: '#16a34a', fontWeight: 600, marginBottom: '4px' }}>Billed ${proAnnual}/yr · save $100</div>}
                 <div style={{ fontSize: '13px', color: TEXT_MUTED, marginBottom: '24px' }}>7-day free trial</div>
-                <button onClick={() => router.push('/app')} style={{ width: '100%', background: GOLD, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
+                <button onClick={() => router.push('/login')} style={{ width: '100%', background: GOLD, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Start Free Trial
                 </button>
                 {['Everything in Trader', 'AI options picks daily', 'Entry premium, stop & target', 'Options email alerts', 'Priority report generation', 'Early access to new features'].map(f => (
@@ -397,7 +397,7 @@ export default function LandingPage() {
             <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.65)', marginBottom: '36px', lineHeight: 1.7 }}>
               Join traders using Investment Council for daily briefings, AI picks, and unbiased market analysis. Start free — no credit card needed.
             </p>
-            <button onClick={() => router.push('/app')} style={{ background: GOLD, border: 'none', borderRadius: '10px', padding: '16px 40px', color: '#fff', fontSize: '17px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 24px rgba(201,163,78,0.4)' }}
+            <button onClick={() => router.push('/login')} style={{ background: GOLD, border: 'none', borderRadius: '10px', padding: '16px 40px', color: '#fff', fontSize: '17px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 24px rgba(201,163,78,0.4)' }}
             onMouseEnter={e => { e.currentTarget.style.background = '#b8913d'; e.currentTarget.style.transform = 'translateY(-2px)' }}
             onMouseLeave={e => { e.currentTarget.style.background = GOLD; e.currentTarget.style.transform = 'translateY(0)' }}
             >Start Your Free Trial →</button>
