@@ -17,6 +17,7 @@ import ChartModal from '@/components/ChartModal'
 import EconomicCalendar from '@/components/EconomicCalendar'
 import PortfolioTab from '@/components/PortfolioTab'
 import Sidebar, { type SidebarItem as SidebarItemType } from '@/components/Sidebar'
+import UpgradeModal from '@/components/UpgradeModal'
 import { Menu } from 'lucide-react'
 
 interface Message {
@@ -274,6 +275,7 @@ export default function Home() {
   // Auth
   const [user, setUser] = useState<any>(null)
   const [userTier, setUserTier] = useState<'free' | 'trader' | 'pro'>('free')
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const supabase = createBrowserSupabaseClient()
 
   useEffect(() => {
@@ -704,6 +706,13 @@ Be direct and factual. Use numbers.`
           onClose={() => setShowChart(false)}
         />
       )}
+      {showUpgradeModal && (
+        <UpgradeModal
+          currentTier={userTier}
+          onClose={() => setShowUpgradeModal(false)}
+          onSelectPlan={(priceId) => { setShowUpgradeModal(false); handleUpgrade(priceId) }}
+        />
+      )}
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{
@@ -834,7 +843,7 @@ Be direct and factual. Use numbers.`
         {/* Upgrade button — only shown on free tier */}
         {userTier === 'free' && (
           <button
-            onClick={() => handleUpgrade(PRICES.trader.monthly)}
+            onClick={() => setShowUpgradeModal(true)}
             style={{
               marginLeft: '8px',
               background: '#16a34a',
@@ -942,7 +951,7 @@ Be direct and factual. Use numbers.`
             mobileOpen={sidebarMobileOpen}
             onMobileClose={() => setSidebarMobileOpen(false)}
             userTier={userTier}
-            onUpgradeClick={() => handleUpgrade(PRICES.trader.monthly)}
+            onUpgradeClick={() => setShowUpgradeModal(true)}
           />
         )}
 
