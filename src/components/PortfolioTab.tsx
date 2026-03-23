@@ -773,7 +773,7 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
                 value={addShares}
                 onChange={e => setAddShares(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
-                placeholder="100"
+                placeholder="# of shares"
                 type="text"
                 inputMode="decimal"
                 style={{ ...inputStyle, cursor: 'text' }}
@@ -785,7 +785,7 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
                 value={addAvgCost}
                 onChange={e => setAddAvgCost(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
-                placeholder="150.00"
+                placeholder="auto-fills"
                 type="text"
                 inputMode="decimal"
                 style={{ ...inputStyle, cursor: 'text' }}
@@ -814,18 +814,24 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                onClick={addHolding}
-                disabled={addSubmitting || !addTicker.trim() || !addShares || !addAvgCost}
-                style={{
-                  ...btn('#2d6a4f', '#fff'),
-                  opacity: (addSubmitting || !addTicker.trim() || !addShares || !addAvgCost) ? 0.4 : 1,
-                  padding: '7px 18px',
-                  fontSize: '12px',
-                }}
-              >
-                {addSubmitting ? 'Adding...' : '+ Add to Portfolio'}
-              </button>
+              {(() => {
+                const ready = !addSubmitting && !!addTicker.trim() && !!addShares && !!addAvgCost
+                return (
+                  <button
+                    onClick={addHolding}
+                    disabled={!ready}
+                    style={{
+                      ...btn(ready ? '#2d6a4f' : '#1a1a1a', ready ? '#fff' : '#444'),
+                      border: `1px solid ${ready ? 'transparent' : '#2a2a2a'}`,
+                      padding: '7px 18px',
+                      fontSize: '12px',
+                      cursor: ready ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    {addSubmitting ? 'Adding...' : ready ? '+ Add to Portfolio' : 'Fill in shares to add'}
+                  </button>
+                )
+              })()}
             </div>
           </div>
 
