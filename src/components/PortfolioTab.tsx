@@ -184,18 +184,19 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
     loadPortfolio()
   }, [loadPortfolio])
 
-  // Auto-fetch company name from Finnhub when ticker is set and asset type is stock/etf
+  // Auto-fetch company name, sector, and current price when ticker is typed
   useEffect(() => {
-    if (!addTicker || addTicker.length < 1 || addAssetType === 'crypto') return
+    if (!addTicker || addTicker.length < 2) return
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`https://finnhub.io/api/v1/search?q=${addTicker}&token=${process.env.NEXT_PUBLIC_FINNHUB_KEY || ''}`)
+        const res = await fetch(`/api/portfolio/lookup?ticker=${addTicker}&type=${addAssetType}`)
         if (!res.ok) return
         const data = await res.json()
-        const match = data.result?.find((r: any) => r.symbol === addTicker && r.type === 'Common Stock')
-        if (match?.description) setAddCompanyName(match.description)
+        if (data.name && !addCompanyName) setAddCompanyName(data.name)
+        if (data.sector && !addSector) setAddSector(data.sector)
+        if (data.price && !addAvgCost) setAddAvgCost(String(data.price))
       } catch { /* ignore */ }
-    }, 800)
+    }, 700)
     return () => clearTimeout(timer)
   }, [addTicker, addAssetType])
 
@@ -311,14 +312,16 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
 
   // ── Shared input style ───────────────────────────────────────────────────
   const inputStyle: React.CSSProperties = {
-    background: '#111',
-    border: '1px solid #262626',
+    background: '#161616',
+    border: '1px solid #333',
     borderRadius: '6px',
     padding: '6px 10px',
     color: '#e5e5e5',
     fontSize: '12px',
     outline: 'none',
     fontFamily: 'inherit',
+    width: '100%',
+    boxSizing: 'border-box' as const,
   }
 
   const btn = (bg: string, color = '#ccc'): React.CSSProperties => ({
