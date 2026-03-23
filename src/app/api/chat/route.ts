@@ -26,6 +26,17 @@ export async function POST(request: Request) {
       Promise.resolve(getSystemPrompt()),
     ])
 
+    // Current date/time stamped on every request
+    const now = new Date()
+    const reportDate = now.toLocaleString('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+      hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+    })
+
+    // Detect queries that REQUIRE live market data to be useful
+    const needsLiveData = /\b(quote|price|stock|ticker|etf|crypto|btc|eth|sol|market|briefing|analysis|analyze|fundamentals|earnings|sector|movers|scan|report|watchlist|portfolio|nvda|aapl|tsla|spy|qqq|msft|amzn|googl|meta|nflx)\b/i.test(latestUserMessage)
+
     let liveData = ''
     try {
       // Scans fetch 10+ stock overviews — allow up to 30s; regular queries get 8s
@@ -38,6 +49,19 @@ export async function POST(request: Request) {
       console.log('[live-data] fetched, length:', liveData.length)
     } catch (err) {
       console.error('[live-data] failed:', (err as Error).message)
+    }
+
+    // Block the API call if live data is needed but unavailable — saves cost
+    if (needsLiveData && !liveData.trim()) {
+      const msg = `**Report blocked — no live market data available**\n\nThe live market data feed returned nothing for this query. To avoid running a report on stale data, this request was not sent to the AI.\n\n**What to try:**\n- Wait a moment and try again\n- Check that the market data feed is connected\n- Try a different ticker or rephrase the query`
+      const encoder = new TextEncoder()
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(msg))
+          controller.close()
+        },
+      })
+      return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
     }
 
     // Build system prompt as an array of blocks with cache_control markers.
@@ -72,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     // Block 3: live data + closing reminder — NOT cached (fresh every request)
-    const liveAndReminder = `${liveData}\n\nRemember: Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.`
+    const liveAndReminder = `REPORT DATE/TIME: ${reportDate}\n\n${liveData}\n\nRemember: Always include the report date (${reportDate}) at the top of any analysis or report. Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.`
     systemBlocks.push({
       type: 'text',
       text: liveAndReminder,
