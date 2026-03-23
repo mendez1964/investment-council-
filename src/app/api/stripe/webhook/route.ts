@@ -1,7 +1,7 @@
 import Stripe from 'stripe'
 import { createServerSupabaseClient } from '@/lib/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-06-20' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-02-25.clover' as any })
 
 const PRICE_TO_TIER: Record<string, 'trader' | 'pro'> = {
   [process.env.STRIPE_PRICE_TRADER_MONTHLY!]: 'trader',
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const supabase = createServerSupabaseClient()
 
   if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.CheckoutSession
+    const session = event.data.object as any
     const userId = session.metadata?.user_id
     const subscriptionId = session.subscription as string
 
