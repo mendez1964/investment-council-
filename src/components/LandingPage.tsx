@@ -20,26 +20,8 @@ export default function LandingPage() {
   const traderAnnual = '299.88'
   const proAnnual = '499.92'
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'SoftwareApplication',
-    name: 'Investment Council',
-    applicationCategory: 'FinanceApplication',
-    operatingSystem: 'Web',
-    description: 'AI-powered investment research platform with 18 frameworks for stocks, crypto, and options analysis. No hype, no agenda.',
-    url: 'https://www.investmentcouncil.io',
-    offers: [
-      { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free' },
-      { '@type': 'Offer', price: '29.99', priceCurrency: 'USD', name: 'Trader' },
-      { '@type': 'Offer', price: '49.99', priceCurrency: 'USD', name: 'Pro' },
-    ],
-  }
-
   return (
-    <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-
-      <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: TEXT, overflowX: 'hidden' }}>
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: TEXT, overflowX: 'hidden' }}>
 
         {/* ── NAV ── */}
         <nav style={{
@@ -464,6 +446,5 @@ export default function LandingPage() {
         </footer>
 
       </div>
-    </>
   )
 }

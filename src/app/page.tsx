@@ -1,6 +1,21 @@
 import type { Metadata } from 'next'
 import LandingPage from '@/components/LandingPage'
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: 'Investment Council',
+  applicationCategory: 'FinanceApplication',
+  operatingSystem: 'Web',
+  description: 'AI-powered investment research platform with 18 frameworks for stocks, crypto, and options analysis.',
+  url: 'https://www.investmentcouncil.io',
+  offers: [
+    { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free' },
+    { '@type': 'Offer', price: '29.99', priceCurrency: 'USD', name: 'Trader' },
+    { '@type': 'Offer', price: '49.99', priceCurrency: 'USD', name: 'Pro' },
+  ],
+}
+
 export const metadata: Metadata = {
   title: 'Investment Council — Free AI Stock & Crypto Research Dashboard | No Hype, No Agenda',
   description: 'Your personal AI analyst. 18 investment frameworks. Stocks, crypto & options analysis on demand. Pre-market briefings, AI daily picks, sector rotation, fear & greed — free to start.',
@@ -22,5 +37,10 @@ export const metadata: Metadata = {
 }
 
 export default function Page() {
-  return <LandingPage />
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <LandingPage />
+    </>
+  )
 }
