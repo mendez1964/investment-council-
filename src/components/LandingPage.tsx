@@ -21,7 +21,7 @@ export default function LandingPage() {
   const proAnnual = '499.92'
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: TEXT, overflowX: 'hidden' }}>
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: TEXT, overflowX: 'hidden', background: '#fff' }}>
 
         {/* ── NAV ── */}
         <nav style={{
