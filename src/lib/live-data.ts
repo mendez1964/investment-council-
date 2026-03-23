@@ -62,9 +62,10 @@ function extractTickers(message: string): string[] {
   }
 
   // 3. Catch lowercase tickers typed after context keywords: "for nvda", "analyze aapl", etc.
-  const contextMatches = message.matchAll(/(?:for|of|on|analyze|analysis|check|quote|pull|about|get)\s+([a-z]{2,5})\b/gi)
-  for (const m of contextMatches) {
-    const t = m[1].toUpperCase()
+  const contextRe = /(?:for|of|on|analyze|analysis|check|quote|pull|about|get)\s+([a-z]{2,5})\b/gi
+  let cm: RegExpExecArray | null
+  while ((cm = contextRe.exec(message)) !== null) {
+    const t = cm[1].toUpperCase()
     if (!NOT_TICKERS.has(t)) found.add(t)
   }
 
