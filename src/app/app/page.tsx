@@ -907,7 +907,12 @@ Be direct and factual. Use numbers.`
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '28px', fontWeight: 700, color: '#e5e5e5', letterSpacing: '-0.02em', marginBottom: '8px' }}>
-                    Good morning, Dag.
+                    {(() => {
+                      const h = new Date().getHours()
+                      const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+                      const name = 'Dag' // replace with user.name once auth is added
+                      return `${greeting}, ${name}.`
+                    })()}
                   </div>
                   <div style={{ fontSize: '14px', color: '#555', lineHeight: 1.6 }}>
                     Your Investment Council is ready. Eighteen frameworks. No agenda.
