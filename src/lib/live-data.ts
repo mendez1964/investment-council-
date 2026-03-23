@@ -48,6 +48,7 @@ const COMPANY_NAMES: Record<string, string> = {
 
 function extractTickers(message: string): string[] {
   const msg = message.toLowerCase()
+  const upper = message.toUpperCase()
   const found = new Set<string>()
 
   // 1. Check company names (lowercase match)
@@ -55,8 +56,9 @@ function extractTickers(message: string): string[] {
     if (msg.includes(name)) found.add(ticker)
   }
 
-  // 2. Match explicit $TICKER or ALL-CAPS ticker symbols only
-  const matches = message.match(/\$([A-Za-z]{1,5})|(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])/g) ?? []
+  // 2. Match $TICKER or 2-5 char word-boundary tokens — run on UPPERCASED message
+  //    so "nvda", "aapl", "btc" are all caught regardless of how user types them
+  const matches = upper.match(/\$([A-Z]{1,5})|(?<![A-Z])([A-Z]{2,5})(?![A-Z])/g) ?? []
   for (const t of matches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
     found.add(t)
   }
