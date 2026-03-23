@@ -120,14 +120,15 @@ interface SidebarProps {
   isLoading: boolean
   mobileOpen: boolean
   onMobileClose: () => void
-  userTier?: 'free' | 'trader' | 'pro'
+  userTier?: 'free' | 'trader' | 'pro' | null
   onUpgradeClick?: () => void
 }
 
-function isLocked(item: SidebarItem, userTier: 'free' | 'trader' | 'pro') {
+function isLocked(item: SidebarItem, userTier: 'free' | 'trader' | 'pro' | null) {
   if (!item.tier) return false
-  if (item.tier === 'trader') return userTier === 'free'
-  if (item.tier === 'pro') return userTier !== 'pro'
+  const tier = userTier ?? 'free'
+  if (item.tier === 'trader') return tier === 'free'
+  if (item.tier === 'pro') return tier !== 'pro'
   return false
 }
 
@@ -147,7 +148,7 @@ function SidebarContent({
   setCollapsed: (v: boolean) => void
   isMobile: boolean
   onClose?: () => void
-  userTier?: 'free' | 'trader' | 'pro'
+  userTier?: 'free' | 'trader' | 'pro' | null
   onUpgradeClick?: () => void
 }) {
   const accentColor = mode === 'stocks' ? '#2d6a4f' : '#b45309'

@@ -274,7 +274,7 @@ export default function Home() {
 
   // Auth
   const [user, setUser] = useState<any>(null)
-  const [userTier, setUserTier] = useState<'free' | 'trader' | 'pro'>('free')
+  const [userTier, setUserTier] = useState<'free' | 'trader' | 'pro' | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const supabase = createBrowserSupabaseClient()
 
@@ -840,7 +840,7 @@ Be direct and factual. Use numbers.`
           </div>
         </div>
 
-        {/* Upgrade button — only shown on free tier */}
+        {/* Upgrade button — free tier only */}
         {userTier === 'free' && (
           <button
             onClick={() => setShowUpgradeModal(true)}
@@ -862,6 +862,30 @@ Be direct and factual. Use numbers.`
             onMouseLeave={e => e.currentTarget.style.background = '#16a34a'}
           >
             ⬆ Upgrade
+          </button>
+        )}
+        {/* Manage Plan button — paid users */}
+        {(userTier === 'trader' || userTier === 'pro') && (
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            style={{
+              marginLeft: '8px',
+              background: 'transparent',
+              border: '1px solid #2d6a4f',
+              borderRadius: '6px',
+              padding: '5px 14px',
+              color: '#7ec8a0',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              letterSpacing: '0.04em',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#22c55e'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = '#2d6a4f'}
+          >
+            {userTier === 'pro' ? '★ Pro' : '★ Trader'}
           </button>
         )}
 

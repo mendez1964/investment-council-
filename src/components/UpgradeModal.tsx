@@ -6,7 +6,7 @@ import { PRICES } from '@/lib/stripe-prices'
 interface UpgradeModalProps {
   onClose: () => void
   onSelectPlan: (priceId: string) => void
-  currentTier: 'free' | 'trader' | 'pro'
+  currentTier: 'free' | 'trader' | 'pro' | null
 }
 
 export default function UpgradeModal({ onClose, onSelectPlan, currentTier }: UpgradeModalProps) {
@@ -159,7 +159,7 @@ export default function UpgradeModal({ onClose, onSelectPlan, currentTier }: Upg
                     color: isCurrentPlan ? '#444' : '#fff',
                   }}
                 >
-                  {isCurrentPlan ? 'Current Plan' : `Start 7-Day Trial`}
+                  {isCurrentPlan ? 'Current Plan' : currentTier === 'trader' && plan.tier === 'pro' ? 'Upgrade to Pro' : 'Start 7-Day Trial'}
                 </button>
               </div>
             )
