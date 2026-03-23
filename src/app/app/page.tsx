@@ -298,10 +298,11 @@ export default function Home() {
   }
 
   async function handleUpgrade(priceId: string) {
+    const skipTrial = userTier === 'trader' || userTier === 'pro'
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId }),
+      body: JSON.stringify({ priceId, skipTrial }),
     })
     const data = await res.json()
     if (data.url) window.location.href = data.url

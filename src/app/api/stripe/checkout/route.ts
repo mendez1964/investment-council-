@@ -12,7 +12,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { priceId } = await request.json()
+    const { priceId, skipTrial } = await request.json()
     if (!priceId) {
       return Response.json({ error: 'priceId required' }, { status: 400 })
     }
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: {
-        trial_period_days: 7,
+        ...(skipTrial ? {} : { trial_period_days: 7 }),
         metadata: { user_id: user.id },
       },
       customer_email: user.email,
