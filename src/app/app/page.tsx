@@ -180,6 +180,13 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
 
 const CRYPTO_SECTIONS: SidebarSection[] = [
   {
+    id: 'ai-picks',
+    title: 'AI PICKS',
+    items: [
+      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
+    ],
+  },
+  {
     id: 'analyzecrypto',
     title: 'ANALYZE',
     items: [
