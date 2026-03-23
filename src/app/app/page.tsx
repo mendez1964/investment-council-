@@ -875,7 +875,7 @@ Be direct and factual. Use numbers.`
         {/* Manage Plan button — paid users */}
         {(userTier === 'trader' || userTier === 'pro') && (
           <button
-            onClick={() => setShowUpgradeModal(true)}
+            onClick={() => userTier === 'pro' ? handleManageBilling() : setShowUpgradeModal(true)}
             style={{
               marginLeft: '8px',
               background: 'transparent',

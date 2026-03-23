@@ -72,8 +72,8 @@ export default function UpgradeModal({ onClose, onSelectPlan, onManageBilling, c
             <div style={{ fontSize: '20px', fontWeight: 700, color: '#e5e5e5' }}>
               {currentTier === 'trader' ? 'Upgrade to Pro' : 'Upgrade Your Plan'}
             </div>
-            <div style={{ fontSize: '13px', color: '#555', marginTop: '4px' }}>
-              {currentTier === 'trader' ? 'Cancel anytime' : '7-day free trial · Cancel anytime'}
+            <div style={{ fontSize: '13px', color: '#888', marginTop: '4px' }}>
+              {currentTier === 'trader' ? 'Cancel anytime · Or upgrade to Pro below' : '7-day free trial · Cancel anytime'}
             </div>
           </div>
           <button
@@ -177,12 +177,12 @@ export default function UpgradeModal({ onClose, onSelectPlan, onManageBilling, c
           </div>
         )}
         {(currentTier === 'trader' || currentTier === 'pro') && (
-          <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          <div style={{ marginTop: '20px', textAlign: 'center' }}>
             <button
               onClick={onManageBilling}
-              style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }}
+              style={{ background: 'transparent', border: '1px solid #333', borderRadius: '6px', color: '#aaa', fontSize: '12px', cursor: 'pointer', padding: '8px 20px', fontFamily: 'inherit' }}
             >
-              Downgrade or cancel subscription
+              Manage billing / Cancel subscription
             </button>
           </div>
         )}
