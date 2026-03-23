@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const NAVY = '#0F2A44'
@@ -11,17 +11,264 @@ const TEXT = '#1f2937'
 const TEXT_MUTED = '#6b7280'
 const BORDER = '#e5e7eb'
 
+const mobileCSS = `
+@media (max-width: 768px) {
+  .landing-nav-links {
+    display: none !important;
+  }
+  nav {
+    padding: 0 16px !important;
+  }
+  .landing-hero-section {
+    padding: 60px 16px 48px !important;
+  }
+  .landing-hero-section h1 {
+    font-size: 32px !important;
+  }
+  .landing-hero-buttons {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .landing-hero-buttons button {
+    width: 100% !important;
+  }
+  .landing-mockup {
+    height: 260px !important;
+    overflow: hidden !important;
+  }
+  .landing-stats-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 24px !important;
+    justify-items: center !important;
+  }
+  .landing-section {
+    padding: 48px 16px !important;
+  }
+  .landing-section .features-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-section .pricing-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .landing-section .howitworks-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .competitor-table-wrapper {
+    overflow-x: auto !important;
+  }
+}
+`
+
+const slides = [
+  {
+    label: 'Pre-Market Briefing',
+    content: (
+      <div style={{ background: '#0a0a0a', height: '100%', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: '#C9A34E', letterSpacing: '0.08em', marginBottom: '4px' }}>
+          PRE-MARKET BRIEFING — Mon, Mar 23, 2026
+        </div>
+        <div style={{ borderRadius: '6px', overflow: 'hidden', border: '1px solid #1a1a1a' }}>
+          {[
+            { sym: 'SPY', price: '$524.80', chg: '+0.4%', pos: true },
+            { sym: 'QQQ', price: '$448.20', chg: '+0.6%', pos: true },
+            { sym: 'BTC', price: '$84,200', chg: '+1.2%', pos: true },
+            { sym: '10Y Yield', price: '4.38%', chg: '-0.02', pos: false },
+            { sym: 'VIX', price: '18.4', chg: '-2.1%', pos: false },
+          ].map(({ sym, price, chg, pos }, i) => (
+            <div key={sym} style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              padding: '6px 10px', background: i % 2 === 0 ? '#111' : '#0d0d0d',
+              fontSize: '11px',
+            }}>
+              <span style={{ color: '#aaa', fontWeight: 600, minWidth: '70px' }}>{sym}</span>
+              <span style={{ color: '#fff', fontWeight: 600 }}>{price}</span>
+              <span style={{ color: pos ? '#4ade80' : '#f87171', fontWeight: 700, minWidth: '44px', textAlign: 'right' }}>{chg}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.6 }}>
+          Key levels: Watch 524.80 resistance · Sector bias: Tech leading
+        </div>
+        <div style={{ fontSize: '10px', color: '#C9A34E', marginTop: 'auto' }}>Generated in ~4 seconds</div>
+      </div>
+    ),
+  },
+  {
+    label: 'AI Daily Stock Picks',
+    content: (
+      <div style={{ background: '#0a0a0a', height: '100%', padding: '16px', overflowY: 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          {[
+            { sym: 'NVDA', price: '$175.64', bias: 'BULLISH', dir: '▲', conf: 8, borderColor: '#22c55e', badgeColor: '#22c55e', dotColor: '#22c55e', desc: 'AI infrastructure leadership driving semiconductor demand', entry: '$171.20' },
+            { sym: 'AAPL', price: '$251.49', bias: 'BEARISH', dir: '▼', conf: 6, borderColor: '#ef4444', badgeColor: '#ef4444', dotColor: '#ef4444', desc: 'Hardware cycle headwinds amid macro pressure', entry: '$253.00' },
+            { sym: 'SPY', price: '$524.80', bias: 'BULLISH', dir: '▲', conf: 7, borderColor: '#22c55e', badgeColor: '#22c55e', dotColor: '#22c55e', desc: 'Broad market momentum with tech leadership', entry: '$521.40' },
+            { sym: 'META', price: '$604.06', bias: 'BULLISH', dir: '▲', conf: 9, borderColor: '#22c55e', badgeColor: '#22c55e', dotColor: '#22c55e', desc: 'Consumer ad spend recovering, margins expanding', entry: '$598.50' },
+          ].map(({ sym, price, bias, dir, conf, borderColor, badgeColor, dotColor, desc, entry }) => (
+            <div key={sym} style={{ background: '#111', borderRadius: '8px', borderTop: `2px solid ${borderColor}`, padding: '10px', position: 'relative' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#fff' }}>{sym}</div>
+                  <div style={{ fontSize: '10px', color: badgeColor, fontWeight: 700 }}>{dir} {bias}</div>
+                </div>
+                <span style={{ fontSize: '8px', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.12)', borderRadius: '3px', padding: '2px 5px' }}>OPEN</span>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>{price}</div>
+              <div style={{ display: 'flex', gap: '2px', marginBottom: '5px' }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div key={i} style={{ width: '8px', height: '4px', borderRadius: '1px', background: i < conf ? dotColor : '#222' }} />
+                ))}
+                <span style={{ fontSize: '8px', color: '#555', marginLeft: '3px' }}>{conf}/10</span>
+              </div>
+              <div style={{ fontSize: '9px', color: '#666', lineHeight: 1.4, marginBottom: '4px' }}>{desc}</div>
+              <div style={{ fontSize: '8px', color: '#444' }}>Entry {entry}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: 'Options Picks (Daily & Weekly)',
+    content: (
+      <div style={{ background: '#0a0a0a', height: '100%', padding: '16px', overflowY: 'auto' }}>
+        <div style={{ fontSize: '10px', color: '#888', marginBottom: '10px', textAlign: 'center', background: '#111', borderRadius: '6px', padding: '5px' }}>
+          8W – 4L · 66.7% win rate · Calls: 72% · Puts: 58%
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {[
+            { label: 'QQQ $592 C', type: 'CALL', dir: '▲', freq: 'DAILY', freqColor: '#38bdf8', borderColor: '#3b82f6', entry: '$4.80', stop: '$2.88 (-40%)', target: '$8.88 (+85%)', exp: 'Apr 4', conf: 8 },
+            { label: 'NVDA $270 C', type: 'CALL', dir: '▲', freq: 'WEEKLY', freqColor: '#a78bfa', borderColor: '#3b82f6', entry: '$6.50', stop: '$3.90 (-40%)', target: '$13.00 (+100%)', exp: 'Apr 17', conf: 7 },
+            { label: 'TLT $87 P', type: 'PUT', dir: '▼', freq: 'WEEKLY', freqColor: '#a78bfa', borderColor: '#7c3aed', entry: '$2.60', stop: '$1.56 (-40%)', target: '$4.68 (+80%)', exp: 'Apr 17', conf: 6 },
+          ].map(({ label, type, dir, freq, freqColor, borderColor, entry, stop, target, exp, conf }) => (
+            <div key={label} style={{ flex: 1, background: '#111', borderRadius: '8px', borderTop: `2px solid ${borderColor}`, padding: '10px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 800, color: '#fff', marginBottom: '5px' }}>{label}</div>
+              <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                <span style={{ fontSize: '8px', fontWeight: 700, color: borderColor, background: 'rgba(59,130,246,0.12)', borderRadius: '3px', padding: '1px 5px' }}>{dir} {type}</span>
+                <span style={{ fontSize: '8px', fontWeight: 700, color: freqColor, background: 'rgba(168,85,247,0.12)', borderRadius: '3px', padding: '1px 5px' }}>{freq}</span>
+              </div>
+              <div style={{ fontSize: '9px', color: '#aaa', marginBottom: '2px' }}>Entry: <span style={{ color: '#fff', fontWeight: 600 }}>{entry}</span></div>
+              <div style={{ fontSize: '9px', color: '#f87171', marginBottom: '2px' }}>Stop: {stop}</div>
+              <div style={{ fontSize: '9px', color: '#4ade80', marginBottom: '4px' }}>Target: {target}</div>
+              <div style={{ fontSize: '8px', color: '#555' }}>Exp {exp}</div>
+              <div style={{ display: 'flex', gap: '2px', marginTop: '6px' }}>
+                {Array.from({ length: 10 }, (_, i) => (
+                  <div key={i} style={{ width: '7px', height: '3px', borderRadius: '1px', background: i < conf ? '#3b82f6' : '#1a1a1a' }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: 'Crypto Dashboard',
+    content: (
+      <div style={{ background: '#0a0a0a', height: '100%', padding: '16px', display: 'flex', gap: '16px' }}>
+        {/* Left: dominance */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#888', letterSpacing: '0.1em', marginBottom: '6px' }}>BTC DOMINANCE</div>
+            <div style={{ background: '#1a1a1a', borderRadius: '4px', height: '10px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ width: '62.4%', height: '100%', background: '#f7931a', borderRadius: '4px' }} />
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 800, color: '#f7931a' }}>62.4%</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: '#888', letterSpacing: '0.1em', marginBottom: '6px' }}>ALT SEASON INDEX</div>
+            <div style={{ background: '#1a1a1a', borderRadius: '4px', height: '10px', overflow: 'hidden', marginBottom: '4px' }}>
+              <div style={{ width: '28%', height: '100%', background: '#f7931a', borderRadius: '4px' }} />
+            </div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#aaa' }}>28 — <span style={{ color: '#f7931a' }}>Bitcoin Season</span></div>
+          </div>
+        </div>
+        {/* Right: prices */}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: '#888', letterSpacing: '0.1em', marginBottom: '8px' }}>TOP CRYPTOS</div>
+          {[
+            { sym: 'BTC', price: '$84,200', chg: '+1.2%', color: '#f7931a', pos: true },
+            { sym: 'ETH', price: '$1,847', chg: '-0.4%', color: '#627eea', pos: false },
+            { sym: 'BNB', price: '$612', chg: '+0.8%', color: '#f0b90b', pos: true },
+            { sym: 'SOL', price: '$142', chg: '+2.1%', color: '#9945ff', pos: true },
+            { sym: 'XRP', price: '$0.498', chg: '-1.2%', color: '#346aa9', pos: false },
+          ].map(({ sym, price, chg, color, pos }) => (
+            <div key={sym} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
+              <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#aaa', minWidth: '28px' }}>{sym}</span>
+              <span style={{ fontSize: '10px', color: '#fff', fontWeight: 600, flex: 1 }}>{price}</span>
+              <span style={{ fontSize: '10px', color: pos ? '#4ade80' : '#f87171', fontWeight: 600 }}>{chg}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  {
+    label: 'Council Chat',
+    content: (
+      <div style={{ background: '#0a0a0a', height: '100%', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+        {/* User bubble */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <div style={{ background: '#1a1a1a', borderRadius: '10px 10px 2px 10px', padding: '8px 12px', maxWidth: '70%' }}>
+            <div style={{ fontSize: '10px', color: '#ccc' }}>What does the yield curve say about recession risk right now?</div>
+          </div>
+          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#1f1f1f', flexShrink: 0 }} />
+        </div>
+        {/* AI bubble */}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'linear-gradient(135deg, #1a472a, #2d6a4f)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px' }}>⚡</div>
+          <div style={{ background: '#111', borderRadius: '2px 10px 10px 10px', padding: '10px 12px', flex: 1 }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#fff', marginBottom: '4px' }}>Yield Curve — Partially Inverted</div>
+            <div style={{ fontSize: '10px', color: '#C9A34E', marginBottom: '6px' }}>2Y: 4.59% · 10Y: 4.38% · Spread: -0.21%</div>
+            <div style={{ fontSize: '10px', color: '#aaa', lineHeight: 1.6, marginBottom: '6px' }}>
+              The 2Y-10Y has been inverted for 18 months — historically a recession signal — but the Fed's 'higher for longer' stance has extended the window. Watch for dis-inversion as a more immediate risk-on signal than the inversion itself.
+            </div>
+            <div style={{ fontSize: '10px', color: '#f59e0b', fontWeight: 600 }}>Bias: Cautious — not panicking yet</div>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+]
+
 export default function LandingPage() {
   const router = useRouter()
   const [annual, setAnnual] = useState(false)
+  const [activeSlide, setActiveSlide] = useState(0)
+  const [fading, setFading] = useState(false)
 
   const traderPrice = annual ? '24.99' : '29.99'
   const proPrice = annual ? '41.66' : '49.99'
   const traderAnnual = '299.88'
   const proAnnual = '499.92'
 
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setFading(true)
+      setTimeout(() => {
+        setActiveSlide(prev => (prev + 1) % slides.length)
+        setFading(false)
+      }, 300)
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const goToSlide = (idx: number) => {
+    if (idx === activeSlide) return
+    setFading(true)
+    setTimeout(() => {
+      setActiveSlide(idx)
+      setFading(false)
+    }, 300)
+  }
+
   return (
     <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: TEXT, overflowX: 'hidden', background: '#fff' }}>
+      <style>{mobileCSS}</style>
 
         {/* ── NAV ── */}
         <nav style={{
@@ -33,7 +280,7 @@ export default function LandingPage() {
         }}>
           <img src="/logo-preview.svg" alt="Investment Council" style={{ height: '40px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-            <div style={{ display: 'flex', gap: '24px' }}>
+            <div className="landing-nav-links" style={{ display: 'flex', gap: '24px' }}>
               {[
                 { label: 'Features', href: '#features' },
                 { label: 'Pricing', href: '#pricing' },
@@ -68,7 +315,7 @@ export default function LandingPage() {
         </nav>
 
         {/* ── HERO ── */}
-        <section style={{
+        <section className="landing-hero-section" style={{
           background: `linear-gradient(135deg, ${NAVY} 0%, #1a3a5c 60%, #0d2035 100%)`,
           padding: '100px 32px 80px',
           textAlign: 'center',
@@ -110,7 +357,7 @@ export default function LandingPage() {
               AI daily picks, and 18 unbiased investment frameworks — all in one place.
             </p>
 
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div className="landing-hero-buttons" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
               <button onClick={() => router.push('/login')} style={{
                 background: GOLD, border: 'none', borderRadius: '10px',
                 padding: '14px 32px', color: '#fff', fontSize: '16px',
@@ -135,13 +382,14 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* App mockup */}
-          <div style={{ maxWidth: '900px', margin: '64px auto 0', position: 'relative' }}>
+          {/* ── SLIDESHOW MOCKUP ── */}
+          <div className="landing-mockup" style={{ maxWidth: '900px', margin: '64px auto 0', position: 'relative' }}>
             <div style={{
               background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
               borderRadius: '16px', overflow: 'hidden',
               boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
             }}>
+              {/* Browser chrome */}
               <div style={{
                 background: 'rgba(0,0,0,0.3)', padding: '12px 16px',
                 display: 'flex', alignItems: 'center', gap: '8px',
@@ -157,37 +405,40 @@ export default function LandingPage() {
                   padding: '4px 12px', fontSize: '12px', color: 'rgba(255,255,255,0.35)', marginLeft: '8px',
                 }}>www.investmentcouncil.io/app</div>
               </div>
-              <div style={{ display: 'flex', height: '320px' }}>
-                <div style={{ width: '180px', background: '#070707', borderRight: '1px solid #111', padding: '12px 8px', flexShrink: 0 }}>
-                  <div style={{ display: 'flex', gap: '4px', marginBottom: '12px' }}>
-                    <div style={{ flex: 1, background: '#1a472a', borderRadius: '5px', padding: '5px', textAlign: 'center', fontSize: '10px', color: '#7ec8a0', fontWeight: 700 }}>STOCKS</div>
-                    <div style={{ flex: 1, background: '#111', borderRadius: '5px', padding: '5px', textAlign: 'center', fontSize: '10px', color: '#333', fontWeight: 700 }}>CRYPTO</div>
-                  </div>
-                  {[
-                    { section: 'MARKET', items: ['Pre-Market Briefing', 'End of Day Summary', 'Market Health', 'Fear & Greed'] },
-                    { section: 'GET DATA', items: ['AI Daily Picks', 'Chart a Ticker', 'Email Alerts'] },
-                  ].map(({ section, items }) => (
-                    <div key={section}>
-                      <div style={{ fontSize: '8px', color: '#2e2e2e', fontWeight: 700, letterSpacing: '0.1em', padding: '8px 6px 4px' }}>{section}</div>
-                      {items.map(item => (
-                        <div key={item} style={{ fontSize: '11px', color: item === 'AI Daily Picks' ? '#7ec8a0' : '#444', padding: '3px 8px', fontWeight: item === 'AI Daily Picks' ? 600 : 400 }}>{item}</div>
-                      ))}
-                    </div>
-                  ))}
+
+              {/* Slide content */}
+              <div style={{
+                height: '320px',
+                opacity: fading ? 0 : 1,
+                transition: 'opacity 0.3s ease',
+              }}>
+                {slides[activeSlide].content}
+              </div>
+
+              {/* Slide label + dots */}
+              <div style={{
+                background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.06)',
+                padding: '10px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+              }}>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', fontWeight: 600, letterSpacing: '0.05em' }}>
+                  {slides[activeSlide].label}
                 </div>
-                <div style={{ flex: 1, background: '#0a0a0a', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'hidden' }}>
-                  {[
-                    { role: 'ai', text: <><span style={{ color: '#7ec8a0', fontWeight: 600 }}>SPY +0.4% · QQQ +0.6% · DIA +0.2%</span><br />Futures pointing higher after Fed minutes. Key resistance at 524.<br /><span style={{ color: GOLD }}>Watch: CPI 8:30am · NVDA earnings aftermarket</span></> },
-                    { role: 'user', text: 'What is the sector rotation signal right now?' },
-                    { role: 'ai', text: <><span style={{ color: '#fff', fontWeight: 600 }}>Rotating into Technology & Healthcare</span><br />Energy outflows accelerating. Risk-on dominant. Overweight QQQ, underweight XLE...</> },
-                  ].map(({ role, text }, i) => (
-                    <div key={i} style={{ display: 'flex', gap: '10px', justifyContent: role === 'user' ? 'flex-end' : 'flex-start' }}>
-                      {role === 'ai' && <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #1a472a, #2d6a4f)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>⚡</div>}
-                      <div style={{ background: role === 'ai' ? '#111' : '#1a1a1a', borderRadius: '8px', padding: '10px 14px', maxWidth: '75%' }}>
-                        <div style={{ fontSize: '10px', color: '#666', lineHeight: 1.6 }}>{text}</div>
-                      </div>
-                      {role === 'user' && <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#1f1f1f', flexShrink: 0 }} />}
-                    </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {slides.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => goToSlide(i)}
+                      style={{
+                        width: i === activeSlide ? '20px' : '6px',
+                        height: '6px',
+                        borderRadius: '3px',
+                        background: i === activeSlide ? GOLD : 'rgba(255,255,255,0.25)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        transition: 'all 0.3s ease',
+                      }}
+                    />
                   ))}
                 </div>
               </div>
@@ -196,7 +447,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── STATS BAR ── */}
-        <section style={{ background: NAVY, padding: '24px 32px', display: 'flex', justifyContent: 'center', gap: '48px', flexWrap: 'wrap' }}>
+        <section className="landing-stats-bar" style={{ background: NAVY, padding: '24px 32px', display: 'flex', justifyContent: 'center', gap: '48px', flexWrap: 'wrap' }}>
           {[
             { num: '18', label: 'Investment Frameworks' },
             { num: '2', label: 'Markets: Stocks & Crypto' },
@@ -212,7 +463,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── FEATURES ── */}
-        <section id="features" style={{ padding: '80px 32px', background: '#fff' }}>
+        <section id="features" className="landing-section" style={{ padding: '80px 32px', background: '#fff' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '56px' }}>
               <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, marginBottom: '12px' }}>
@@ -222,7 +473,7 @@ export default function LandingPage() {
                 From pre-market briefings to on-chain crypto analysis — one platform, no tab switching, no noise.
               </p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
               {[
                 { icon: '⚡', title: 'On-Demand AI Council Chat', desc: '18 investment frameworks ready to analyze any stock, crypto, or market condition. Ask anything — get structured, unbiased analysis in seconds.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '🌅', title: 'Pre-Market Briefing & EOD Summary', desc: 'Start every trading day with a full market snapshot — futures, key levels, macro risks, and what to watch. End the day with a full recap.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
@@ -250,11 +501,11 @@ export default function LandingPage() {
         </section>
 
         {/* ── HOW IT WORKS ── */}
-        <section style={{ padding: '80px 32px', background: GREY_BG }}>
+        <section className="landing-section" style={{ padding: '80px 32px', background: GREY_BG }}>
           <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
             <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, marginBottom: '12px' }}>How It Works</h2>
             <p style={{ fontSize: '16px', color: TEXT_MUTED, marginBottom: '56px' }}>From zero to full market analysis in under 30 seconds.</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '40px' }}>
+            <div className="howitworks-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '40px' }}>
               {[
                 { step: '01', title: 'Pick a Framework or Ask Anything', desc: 'Choose from 18 pre-built frameworks or type any market question. Pre-market briefing, sector rotation, crypto dashboard, options ideas — all ready.' },
                 { step: '02', title: 'Get Instant Structured Analysis', desc: 'The AI council generates a full structured report in seconds. No fluff, no hype — clean analysis with data, reasoning, and key levels.' },
@@ -271,7 +522,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── PRICING ── */}
-        <section id="pricing" style={{ padding: '80px 32px', background: '#fff' }}>
+        <section id="pricing" className="landing-section" style={{ padding: '80px 32px', background: '#fff' }}>
           <div style={{ maxWidth: '960px', margin: '0 auto', textAlign: 'center' }}>
             <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, marginBottom: '12px' }}>Simple, Transparent Pricing</h2>
             <p style={{ fontSize: '16px', color: TEXT_MUTED, marginBottom: '32px' }}>Start with 7 days full Pro access — no credit card required for Free tier.</p>
@@ -287,7 +538,7 @@ export default function LandingPage() {
               </span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px', alignItems: 'start' }}>
+            <div className="pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px', alignItems: 'start' }}>
 
               {/* Free */}
               <div style={{ border: `1px solid ${BORDER}`, borderRadius: '16px', padding: '32px 24px', textAlign: 'left' }}>
@@ -349,13 +600,13 @@ export default function LandingPage() {
         </section>
 
         {/* ── VS COMPETITORS ── */}
-        <section id="vs-competitors" style={{ padding: '80px 32px', background: GREY_BG }}>
+        <section id="vs-competitors" className="landing-section" style={{ padding: '80px 32px', background: GREY_BG }}>
           <div style={{ maxWidth: '960px', margin: '0 auto', textAlign: 'center' }}>
             <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, marginBottom: '12px' }}>Why Investment Council?</h2>
             <p style={{ fontSize: '16px', color: TEXT_MUTED, marginBottom: '48px' }}>
               The only platform combining stocks, crypto, and options AI analysis in one place — free to start.
             </p>
-            <div style={{ overflowX: 'auto' }}>
+            <div className="competitor-table-wrapper" style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ borderBottom: `2px solid ${BORDER}` }}>
@@ -391,7 +642,7 @@ export default function LandingPage() {
         </section>
 
         {/* ── FINAL CTA ── */}
-        <section style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1a3a5c 100%)`, padding: '80px 32px', textAlign: 'center' }}>
+        <section className="landing-section" style={{ background: `linear-gradient(135deg, ${NAVY} 0%, #1a3a5c 100%)`, padding: '80px 32px', textAlign: 'center' }}>
           <div style={{ maxWidth: '600px', margin: '0 auto' }}>
             <h2 style={{ fontSize: '40px', fontWeight: 800, color: '#fff', marginBottom: '16px', lineHeight: 1.2 }}>Ready to Trade Smarter?</h2>
             <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.65)', marginBottom: '36px', lineHeight: 1.7 }}>
