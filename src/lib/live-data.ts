@@ -48,7 +48,6 @@ const COMPANY_NAMES: Record<string, string> = {
 
 function extractTickers(message: string): string[] {
   const msg = message.toLowerCase()
-  const upper = message.toUpperCase()
   const found = new Set<string>()
 
   // 1. Check company names (lowercase match)
@@ -56,11 +55,17 @@ function extractTickers(message: string): string[] {
     if (msg.includes(name)) found.add(ticker)
   }
 
-  // 2. Match $TICKER or 2-5 char word-boundary tokens — run on UPPERCASED message
-  //    so "nvda", "aapl", "btc" are all caught regardless of how user types them
-  const matches = upper.match(/\$([A-Z]{1,5})|(?<![A-Z])([A-Z]{2,5})(?![A-Z])/g) ?? []
-  for (const t of matches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
+  // 2. Match explicit $ticker (any case) or ALL-CAPS tokens in the original message
+  const capsMatches = message.match(/\$([A-Za-z]{1,5})|(?<![A-Za-z])([A-Z]{2,5})(?![A-Za-z])/g) ?? []
+  for (const t of capsMatches.map(t => t.replace('$', '').toUpperCase()).filter(t => !NOT_TICKERS.has(t))) {
     found.add(t)
+  }
+
+  // 3. Catch lowercase tickers typed after context keywords: "for nvda", "analyze aapl", etc.
+  const contextMatches = message.matchAll(/(?:for|of|on|analyze|analysis|check|quote|pull|about|get)\s+([a-z]{2,5})\b/gi)
+  for (const m of contextMatches) {
+    const t = m[1].toUpperCase()
+    if (!NOT_TICKERS.has(t)) found.add(t)
   }
 
   return Array.from(found).slice(0, 3)
