@@ -201,8 +201,8 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
   }, [addTicker, addAssetType])
 
   async function addHolding() {
-    if (!addTicker.trim() || !addShares || !addAvgCost) {
-      showStatus('Ticker, shares, and avg cost are required')
+    if (!addTicker.trim() || !addShares) {
+      showStatus('Ticker and shares are required')
       return
     }
     setAddSubmitting(true)
@@ -312,11 +312,11 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
 
   // ── Shared input style ───────────────────────────────────────────────────
   const inputStyle: React.CSSProperties = {
-    background: '#161616',
-    border: '1px solid #333',
+    background: '#1c1c1c',
+    border: '1px solid #3a3a3a',
     borderRadius: '6px',
-    padding: '6px 10px',
-    color: '#e5e5e5',
+    padding: '7px 10px',
+    color: '#f0f0f0',
     fontSize: '12px',
     outline: 'none',
     fontFamily: 'inherit',
@@ -734,8 +734,8 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
 
         {/* ── Add Holding form ─────────────────────────────────────────── */}
         <div style={{
-          background: '#080808',
-          border: '1px solid #1a1a1a',
+          background: '#0e0e0e',
+          border: '1px solid #2a2a2a',
           borderRadius: '10px',
           padding: '16px',
         }}>
@@ -780,7 +780,7 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
               />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>AVG COST *</label>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>AVG COST</label>
               <input
                 value={addAvgCost}
                 onChange={e => setAddAvgCost(e.target.value)}
@@ -814,24 +814,19 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
               />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              {(() => {
-                const ready = !addSubmitting && !!addTicker.trim() && !!addShares && !!addAvgCost
-                return (
-                  <button
-                    onClick={addHolding}
-                    disabled={!ready}
-                    style={{
-                      ...btn(ready ? '#2d6a4f' : '#1a1a1a', ready ? '#fff' : '#444'),
-                      border: `1px solid ${ready ? 'transparent' : '#2a2a2a'}`,
-                      padding: '7px 18px',
-                      fontSize: '12px',
-                      cursor: ready ? 'pointer' : 'not-allowed',
-                    }}
-                  >
-                    {addSubmitting ? 'Adding...' : ready ? '+ Add to Portfolio' : 'Fill in shares to add'}
-                  </button>
-                )
-              })()}
+              <button
+                onClick={addHolding}
+                disabled={addSubmitting || !addTicker.trim() || !addShares}
+                style={{
+                  ...btn('#2d6a4f', '#fff'),
+                  padding: '7px 18px',
+                  fontSize: '12px',
+                  opacity: (addSubmitting || !addTicker.trim() || !addShares) ? 0.35 : 1,
+                  cursor: (!addTicker.trim() || !addShares) ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {addSubmitting ? 'Adding...' : '+ Add to Portfolio'}
+              </button>
             </div>
           </div>
 
