@@ -35,12 +35,9 @@ function getMondayOfWeek(dateStr: string): string {
   return toDateStr(d)
 }
 
-// Get this week's Friday expiry (if today IS Friday, use next Friday)
-function getThisFriday(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00')
-  if (d.getDay() === 5) d.setDate(d.getDate() + 7) // already Friday → next Friday
-  else while (d.getDay() !== 5) d.setDate(d.getDate() + 1)
-  return toDateStr(d)
+// Daily options expire same day (0DTE)
+function getDailyExpiry(dateStr: string): string {
+  return dateStr
 }
 
 // Get expiry ~3 weeks out (next Friday that's at least 18 days away)
@@ -80,7 +77,7 @@ async function evaluatePending(supabase: any) {
 async function generatePicks(supabase: any, pickDate: string, expiryStr: string, count: number, type: 'daily' | 'weekly', liveData: string) {
   const typeLabel = type === 'daily' ? 'short-term daily' : 'medium-term weekly'
   const expiryNote = type === 'daily'
-    ? `expiring ${expiryStr} (this Friday — 1-week plays)`
+    ? `expiring ${expiryStr} (0DTE — same day, expires today)`
     : `expiring ${expiryStr} (3-week plays)`
 
   const prompt = `You are an options trading analyst. Generate ${count} specific ${typeLabel} options trade setups using real liquid tickers.
@@ -172,7 +169,7 @@ function getPickDuration(pick: any): 'daily' | 'weekly' {
   const days = Math.round(
     (new Date(pick.expiry + 'T12:00:00').getTime() - new Date(pick.pick_date + 'T12:00:00').getTime()) / 86400000
   )
-  return days <= 10 ? 'daily' : 'weekly'
+  return days <= 1 ? 'daily' : 'weekly'
 }
 
 function calcOptionsStats(picks: any[]) {
@@ -262,7 +259,7 @@ export async function GET(request: Request) {
         const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))
         liveData = await Promise.race([fetchLiveData('pre-market briefing options volatility sector rotation market movers'), timeout])
       } catch {}
-      await generatePicks(supabase, today, getThisFriday(today), 5, 'daily', liveData)
+      await generatePicks(supabase, today, getDailyExpiry(today), 5, 'daily', liveData)
       const { data: fresh } = await supabase
         .from('ai_options_picks').select('*').eq('pick_date', today)
         .order('confidence', { ascending: false })
@@ -271,10 +268,10 @@ export async function GET(request: Request) {
     }
 
     // --- Weekly picks: always from Monday of this week ---
-    let { data: weeklyPicks } = await supabase
+    let { data: weeklyRaw } = await supabase
       .from('ai_options_picks').select('*').eq('pick_date', monday)
       .order('confidence', { ascending: false })
-    weeklyPicks = (weeklyPicks ?? []).filter((p: any) => getPickDuration(p) === 'weekly')
+    let weeklyPicks = (weeklyRaw ?? []).filter((p: any) => getPickDuration(p) === 'weekly').slice(0, 5)
 
     // Generate weekly picks if it's Monday and none exist
     if (weeklyPicks.length < 5 && isMondayToday) {
@@ -287,7 +284,7 @@ export async function GET(request: Request) {
       const { data: fresh } = await supabase
         .from('ai_options_picks').select('*').eq('pick_date', monday)
         .order('confidence', { ascending: false })
-      weeklyPicks = (fresh ?? []).filter((p: any) => getPickDuration(p) === 'weekly')
+      weeklyPicks = (fresh ?? []).filter((p: any) => getPickDuration(p) === 'weekly').slice(0, 5)
     }
 
     const picks = [...dailyPicks, ...weeklyPicks]

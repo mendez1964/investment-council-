@@ -97,7 +97,7 @@ function getPickDuration(pick: OptionsPick): 'daily' | 'weekly' {
   const days = Math.round(
     (new Date(pick.expiry + 'T12:00:00').getTime() - new Date(pick.pick_date + 'T12:00:00').getTime()) / 86400000
   )
-  return days <= 10 ? 'daily' : 'weekly'
+  return days <= 1 ? 'daily' : 'weekly'
 }
 
 function fmtDate(dateStr: string): string {
@@ -876,7 +876,7 @@ export default function AIPicksPage() {
                         {optionsData.daily_date && (
                           <span style={{ fontSize: '11px', color: '#6b7280' }}>{fmtDate(optionsData.daily_date)}</span>
                         )}
-                        <span style={{ fontSize: '10px', color: '#9ca3af' }}>· expires this Friday</span>
+                        <span style={{ fontSize: '10px', color: '#9ca3af' }}>· 0DTE — expires today</span>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
                         {dailyPicks.map(pick => <OptionsPickCard key={pick.id} pick={pick} />)}
