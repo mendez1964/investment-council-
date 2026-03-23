@@ -740,99 +740,90 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
             ADD POSITION
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            {/* Ticker */}
+          {/* Row 1: Ticker, Type, Shares, Avg Cost */}
+          <div style={{ display: 'grid', gridTemplateColumns: '80px 90px 90px 100px', gap: '8px', marginBottom: '8px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>TICKER</label>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>TICKER *</label>
               <input
                 value={addTicker}
                 onChange={e => setAddTicker(e.target.value.toUpperCase())}
                 onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
                 placeholder="AAPL"
-                style={{ ...inputStyle, width: '72px', fontWeight: 700 }}
+                style={{ ...inputStyle, fontWeight: 700, cursor: 'text' }}
               />
             </div>
-
-            {/* Company name */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>COMPANY (optional)</label>
-              <input
-                value={addCompanyName}
-                onChange={e => setAddCompanyName(e.target.value)}
-                placeholder="Apple Inc."
-                style={{ ...inputStyle, width: '130px' }}
-              />
-            </div>
-
-            {/* Shares */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>SHARES</label>
-              <input
-                value={addShares}
-                onChange={e => setAddShares(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
-                placeholder="100"
-                type="number"
-                min="0"
-                step="any"
-                style={{ ...inputStyle, width: '80px' }}
-              />
-            </div>
-
-            {/* Avg Cost */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>AVG COST</label>
-              <input
-                value={addAvgCost}
-                onChange={e => setAddAvgCost(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
-                placeholder="150.00"
-                type="number"
-                min="0"
-                step="any"
-                style={{ ...inputStyle, width: '90px' }}
-              />
-            </div>
-
-            {/* Asset type */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>TYPE</label>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>TYPE *</label>
               <select
                 value={addAssetType}
                 onChange={e => setAddAssetType(e.target.value as 'stock' | 'crypto' | 'etf')}
-                style={{ ...inputStyle, width: '80px' }}
+                style={{ ...inputStyle, cursor: 'pointer' }}
               >
                 <option value="stock">Stock</option>
                 <option value="crypto">Crypto</option>
                 <option value="etf">ETF</option>
               </select>
             </div>
-
-            {/* Sector */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>SECTOR (opt.)</label>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>SHARES *</label>
+              <input
+                value={addShares}
+                onChange={e => setAddShares(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
+                placeholder="100"
+                type="text"
+                inputMode="decimal"
+                style={{ ...inputStyle, cursor: 'text' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>AVG COST *</label>
+              <input
+                value={addAvgCost}
+                onChange={e => setAddAvgCost(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') addHolding() }}
+                placeholder="150.00"
+                type="text"
+                inputMode="decimal"
+                style={{ ...inputStyle, cursor: 'text' }}
+              />
+            </div>
+          </div>
+
+          {/* Row 2: Company, Sector, Button */}
+          <div style={{ display: 'grid', gridTemplateColumns: '150px 120px 1fr', gap: '8px', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>COMPANY (opt.)</label>
+              <input
+                value={addCompanyName}
+                onChange={e => setAddCompanyName(e.target.value)}
+                placeholder="Apple Inc."
+                style={{ ...inputStyle, cursor: 'text' }}
+              />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <label style={{ fontSize: '10px', color: '#555', fontWeight: 600 }}>SECTOR (opt.)</label>
               <input
                 value={addSector}
                 onChange={e => setAddSector(e.target.value)}
                 placeholder="Technology"
-                style={{ ...inputStyle, width: '110px' }}
+                style={{ ...inputStyle, cursor: 'text' }}
               />
             </div>
-
-            {/* Submit */}
-            <button
-              onClick={addHolding}
-              disabled={addSubmitting || !addTicker.trim() || !addShares || !addAvgCost}
-              style={{
-                ...btn('#2d6a4f', '#fff'),
-                opacity: (addSubmitting || !addTicker.trim() || !addShares || !addAvgCost) ? 0.4 : 1,
-                padding: '7px 16px',
-                fontSize: '12px',
-                alignSelf: 'flex-end',
-              }}
-            >
-              {addSubmitting ? 'Adding...' : '+ Add to Portfolio'}
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={addHolding}
+                disabled={addSubmitting || !addTicker.trim() || !addShares || !addAvgCost}
+                style={{
+                  ...btn('#2d6a4f', '#fff'),
+                  opacity: (addSubmitting || !addTicker.trim() || !addShares || !addAvgCost) ? 0.4 : 1,
+                  padding: '7px 18px',
+                  fontSize: '12px',
+                }}
+              >
+                {addSubmitting ? 'Adding...' : '+ Add to Portfolio'}
+              </button>
+            </div>
           </div>
 
           {/* Status message */}
