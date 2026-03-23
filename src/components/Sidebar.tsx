@@ -142,15 +142,15 @@ function SidebarContent({
   const accentBg = mode === 'stocks' ? '#1a472a' : '#451a03'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#070707' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0f1117' }}>
 
       {/* Top bar: mode toggle + collapse */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        padding: collapsed ? '8px 6px' : '10px 10px 8px',
-        borderBottom: '1px solid #0f0f0f',
+        padding: collapsed ? '10px 6px' : '10px 12px',
+        borderBottom: '1px solid #1e2130',
         flexShrink: 0,
       }}>
         {!collapsed && (
@@ -159,8 +159,8 @@ function SidebarContent({
             flex: 1,
             borderRadius: '8px',
             overflow: 'hidden',
-            border: '1px solid #141414',
-            background: '#0a0a0a',
+            border: '1px solid #1e2130',
+            background: '#080a0f',
           }}>
             {(['stocks', 'crypto'] as const).map(m => (
               <button
@@ -171,7 +171,7 @@ function SidebarContent({
                   padding: '7px 0',
                   background: mode === m ? accentBg : 'transparent',
                   border: 'none',
-                  color: mode === m ? accentText : '#2e2e2e',
+                  color: mode === m ? accentText : '#4a5568',
                   fontSize: '11px',
                   fontWeight: 700,
                   letterSpacing: '0.07em',
@@ -184,8 +184,8 @@ function SidebarContent({
                   justifyContent: 'center',
                   gap: '5px',
                 }}
-                onMouseEnter={e => { if (mode !== m) e.currentTarget.style.color = '#555' }}
-                onMouseLeave={e => { if (mode !== m) e.currentTarget.style.color = '#2e2e2e' }}
+                onMouseEnter={e => { if (mode !== m) e.currentTarget.style.color = '#718096' }}
+                onMouseLeave={e => { if (mode !== m) e.currentTarget.style.color = '#4a5568' }}
               >
                 {m === 'stocks' ? <TrendingUp size={11} /> : <Bitcoin size={11} />}
                 {m === 'stocks' ? 'Stocks' : 'Crypto'}
@@ -198,9 +198,9 @@ function SidebarContent({
         {isMobile ? (
           <button
             onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: '#404040', cursor: 'pointer', padding: '5px', borderRadius: '5px', display: 'flex', marginLeft: 'auto' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#888'}
-            onMouseLeave={e => e.currentTarget.style.color = '#404040'}
+            style={{ background: 'transparent', border: 'none', color: '#4a5568', cursor: 'pointer', padding: '5px', borderRadius: '5px', display: 'flex', marginLeft: 'auto' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#a0aec0'}
+            onMouseLeave={e => e.currentTarget.style.color = '#4a5568'}
           >
             <X size={16} />
           </button>
@@ -211,7 +211,7 @@ function SidebarContent({
             style={{
               background: 'transparent',
               border: '1px solid transparent',
-              color: '#252525',
+              color: '#4a5568',
               cursor: 'pointer',
               padding: '4px',
               borderRadius: '5px',
@@ -222,8 +222,8 @@ function SidebarContent({
               marginLeft: collapsed ? 'auto' : undefined,
               marginRight: collapsed ? 'auto' : undefined,
             }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = '#1f1f1f' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#252525'; e.currentTarget.style.borderColor = 'transparent' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#a0aec0'; e.currentTarget.style.borderColor = '#2d3748' }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#4a5568'; e.currentTarget.style.borderColor = 'transparent' }}
           >
             <ChevronRight size={13} style={{ transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s' }} />
           </button>
@@ -252,11 +252,11 @@ function SidebarContent({
                     padding: '7px 0',
                     display: 'flex',
                     justifyContent: 'center',
-                    color: feature ? accentText : '#333',
+                    color: feature ? accentText : '#4a5568',
                     transition: 'color 0.12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#999'}
-                  onMouseLeave={e => e.currentTarget.style.color = feature ? accentText : '#333'}
+                  onMouseEnter={e => e.currentTarget.style.color = '#a0aec0'}
+                  onMouseLeave={e => e.currentTarget.style.color = feature ? accentText : '#4a5568'}
                 >
                   <Icon size={14} />
                 </button>
@@ -280,13 +280,13 @@ function SidebarContent({
                     width: '100%',
                     background: 'transparent',
                     border: 'none',
-                    borderTop: '1px solid #0d0d0d',
+                    borderTop: '1px solid #1e2130',
                     padding: '10px 14px 7px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    color: isOpen ? accentText : '#2e2e2e',
+                    color: isOpen ? accentText : '#4a5568',
                     fontSize: '9.5px',
                     fontWeight: 700,
                     letterSpacing: '0.13em',
@@ -295,14 +295,14 @@ function SidebarContent({
                     textTransform: 'uppercase',
                     transition: 'color 0.12s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#606060'}
-                  onMouseLeave={e => e.currentTarget.style.color = isOpen ? accentText : '#2e2e2e'}
+                  onMouseEnter={e => e.currentTarget.style.color = '#a0aec0'}
+                  onMouseLeave={e => e.currentTarget.style.color = isOpen ? accentText : '#4a5568'}
                 >
                   <span>{section.title}</span>
                   <ChevronDown
                     size={11}
                     style={{
-                      opacity: 0.45,
+                      opacity: 0.6,
                       transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
                       transition: 'transform 0.18s',
                       flexShrink: 0,
@@ -325,12 +325,12 @@ function SidebarContent({
                           disabled={isLoading}
                           style={{
                             width: '100%',
-                            background: feature ? `${accentColor}1a` : 'transparent',
-                            border: `1px solid ${feature ? `${accentColor}30` : 'transparent'}`,
+                            background: feature ? `${accentColor}22` : 'transparent',
+                            border: `1px solid ${feature ? `${accentColor}40` : 'transparent'}`,
                             borderRadius: '7px',
                             padding: feature ? '8px 10px' : isPerson ? '4px 10px' : '5px 10px',
                             marginBottom: feature ? '3px' : '1px',
-                            color: feature ? accentText : isPerson ? '#3a3a3a' : '#525252',
+                            color: feature ? accentText : isPerson ? '#718096' : '#8892a4',
                             fontSize: isPerson ? '11.5px' : '12.5px',
                             fontWeight: feature ? 600 : 400,
                             cursor: isLoading ? 'default' : 'pointer',
@@ -344,20 +344,20 @@ function SidebarContent({
                           }}
                           onMouseEnter={e => {
                             if (!isLoading) {
-                              e.currentTarget.style.color = '#d4d4d4'
-                              e.currentTarget.style.background = feature ? accentColor : '#101010'
-                              e.currentTarget.style.borderColor = feature ? accentColor : 'transparent'
+                              e.currentTarget.style.color = '#e2e8f0'
+                              e.currentTarget.style.background = feature ? `${accentColor}44` : '#1a1f2e'
+                              e.currentTarget.style.borderColor = feature ? `${accentColor}60` : 'transparent'
                             }
                           }}
                           onMouseLeave={e => {
-                            e.currentTarget.style.color = feature ? accentText : isPerson ? '#3a3a3a' : '#525252'
-                            e.currentTarget.style.background = feature ? `${accentColor}1a` : 'transparent'
-                            e.currentTarget.style.borderColor = feature ? `${accentColor}30` : 'transparent'
+                            e.currentTarget.style.color = feature ? accentText : isPerson ? '#718096' : '#8892a4'
+                            e.currentTarget.style.background = feature ? `${accentColor}22` : 'transparent'
+                            e.currentTarget.style.borderColor = feature ? `${accentColor}40` : 'transparent'
                           }}
                         >
                           <Icon
                             size={feature ? 13 : isPerson ? 11 : 13}
-                            style={{ flexShrink: 0, opacity: feature ? 0.85 : isPerson ? 0.4 : 0.5 }}
+                            style={{ flexShrink: 0, opacity: feature ? 0.9 : isPerson ? 0.6 : 0.65 }}
                           />
                           <span style={{ flex: 1 }}>{item.label}</span>
                         </button>
