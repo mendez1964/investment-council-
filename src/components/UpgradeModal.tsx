@@ -6,10 +6,11 @@ import { PRICES } from '@/lib/stripe-prices'
 interface UpgradeModalProps {
   onClose: () => void
   onSelectPlan: (priceId: string) => void
+  onManageBilling: () => void
   currentTier: 'free' | 'trader' | 'pro' | null
 }
 
-export default function UpgradeModal({ onClose, onSelectPlan, currentTier }: UpgradeModalProps) {
+export default function UpgradeModal({ onClose, onSelectPlan, onManageBilling, currentTier }: UpgradeModalProps) {
   const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly')
 
   const plans = [
@@ -173,6 +174,16 @@ export default function UpgradeModal({ onClose, onSelectPlan, currentTier }: Upg
         {currentTier !== 'trader' && (
           <div style={{ marginTop: '16px', fontSize: '11px', color: '#333', textAlign: 'center' }}>
             No charge during trial · Cancel before trial ends to avoid billing
+          </div>
+        )}
+        {(currentTier === 'trader' || currentTier === 'pro') && (
+          <div style={{ marginTop: '16px', textAlign: 'center' }}>
+            <button
+              onClick={onManageBilling}
+              style={{ background: 'transparent', border: 'none', color: '#555', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Downgrade or cancel subscription
+            </button>
           </div>
         )}
       </div>

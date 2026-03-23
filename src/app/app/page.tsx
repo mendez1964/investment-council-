@@ -308,6 +308,12 @@ export default function Home() {
     if (data.url) window.location.href = data.url
   }
 
+  async function handleManageBilling() {
+    const res = await fetch('/api/stripe/portal', { method: 'POST' })
+    const data = await res.json()
+    if (data.url) window.location.href = data.url
+  }
+
   // Cost tracking
   const [sessionCost, setSessionCost] = useState(0)
   const [sessionTokens, setSessionTokens] = useState({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 })
@@ -712,6 +718,7 @@ Be direct and factual. Use numbers.`
           currentTier={userTier}
           onClose={() => setShowUpgradeModal(false)}
           onSelectPlan={(priceId) => { setShowUpgradeModal(false); handleUpgrade(priceId) }}
+          onManageBilling={() => { setShowUpgradeModal(false); handleManageBilling() }}
         />
       )}
 
