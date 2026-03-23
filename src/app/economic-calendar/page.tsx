@@ -110,7 +110,7 @@ export default function EconomicCalendarPage() {
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid #e4e4e7', padding: '14px 32px', display: 'flex', alignItems: 'center', gap: '16px', background: '#ffffff' }}>
         <button
-          onClick={() => router.back()}
+          onClick={() => router.push("/app")}
           style={{ background: 'transparent', border: '1px solid #d4d4d8', borderRadius: '6px', color: '#555', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#111'; e.currentTarget.style.borderColor = '#a1a1aa' }}
           onMouseLeave={e => { e.currentTarget.style.color = '#555'; e.currentTarget.style.borderColor = '#d4d4d8' }}

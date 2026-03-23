@@ -305,7 +305,7 @@ export default function PatternsPage() {
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', background:'#fff', fontFamily:'system-ui, sans-serif' }}>
       {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:'16px', padding:'14px 20px', borderBottom:'1px solid #e5e7eb', flexShrink:0 }}>
-        <button onClick={() => router.back()}
+        <button onClick={() => router.push("/app")}
           style={{ background:'none', border:'1px solid #e5e7eb', borderRadius:'8px', padding:'6px 12px', cursor:'pointer', fontSize:'13px', color:'#555' }}>
           ← Back
         </button>

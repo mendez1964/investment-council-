@@ -482,7 +482,7 @@ export default function CalculatorsPage() {
     <div style={{ minHeight: '100vh', background: '#060606', color: '#e5e5e5', fontFamily: 'inherit', display: 'flex', flexDirection: 'column' }}>
       {/* Top bar */}
       <div style={{ borderBottom: '1px solid #111', padding: '14px 24px', display: 'flex', alignItems: 'center', gap: '16px', background: '#080808', flexShrink: 0 }}>
-        <button onClick={() => router.back()}
+        <button onClick={() => router.push('/app')}
           style={{ background: 'transparent', border: '1px solid #1f1f1f', borderRadius: '6px', color: '#666', fontSize: '12px', fontWeight: 600, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}
           onMouseEnter={e => e.currentTarget.style.color = '#ccc'}
           onMouseLeave={e => e.currentTarget.style.color = '#666'}
