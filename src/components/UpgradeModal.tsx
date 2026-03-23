@@ -68,8 +68,12 @@ export default function UpgradeModal({ onClose, onSelectPlan, currentTier }: Upg
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
           <div>
-            <div style={{ fontSize: '20px', fontWeight: 700, color: '#e5e5e5' }}>Upgrade Your Plan</div>
-            <div style={{ fontSize: '13px', color: '#555', marginTop: '4px' }}>7-day free trial · Cancel anytime</div>
+            <div style={{ fontSize: '20px', fontWeight: 700, color: '#e5e5e5' }}>
+              {currentTier === 'trader' ? 'Upgrade to Pro' : 'Upgrade Your Plan'}
+            </div>
+            <div style={{ fontSize: '13px', color: '#555', marginTop: '4px' }}>
+              {currentTier === 'trader' ? 'Cancel anytime' : '7-day free trial · Cancel anytime'}
+            </div>
           </div>
           <button
             onClick={onClose}
@@ -166,9 +170,11 @@ export default function UpgradeModal({ onClose, onSelectPlan, currentTier }: Upg
           })}
         </div>
 
-        <div style={{ marginTop: '16px', fontSize: '11px', color: '#333', textAlign: 'center' }}>
-          No charge during trial · Cancel before trial ends to avoid billing
-        </div>
+        {currentTier !== 'trader' && (
+          <div style={{ marginTop: '16px', fontSize: '11px', color: '#333', textAlign: 'center' }}>
+            No charge during trial · Cancel before trial ends to avoid billing
+          </div>
+        )}
       </div>
     </div>
   )
