@@ -151,7 +151,7 @@ function PickCard({ pick, color }: { pick: BattlePick; color: string }) {
   const scoreMatch = pick.rationale?.match(/^\[(CAS|CS|WIN|IC):([\d.]+)\]/)
   const scoreLabel = scoreMatch?.[1] ?? null
   const scoreValue = scoreMatch ? parseFloat(scoreMatch[2]) : null
-  const rationaleText = scoreMatch ? pick.rationale.replace(/^\[(CAS|CS|WIN|IC):[\d.]+\]\s*/, '') : pick.rationale
+  const rationaleText = scoreMatch ? (pick.rationale ?? '').replace(/^\[(CAS|CS|WIN|IC):[\d.]+\]\s*/, '') : pick.rationale
   // Normalize to 0-100 for color thresholds (CS and WIN are 0-10 scale)
   const scoreNorm = scoreValue == null ? null : (scoreLabel === 'CS' || scoreLabel === 'WIN') ? scoreValue * 10 : scoreValue
   const scoreColor = scoreNorm == null ? '#9ca3af' : scoreNorm >= 85 ? '#16a34a' : scoreNorm >= 70 ? '#d97706' : '#6b7280'
@@ -439,14 +439,41 @@ function RecentDaysTable({ days }: { days: DayResult[] }) {
 export default function WarPage() {
   const [data, setData] = useState<WarData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [genMsg, setGenMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadData = () => {
+    setLoading(true)
     fetch('/api/war')
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
       .catch(() => { setError('Failed to load battle data.'); setLoading(false) })
-  }, [])
+  }
+
+  useEffect(() => { loadData() }, [])
+
+  const handleGenerate = async (refresh = false) => {
+    setGenerating(true)
+    setGenMsg(null)
+    try {
+      const res = await fetch(`/api/war/generate${refresh ? '?refresh=true' : ''}`, {
+        method: 'POST',
+        headers: { 'x-cron-secret': 'ic-cron-2024' },
+      })
+      const json = await res.json()
+      if (json.skipped) {
+        setGenMsg('Picks already generated for today. Use refresh to regenerate.')
+      } else {
+        setGenMsg(`Generated ${json.generated} picks for ${json.date}`)
+        loadData()
+      }
+    } catch {
+      setGenMsg('Generation failed — check console.')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const picksByAI = (aiName: string): BattlePick[] =>
     (data?.picks_today ?? []).filter(p => p.ai_name === aiName)
@@ -505,14 +532,49 @@ export default function WarPage() {
 
         {/* ── Today's Battle ── */}
         <section style={{ marginBottom: 48 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111', margin: 0 }}>Today's Battle</h2>
             {data?.today && (
               <span style={{ fontSize: 13, color: '#9ca3af' }}>
                 {new Date(data.today + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
               </span>
             )}
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+              {(data?.picks_today ?? []).length === 0 && !loading && (
+                <button
+                  onClick={() => handleGenerate(false)}
+                  disabled={generating}
+                  style={{
+                    fontSize: 12, fontWeight: 700, letterSpacing: '0.05em',
+                    background: DARK_BG, color: GOLD, border: `1px solid ${GOLD}50`,
+                    borderRadius: 6, padding: '7px 16px', cursor: generating ? 'not-allowed' : 'pointer',
+                    opacity: generating ? 0.6 : 1,
+                  }}
+                >
+                  {generating ? 'Generating…' : '⚔️ Generate Today\'s Picks'}
+                </button>
+              )}
+              {(data?.picks_today ?? []).length > 0 && (
+                <button
+                  onClick={() => handleGenerate(true)}
+                  disabled={generating}
+                  style={{
+                    fontSize: 11, fontWeight: 600, color: '#6b7280',
+                    background: 'transparent', border: '1px solid #e5e7eb',
+                    borderRadius: 6, padding: '5px 12px', cursor: generating ? 'not-allowed' : 'pointer',
+                    opacity: generating ? 0.6 : 1,
+                  }}
+                >
+                  {generating ? 'Refreshing…' : '↻ Refresh Picks'}
+                </button>
+              )}
+            </div>
           </div>
+          {genMsg && (
+            <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 16, padding: '8px 12px', background: '#f3f4f6', borderRadius: 6 }}>
+              {genMsg}
+            </div>
+          )}
 
           <div className="battle-grid" style={{ display: 'flex', gap: 16 }}>
             {(['claude', 'chatgpt', 'gemini', 'grok'] as const).map(ai => (
