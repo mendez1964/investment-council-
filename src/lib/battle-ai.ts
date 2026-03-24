@@ -281,7 +281,7 @@ async function callClaude(systemPrompt: string, userPrompt: string): Promise<str
 
 // ── Real API calls (fallback to Claude persona if key not set) ─────────────────
 
-const PICK_JSON_INSTRUCTION = `Respond ONLY with raw JSON: {"symbol":"X","bias":"bullish","confidence":8,"rationale":"...","catalyst":"...","target_pct":2.5,"stop_pct":1.5}`
+const PICK_JSON_INSTRUCTION = `Respond ONLY with a raw JSON object (no markdown, no code blocks, no arrays): {"symbol":"X","bias":"bullish","confidence":8,"rationale":"...","catalyst":"...","target_pct":2.5,"stop_pct":1.5}`
 
 async function callOpenAICompat(
   client: OpenAI,
@@ -341,11 +341,23 @@ async function generateWithClaude(category: string, liveData: string): Promise<s
 
 function extractJSON(text: string): any {
   const cleaned = text.trim()
-  try { return JSON.parse(cleaned) } catch {}
+
+  const unwrapArray = (v: any) => Array.isArray(v) ? v[0] : v
+
+  try { return unwrapArray(JSON.parse(cleaned)) } catch {}
+
+  // Strip markdown code fence
   const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (fence) { try { return JSON.parse(fence[1].trim()) } catch {} }
+  if (fence) { try { return unwrapArray(JSON.parse(fence[1].trim())) } catch {} }
+
+  // Extract first {...} object
   const start = cleaned.indexOf('{'), end = cleaned.lastIndexOf('}')
   if (start !== -1 && end !== -1) { try { return JSON.parse(cleaned.slice(start, end + 1)) } catch {} }
+
+  // Extract first [...] array and take first element
+  const arrStart = cleaned.indexOf('['), arrEnd = cleaned.lastIndexOf(']')
+  if (arrStart !== -1 && arrEnd !== -1) { try { return unwrapArray(JSON.parse(cleaned.slice(arrStart, arrEnd + 1))) } catch {} }
+
   throw new Error(`JSON parse failed: ${cleaned.slice(0, 100)}`)
 }
 
