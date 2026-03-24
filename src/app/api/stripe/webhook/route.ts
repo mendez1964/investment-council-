@@ -1,13 +1,14 @@
 import Stripe from 'stripe'
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { PRICES } from '@/lib/stripe-prices'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-02-25.clover' as any })
 
 const PRICE_TO_TIER: Record<string, 'trader' | 'pro'> = {
-  [process.env.STRIPE_PRICE_TRADER_MONTHLY!]: 'trader',
-  [process.env.STRIPE_PRICE_TRADER_YEARLY!]: 'trader',
-  [process.env.STRIPE_PRICE_PRO_MONTHLY!]: 'pro',
-  [process.env.STRIPE_PRICE_PRO_YEARLY!]: 'pro',
+  [PRICES.trader.monthly]: 'trader',
+  [PRICES.trader.yearly]:  'trader',
+  [PRICES.pro.monthly]:    'pro',
+  [PRICES.pro.yearly]:     'pro',
 }
 
 export async function POST(request: Request) {
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
         trial_ends_at: trialEnd,
         stripe_customer_id: session.customer as string,
       }).eq('id', userId)
+      console.log(`[webhook] checkout.completed user:${userId} price:${priceId} → tier:${tier}`)
     }
   }
 
@@ -49,15 +51,15 @@ export async function POST(request: Request) {
     const subscription = event.data.object as Stripe.Subscription
     const userId = subscription.metadata?.user_id
     const priceId = subscription.items.data[0]?.price.id
-    const tier = PRICE_TO_TIER[priceId] ?? 'trader'
     const status = subscription.status
 
     if (userId) {
-      const update: Record<string, any> = { tier }
+      let tier: 'free' | 'trader' | 'pro' = PRICE_TO_TIER[priceId] ?? 'free'
       if (status === 'canceled' || status === 'unpaid' || status === 'past_due') {
-        update.tier = 'free'
+        tier = 'free'
       }
-      await supabase.from('profiles').update(update).eq('id', userId)
+      await supabase.from('profiles').update({ tier }).eq('id', userId)
+      console.log(`[webhook] subscription.updated user:${userId} price:${priceId} status:${status} → tier:${tier}`)
     }
   }
 
