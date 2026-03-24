@@ -917,7 +917,7 @@ Be direct and factual. Use numbers.`
         {/* Manage Plan button — paid users */}
         {(userTier === 'trader' || userTier === 'pro') && (
           <button
-            onClick={() => userTier === 'pro' ? handleManageBilling() : setShowUpgradeModal(true)}
+            onClick={() => userTier === 'trader' ? setShowUpgradeModal(true) : handleManageBilling()}
             style={{
               marginLeft: '8px',
               background: 'transparent',
@@ -935,7 +935,7 @@ Be direct and factual. Use numbers.`
             onMouseEnter={e => e.currentTarget.style.borderColor = '#22c55e'}
             onMouseLeave={e => e.currentTarget.style.borderColor = '#2d6a4f'}
           >
-            {userTier === 'pro' ? '★ Pro' : '★ Trader'}
+            {userTier === 'pro' ? '★ Pro — Manage Plan' : '★ Trader — Upgrade to Pro'}
           </button>
         )}
 
