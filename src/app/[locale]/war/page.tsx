@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
-const ADMIN_EMAIL = 'dagoberto.mendez@icloud.com'
+const ADMIN_EMAIL = 'mendezdag@gmail.com'
 
 // ── AI branding ────────────────────────────────────────────────────────────────
 
