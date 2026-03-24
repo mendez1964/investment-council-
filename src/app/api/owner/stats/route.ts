@@ -119,6 +119,43 @@ export async function GET() {
       .from('analytics_events').select('created_at, feature, metadata')
       .eq('event_type', 'error').order('created_at', { ascending: false }).limit(20)
 
+    // Users by tier
+    const { data: allProfiles } = await supabase
+      .from('profiles').select('tier')
+
+    const tierCounts = { free: 0, trader: 0, pro: 0 }
+    for (const p of allProfiles ?? []) {
+      const t = p.tier as 'free' | 'trader' | 'pro'
+      if (t in tierCounts) tierCounts[t]++
+    }
+
+    // New users this week (profiles created via auth — approximate via analytics)
+    const { count: newUsersWeek } = await supabase
+      .from('analytics_events').select('session_id', { count: 'exact', head: true })
+      .eq('event_type', 'page_view').eq('page', '/login').gte('created_at', weekAgo)
+
+    // Sessions today (unique session_ids)
+    const { data: todaySessions } = await supabase
+      .from('analytics_events').select('session_id')
+      .gte('created_at', todayStart).not('session_id', 'is', null)
+
+    const uniqueSessions = new Set((todaySessions ?? []).map(e => e.session_id)).size
+
+    // Top features this week
+    const { data: weekFeatureEvents } = await supabase
+      .from('analytics_events').select('feature')
+      .eq('event_type', 'feature_used').gte('created_at', weekAgo).not('feature', 'is', null)
+
+    const weekFeatureCounts: Record<string, number> = {}
+    for (const e of weekFeatureEvents ?? []) {
+      const k = e.feature ?? 'unknown'
+      weekFeatureCounts[k] = (weekFeatureCounts[k] ?? 0) + 1
+    }
+    const topFeaturesWeek = Object.entries(weekFeatureCounts)
+      .map(([feature, count]) => ({ feature, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+
     return Response.json({
       today: {
         page_views: todayPageViews,
@@ -143,6 +180,15 @@ export async function GET() {
       api_costs: apiCosts,
       recent_events: recentEvents ?? [],
       recent_errors: recentErrors ?? [],
+      users: {
+        total: (allProfiles ?? []).length,
+        free: tierCounts.free,
+        trader: tierCounts.trader,
+        pro: tierCounts.pro,
+        new_signups_week: newUsersWeek ?? 0,
+        sessions_today: uniqueSessions,
+      },
+      top_features_week: topFeaturesWeek,
     })
   } catch (err) {
     console.error('[owner/stats]', err)
