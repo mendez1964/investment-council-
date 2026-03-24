@@ -147,12 +147,14 @@ function PickCard({ pick, color }: { pick: BattlePick; color: string }) {
     ? (((pick.entry_price - pick.stop_price) / pick.entry_price) * 100).toFixed(1)
     : null
 
-  // Parse CAS score from Grok rationale [CAS:84] or IC score [IC:84]
-  const scoreMatch = pick.rationale?.match(/^\[(CAS|IC):(\d+)\]/)
+  // Parse formula score badges: [CAS:84] Grok, [CS:7.2] Gemini, [WIN:7.4] ChatGPT, [IC:84] Claude
+  const scoreMatch = pick.rationale?.match(/^\[(CAS|CS|WIN|IC):([\d.]+)\]/)
   const scoreLabel = scoreMatch?.[1] ?? null
-  const scoreValue = scoreMatch ? parseInt(scoreMatch[2]) : null
-  const rationaleText = scoreMatch ? pick.rationale.replace(/^\[(CAS|IC):\d+\]\s*/, '') : pick.rationale
-  const scoreColor = scoreValue == null ? '#9ca3af' : scoreValue >= 85 ? '#16a34a' : scoreValue >= 78 ? '#d97706' : '#6b7280'
+  const scoreValue = scoreMatch ? parseFloat(scoreMatch[2]) : null
+  const rationaleText = scoreMatch ? pick.rationale.replace(/^\[(CAS|CS|WIN|IC):[\d.]+\]\s*/, '') : pick.rationale
+  // Normalize to 0-100 for color thresholds (CS and WIN are 0-10 scale)
+  const scoreNorm = scoreValue == null ? null : (scoreLabel === 'CS' || scoreLabel === 'WIN') ? scoreValue * 10 : scoreValue
+  const scoreColor = scoreNorm == null ? '#9ca3af' : scoreNorm >= 85 ? '#16a34a' : scoreNorm >= 70 ? '#d97706' : '#6b7280'
 
   return (
     <div style={{
@@ -181,7 +183,7 @@ function PickCard({ pick, color }: { pick: BattlePick; color: string }) {
           {scoreValue != null && (
             <span style={{
               fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
-              color: scoreColor, background: scoreValue >= 85 ? '#dcfce7' : scoreValue >= 78 ? '#fef3c7' : '#f4f4f5',
+              color: scoreColor, background: scoreNorm != null && scoreNorm >= 85 ? '#dcfce7' : scoreNorm != null && scoreNorm >= 70 ? '#fef3c7' : '#f4f4f5',
               borderRadius: 4, padding: '2px 6px',
             }}>
               {scoreLabel} {scoreValue}
