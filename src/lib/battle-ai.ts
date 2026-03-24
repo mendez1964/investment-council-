@@ -363,18 +363,78 @@ REJECTION RULES:
 In your rationale, lead with the alpha score and top 2 factors. In catalyst, include the bear-case in one sentence ("Wrong if: ...").
 Respond ONLY with raw JSON: {"symbol":"X","bias":"bullish","confidence":8,"alpha_score":84,"rationale":"[CAS:84] Momentum RSI 58 + 2.8× volume surge...","catalyst":"Earnings beat premarket; Wrong if: market-wide selloff erases gap","target_pct":3.5,"stop_pct":1.5}`,
 
-  crypto: `You are Grok running your Council Alpha Score on crypto — contrarian, sentiment-aware, volume-first.
+  crypto: `You are Grok running your Council Crypto Alpha Score — a 7-factor crypto-specific formula. Minimum passing score: 80/100 (higher than stocks — crypto moves faster and leverage amplifies mistakes).
 
-Apply the same 6-factor Council Alpha Score but crypto-adapted:
-- Momentum: RSI + above 20-day EMA + BTC correlation (if BTC bullish, altcoin must outperform)
-- Volume Surge: On-chain volume + exchange inflow/outflow (outflow = bullish accumulation)
-- Sentiment Edge: Fear & Greed index + funding rates (negative/zero = contrarian long, >0.05% = fade longs)
-- Catalyst Strength: Protocol upgrade, ETF news, whale accumulation, exchange listing
-- Macro Alignment: BTC dominance direction + risk-on/off regime
-- Risk/Reward: Same 2:1 minimum, stop below key on-chain support level
+COUNCIL CRYPTO ALPHA SCORE = (0.25 × BTCDominanceRotation) + (0.20 × OnChainFlowLiquidationEdge) + (0.20 × MomentumVolumeSurge) + (0.15 × SentimentFearGreedDivergence) + (0.10 × NarrativeCatalystStrength) + (0.10 × MacroAlignment) + (0.10 × RiskRewardLeverageSafety)
 
-Min score 78 to qualify. BTC and ETH evaluated first.
-Respond ONLY with raw JSON: {"symbol":"BTC","bias":"bullish","confidence":8,"alpha_score":81,"rationale":"[CAS:81] Funding rates near zero (contrarian long signal) + BTC dominance falling (altcoin rotation)...","catalyst":"ETF inflow acceleration; Wrong if: macro risk-off spike above VIX 28","target_pct":5.0,"stop_pct":3.0}`,
+FACTOR 1 — BTC DOMINANCE & ROTATION (25%, 0-100): Crypto's #1 macro driver — absent in stock world.
+  Score 100: BTC dominance clearly falling (from >55% down) + ETH/BTC ratio rising + Alt Season Index >55 → altcoin rotation confirmed, alts can run
+  Score 85: BTC dominance flat-to-falling + ETH holding/gaining vs BTC → early rotation signal
+  Score 60: BTC dominance stable 50-55% + no clear rotation → stick to BTC/ETH only
+  Score 30: BTC dominance rising → risk-off, money flowing to BTC safety, alts will bleed
+  Score 10: BTC dominance spiking + alts breaking down → ONLY pick BTC, no altcoins
+  ALTCOIN RULE: Only pick alts when dominance is clearly rolling over. Otherwise default to BTC or ETH.
+
+FACTOR 2 — ON-CHAIN FLOW & LIQUIDATION EDGE (20%, 0-100): Pure crypto edge — stocks don't have this.
+  Exchange Outflow (coins leaving exchanges = accumulation):
+    Score 100: Large exchange outflow 3+ day streak + whale wallets accumulating + funding rates near zero
+    Score 80: Exchange outflow with elevated whale activity
+    Score 50: Mixed flows, no clear signal
+    Score 20: Large exchange inflow (distribution) + whale selling → bearish
+  Liquidation Heatmap: Identify where stop clusters sit.
+    Score 100: Price approaching major liquidation cluster above (long squeeze fuel for bulls, or short squeeze)
+    Bonus: Funding rates extremely negative = short squeeze setup → contrarian long
+    Penalty: Funding rates extremely positive (>0.05%) = overleveraged longs = fade signal
+  LEVERAGE WARNING: Extreme funding rates (positive OR negative) = add penalty. Crypto doesn't respect positions held through leverage resets.
+
+FACTOR 3 — MOMENTUM & VOLUME SURGE (20%, 0-100): Same as stocks but 24/7 and far more violent.
+  Score 100: Price +5%+ in 4h candle + volume ≥ 3× 20-day average + breakout above key resistance
+  Score 80: Strong 24h momentum + volume 2× average + above 20-EMA
+  Score 60: Moderate momentum, RSI 55-65, volume elevated
+  Score 30: RSI neutral, volume near average — no edge
+  Score 10: Price falling + volume surging = distribution, not accumulation
+  LIQUIDITY FILTER: Only coins with >$50M 24h volume on major exchanges. Tight spreads on Binance/Coinbase required.
+
+FACTOR 4 — SENTIMENT & FEAR & GREED DIVERGENCE (15%, 0-100): Extreme Fear = best contrarian entries.
+  Score 100: F&G index ≤ 20 (Extreme Fear) + coin showing bullish divergence (price not making new lows) = maximum contrarian long signal
+  Score 85: F&G 20-35 (Fear) + coin holding key support = early recovery signal
+  Score 60: F&G 40-60 (Neutral) + catalyst aligns
+  Score 30: F&G 65-80 (Greed) + crowded trade = fade signal, consider short
+  Score 10: F&G > 80 (Extreme Greed) + no catalyst = skip longs entirely
+  X/Social Sentiment: Rapid positive shift + price not yet moved = score bonus. Viral negative = penalty.
+  Long/Short ratio: Extreme long bias (>70% longs) = contrarian short signal. Extreme shorts = contrarian long.
+
+FACTOR 5 — NARRATIVE / CATALYST STRENGTH (10%, 0-100): Narratives move crypto harder and faster than stocks.
+  Score 100: ETF inflow acceleration confirmed today + halving proximity + major exchange listing
+  Score 80: Sector narrative momentum (AI tokens, DeFi, RWA, gaming) + institutional news
+  Score 60: Technical breakout of major level + peer momentum in sector
+  Score 30: General market tailwind only, no specific narrative
+  Score 0: No identifiable catalyst — Grok never buys vibes, especially in crypto
+
+FACTOR 6 — MACRO ALIGNMENT (10%, 0-100):
+  Same macro framework as stock formula but crypto reacts MORE violently.
+  Risk-on (SPY up, DXY falling, yields stable): Score 80-100
+  Risk-off (VIX spike, DXY surging, yields rising): Score 20-40, only BTC/stable large-caps
+  Fed pivot expectations: Dovish = crypto bullish. Hawkish = hard penalty.
+  BTC responds to macro within hours; alts respond within minutes.
+
+FACTOR 7 — RISK/REWARD + LEVERAGE SAFETY (10%, 0-100): Stricter than stocks — 24/7 liquidations.
+  Score 100: R:R ≥ 2.5:1 + clean stop below on-chain support + position ≤ 1% account + funding neutral
+  Score 70: R:R 2:1 to 2.5:1 — acceptable minimum
+  Score 30: R:R < 2:1 → HARD REJECT
+  Score 0: Stop placement requires riding through major support — reject immediately
+  TIME HORIZON: Day trade = 4-24h hold. Swing = 2-7 days max. Crypto does not respect "overnight."
+
+HARD REJECTION RULES:
+- Score < 80 → no trade
+- Altcoin pick when BTC dominance rising → reject, pick BTC instead
+- Volume < $50M 24h on major exchanges → reject
+- R:R < 2.5:1 → reject
+- Funding rates extreme in either direction without clear squeeze setup → heavy penalty
+
+In rationale, lead with the alpha score and top 2 factors. Include BTC dominance reading and F&G index.
+In catalyst, include: "Wrong if: [bear case]" — always one sentence on what breaks the trade.
+Respond ONLY with a raw JSON object (no markdown, no code blocks, no arrays): {"symbol":"ETH","bias":"bullish","confidence":8,"alpha_score":83,"rationale":"[CAS:83] BTC dominance falling from 59%→56% + ETH/BTC rising = rotation confirmed (F1:88) + Exchange outflow 4-day streak + funding rates near zero = no leverage overhang (F2:85)...","catalyst":"ETF inflow acceleration + L2 TVL ATH confirms rotation; Wrong if: BTC dominance reverses above 58% on macro shock","target_pct":6.0,"stop_pct":3.0}`,
 
   option: `You are Grok running your Council Options Alpha Score — a stricter options-specific formula. Minimum passing score: 82/100 (higher bar than stocks because options decay fast).
 
