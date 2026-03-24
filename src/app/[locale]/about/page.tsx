@@ -9,6 +9,24 @@ const GREY_BG = '#f8f9fa'
 export default function AboutPage() {
   const router = useRouter()
 
+  const pillars = [
+    {
+      icon: '📖',
+      title: 'Full Scope, Not Hints',
+      text: 'Most platforms give you a summary and send you on your way. We give you the complete framework — the why, the how, and the what-to-look-for — so you understand every layer of every analysis.',
+    },
+    {
+      icon: '🧠',
+      title: 'Teach the Thinking, Not Just the Signal',
+      text: 'A signal without understanding is just noise. Every AI pick, every council analysis, every market briefing is designed to show you the reasoning so you can apply it yourself — not just follow it blindly.',
+    },
+    {
+      icon: '🎓',
+      title: 'Education First, Always',
+      text: 'Everything on this platform is built as an educational tool. The Training library, the AI Council frameworks, the daily picks — all of it is designed to make you a more capable, more independent trader.',
+    },
+  ]
+
   const stockFactors = [
     { name: 'Trend Alignment', desc: 'Is the stock trending in the same direction across daily, weekly, and macro time frames?' },
     { name: 'Momentum Quality', desc: 'Is the price momentum sustained and volume-confirmed, or a single-day spike?' },
@@ -23,6 +41,15 @@ export default function AboutPage() {
     { name: 'Funding Rate Signal', desc: 'Are perpetual futures funding rates neutral to negative, avoiding crowded longs?' },
     { name: 'Narrative Strength', desc: 'Does this coin have a strong, current narrative catalyst driving genuine interest?' },
     { name: 'Fear & Greed Regime', desc: 'Is the overall crypto sentiment positioned for continued upside or nearing euphoria?' },
+  ]
+
+  const whatWeTeach = [
+    { label: 'Council Chat', desc: 'Ask anything — every response explains the concept behind the answer, not just the answer itself.' },
+    { label: 'AI Picks', desc: 'Every pick shows the scoring rationale and factors, so you learn what makes a quality setup.' },
+    { label: 'Training Library', desc: 'Structured modules covering technical analysis, options, macro, crypto, and trading psychology.' },
+    { label: 'The Investment Council', desc: '18 legendary investor frameworks — Buffett, Dalio, Livermore and more — applied to live markets.' },
+    { label: 'Pre-Market Briefings', desc: 'Daily context on why markets are moving, not just that they moved.' },
+    { label: 'Options Education', desc: 'All 14 major strategies explained from mechanics to execution — Greeks, IV, rolling, and more.' },
   ]
 
   return (
@@ -46,42 +73,72 @@ export default function AboutPage() {
       </nav>
 
       {/* Hero */}
-      <section style={{ background: NAVY, padding: '80px 32px 72px', textAlign: 'center' }}>
-        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
-          <h1 style={{ fontSize: '48px', fontWeight: 800, color: '#fff', marginBottom: '16px', lineHeight: 1.15 }}>About Investment Council</h1>
-          <p style={{ fontSize: '20px', fontWeight: 600, color: GOLD, marginBottom: '20px', lineHeight: 1.4 }}>The AI-Powered Investment Analysis Platform Built for Retail Traders</p>
-          <p style={{ fontSize: '17px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.75, maxWidth: '640px', margin: '0 auto' }}>
-            We believe every retail trader deserves the same quality of market intelligence that institutional desks have — without the $50,000/year Bloomberg terminal.
+      <section style={{ background: NAVY, padding: '88px 32px 80px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ display: 'inline-block', background: 'rgba(201,163,78,0.15)', border: `1px solid ${GOLD}`, borderRadius: '100px', padding: '6px 18px', fontSize: '12px', fontWeight: 700, color: GOLD, letterSpacing: '1.5px', textTransform: 'uppercase', marginBottom: '24px' }}>
+            Our Mission
+          </div>
+          <h1 style={{ fontSize: '52px', fontWeight: 900, color: '#fff', marginBottom: '24px', lineHeight: 1.1 }}>
+            Most platforms show you<br />
+            <span style={{ color: GOLD }}>the signal.</span><br />
+            We show you the science.
+          </h1>
+          <p style={{ fontSize: '19px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.8, maxWidth: '680px', margin: '0 auto 32px' }}>
+            Investment Council was built on one belief: retail traders deserve the same depth of knowledge as Wall Street professionals — not watered-down summaries, not black-box signals, but the complete framework behind every decision.
+          </p>
+          <div style={{ width: '60px', height: '3px', background: GOLD, margin: '0 auto' }} />
+        </div>
+      </section>
+
+      {/* Core Statement */}
+      <section style={{ background: '#fff', padding: '80px 32px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ fontSize: '22px', color: '#374151', lineHeight: 1.9, fontStyle: 'italic', borderLeft: `4px solid ${GOLD}`, paddingLeft: '28px', textAlign: 'left', marginBottom: '40px' }}>
+            "We don't just tell you what to watch. We teach you why it matters, how the pros think about it, and what to look for yourself. Every analysis, every AI pick, every council framework is designed to make you a better, more independent trader — not a dependent one."
+          </p>
+          <p style={{ fontSize: '20px', fontWeight: 800, color: NAVY }}>
+            Because the goal was never to give you fish.<br />
+            <span style={{ color: GOLD }}>It was to teach you how the whole ocean works.</span>
           </p>
         </div>
       </section>
 
-      {/* Our Mission */}
+      {/* Three Pillars */}
+      <section style={{ background: GREY_BG, padding: '80px 32px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, textAlign: 'center', marginBottom: '12px' }}>What We Stand For</h2>
+          <p style={{ fontSize: '16px', color: '#6b7280', textAlign: 'center', marginBottom: '48px', maxWidth: '600px', margin: '0 auto 48px' }}>
+            These are the core values behind every feature we build.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '28px' }}>
+            {pillars.map(p => (
+              <div key={p.title} style={{ background: '#fff', borderRadius: '16px', padding: '36px 28px', borderTop: `4px solid ${GOLD}` }}>
+                <div style={{ fontSize: '42px', marginBottom: '16px' }}>{p.icon}</div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: NAVY, marginBottom: '12px' }}>{p.title}</h3>
+                <p style={{ fontSize: '15px', color: '#4b5563', lineHeight: 1.75, margin: 0 }}>{p.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* What We Teach */}
       <section style={{ background: '#fff', padding: '80px 32px' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, textAlign: 'center', marginBottom: '48px' }}>Our Mission</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
-            {[
-              {
-                icon: '🎯',
-                title: 'No Hype, No Bias',
-                text: 'Every analysis is data-driven. No stock pumping, no affiliate kickbacks, no paid promotions. If the IC Formula says skip it, we skip it.',
-              },
-              {
-                icon: '🤖',
-                title: 'AI That Actually Works',
-                text: 'We use Claude by Anthropic — the same AI used by Fortune 500 companies — with custom IC Formula prompts designed specifically for financial analysis.',
-              },
-              {
-                icon: '💡',
-                title: 'Built for the Retail Trader',
-                text: 'Institutional-grade analysis at a price retail traders can afford. Pre-market briefings, daily picks, options trades, and on-chain crypto metrics — all in one place.',
-              },
-            ].map(pillar => (
-              <div key={pillar.title} style={{ background: GREY_BG, borderRadius: '16px', padding: '32px 24px', textAlign: 'center' }}>
-                <div style={{ fontSize: '40px', marginBottom: '16px' }}>{pillar.icon}</div>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, color: NAVY, marginBottom: '12px' }}>{pillar.title}</h3>
-                <p style={{ fontSize: '15px', color: '#4b5563', lineHeight: 1.7, margin: 0 }}>{pillar.text}</p>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, textAlign: 'center', marginBottom: '12px' }}>Education Built Into Everything</h2>
+          <p style={{ fontSize: '16px', color: '#6b7280', textAlign: 'center', maxWidth: '600px', margin: '0 auto 48px', lineHeight: 1.7 }}>
+            Every feature on this platform was designed with education at its core. Here is where the learning happens.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            {whatWeTeach.map((item, i) => (
+              <div key={item.label} style={{ display: 'flex', gap: '16px', padding: '20px', background: GREY_BG, borderRadius: '12px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '13px', color: GOLD, flexShrink: 0 }}>
+                  {(i + 1).toString().padStart(2, '0')}
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: NAVY, marginBottom: '4px' }}>{item.label}</div>
+                  <div style={{ fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>{item.desc}</div>
+                </div>
               </div>
             ))}
           </div>
@@ -90,14 +147,13 @@ export default function AboutPage() {
 
       {/* The IC Formula */}
       <section style={{ background: GREY_BG, padding: '80px 32px' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, textAlign: 'center', marginBottom: '16px' }}>The IC Formula — How We Score Every Pick</h2>
-          <p style={{ fontSize: '16px', color: '#4b5563', textAlign: 'center', lineHeight: 1.75, maxWidth: '680px', margin: '0 auto 48px' }}>
-            Not every AI pick makes the cut. Investment Council uses a proprietary 5-factor scoring system called the IC Formula. Every candidate stock, crypto, or option is scored against all 5 factors before being included. Anything under 70 points is rejected.
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, textAlign: 'center', marginBottom: '16px' }}>The IC Formula — Transparent by Design</h2>
+          <p style={{ fontSize: '16px', color: '#4b5563', textAlign: 'center', lineHeight: 1.75, maxWidth: '700px', margin: '0 auto 48px' }}>
+            We don't hide how picks are selected. Every candidate stock, crypto, or option is scored against 5 factors before making the cut. We publish the criteria so you can learn to spot the same setups yourself.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '32px' }}>
-            {/* Stock Formula */}
             <div>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: NAVY, marginBottom: '16px', paddingBottom: '10px', borderBottom: `2px solid ${GOLD}` }}>IC Stock Formula</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -110,7 +166,6 @@ export default function AboutPage() {
               </div>
             </div>
 
-            {/* Crypto Formula */}
             <div>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: NAVY, marginBottom: '16px', paddingBottom: '10px', borderBottom: `2px solid ${GOLD}` }}>IC Crypto Formula</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -125,23 +180,24 @@ export default function AboutPage() {
           </div>
 
           <div style={{ marginTop: '40px', background: NAVY, borderRadius: '12px', padding: '20px 28px', textAlign: 'center' }}>
-            <span style={{ fontSize: '16px', fontWeight: 700, color: GOLD }}>Only picks scoring 70+ out of 100 make the final cut.</span>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: GOLD }}>Only picks scoring 70+ out of 100 make the final cut — and we show you exactly why.</span>
           </div>
         </div>
       </section>
 
       {/* Technology */}
       <section style={{ background: '#fff', padding: '80px 32px' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
           <h2 style={{ fontSize: '36px', fontWeight: 800, color: NAVY, marginBottom: '20px' }}>Powered by World-Class AI</h2>
-          <p style={{ fontSize: '16px', color: '#4b5563', lineHeight: 1.75, maxWidth: '640px', margin: '0 auto 48px' }}>
-            Investment Council is built on Claude by Anthropic — one of the world's most capable and safety-focused AI models. Every analysis uses real-time market data from multiple sources including live price feeds, economic calendars, sector rotation data, and crypto on-chain metrics.
+          <p style={{ fontSize: '16px', color: '#4b5563', lineHeight: 1.75, maxWidth: '660px', margin: '0 auto 48px' }}>
+            Investment Council runs on Claude by Anthropic — one of the world's most capable AI models — combined with a 91-domain knowledge base built specifically for trading and investing education.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
             {[
-              { title: 'Claude AI by Anthropic', icon: '🧠', desc: 'State-of-the-art large language model with custom IC Formula prompting for financial analysis.' },
+              { title: 'Claude AI by Anthropic', icon: '🧠', desc: 'State-of-the-art AI with custom IC Formula prompting for institutional-grade financial analysis.' },
+              { title: '91 Knowledge Domains', icon: '📚', desc: 'Custom-built knowledge base covering every major area of trading, investing, and crypto — loaded dynamically per query.' },
               { title: 'Real-Time Market Data', icon: '📡', desc: 'Live price feeds, economic calendar, sector flows, and crypto on-chain metrics updated continuously.' },
-              { title: 'Proprietary IC Formula', icon: '⚙️', desc: 'A 5-factor scoring framework built specifically for equity, crypto, and options analysis.' },
+              { title: 'Your Choice of AI', icon: '⚡', desc: 'Use Claude, ChatGPT, Gemini, or Grok — bring your own API key and choose the AI that fits your workflow.' },
             ].map(card => (
               <div key={card.title} style={{ border: '1px solid #e5e7eb', borderRadius: '14px', padding: '28px 20px', textAlign: 'center' }}>
                 <div style={{ fontSize: '36px', marginBottom: '12px' }}>{card.icon}</div>
@@ -154,14 +210,32 @@ export default function AboutPage() {
       </section>
 
       {/* Disclaimer */}
-      <section style={{ background: GREY_BG, padding: '80px 32px' }}>
+      <section style={{ background: GREY_BG, padding: '64px 32px' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: NAVY, marginBottom: '20px' }}>Important Disclaimer</h2>
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: NAVY, marginBottom: '16px' }}>Educational Purpose — Important Disclaimer</h2>
           <div style={{ background: '#fff', borderRadius: '12px', borderLeft: '5px solid #d97706', padding: '28px 28px 28px 24px' }}>
             <p style={{ fontSize: '15px', color: '#374151', lineHeight: 1.8, margin: 0 }}>
-              Investment Council is an educational and informational platform. Nothing on this site constitutes financial advice, investment advice, trading advice, or any other sort of advice. The AI-generated picks, signals, and analysis are for educational purposes only. Past performance of any picks or signals does not guarantee future results. Always conduct your own research and consult with a licensed financial advisor before making any investment decisions. Trading stocks, cryptocurrencies, and options involves substantial risk of loss and is not suitable for all investors. You may lose some or all of your invested capital.
+              Investment Council is an educational and informational platform. Nothing on this site constitutes financial advice, investment advice, trading advice, or any other sort of advice. All AI-generated picks, signals, and analyses are for educational purposes only. Past performance does not guarantee future results. Always conduct your own research and consult with a licensed financial advisor before making any investment decisions. Trading stocks, cryptocurrencies, and options involves substantial risk of loss and is not suitable for all investors.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section style={{ background: NAVY, padding: '72px 32px', textAlign: 'center' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#fff', marginBottom: '16px' }}>Ready to learn how the market really works?</h2>
+          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.65)', marginBottom: '32px', lineHeight: 1.7 }}>
+            Join thousands of traders building real knowledge — not just chasing signals.
+          </p>
+          <button
+            onClick={() => router.push('/login')}
+            style={{ background: GOLD, color: '#fff', border: 'none', borderRadius: '10px', padding: '16px 40px', fontSize: '16px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+          >
+            Get Started Free
+          </button>
         </div>
       </section>
 
