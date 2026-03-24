@@ -272,7 +272,7 @@ Respond ONLY with raw JSON: {"symbol":"SPY","bias":"call","confidence":7,"alpha_
 async function callClaude(systemPrompt: string, userPrompt: string): Promise<string> {
   const res = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 400,
+    max_tokens: 800,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   })
@@ -291,7 +291,7 @@ async function callOpenAICompat(
 ): Promise<string> {
   const res = await client.chat.completions.create({
     model,
-    max_tokens: 400,
+    max_tokens: 800,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },

@@ -478,8 +478,8 @@ export default function WarPage() {
       } else if (json.skipped) {
         setGenMsg('Picks already generated for today. Use Refresh Picks to regenerate.')
       } else {
-        setGenMsg(`Generated ${json.generated}/12 picks for ${json.date}`)
-        loadData()
+        setGenMsg(`Generated ${json.generated}/12 picks for ${json.date} — loading…`)
+        setTimeout(loadData, 1500)
       }
     } catch (e: any) {
       setGenMsg(`Failed: ${e?.message ?? 'network error'}`)
