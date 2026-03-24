@@ -11,11 +11,19 @@ const intlMiddleware = createMiddleware({
 })
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, searchParams } = request.nextUrl
 
   // Skip API routes and auth callback
   if (pathname.startsWith('/api') || pathname.startsWith('/auth')) {
     return NextResponse.next()
+  }
+
+  // Forward Supabase auth code to the callback handler
+  const code = searchParams.get('code')
+  if (code && (pathname === '/' || pathname === '')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/callback'
+    return NextResponse.redirect(url)
   }
 
   // Strip locale prefix to check the real path
