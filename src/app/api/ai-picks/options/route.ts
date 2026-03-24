@@ -75,16 +75,72 @@ async function evaluatePending(supabase: any) {
 }
 
 async function generatePicks(supabase: any, pickDate: string, expiryStr: string, count: number, type: 'daily' | 'weekly', liveData: string) {
-  const typeLabel = type === 'daily' ? 'short-term daily' : 'medium-term weekly'
   const expiryNote = type === 'daily'
-    ? `expiring ${expiryStr} (0DTE — same day, expires today)`
-    : `expiring ${expiryStr} (3-week plays)`
+    ? `expiring ${expiryStr} (0DTE — expires today at close)`
+    : `expiring ${expiryStr} (~3 weeks out)`
 
-  const prompt = `You are an options trading analyst. Generate ${count} specific ${typeLabel} options trade setups using real liquid tickers.
+  const prompt = `You are an expert options trader using the IC Formula — a 5-factor scoring system. Evaluate every candidate ticker against all 5 factors before selecting. Only include trades scoring 65+.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
 
-Required format:
+═══════════════════════════════════════
+IC FORMULA — 5 FACTORS (each 0-20 pts)
+═══════════════════════════════════════
+
+FACTOR 1 — TREND ALIGNMENT (0-20)
+Score 20: Price above 20, 50, AND 200-day MA (calls) OR below all 3 (puts)
+Score 15: Above/below 20+50-day MA only
+Score 10: Above/below 20-day MA only
+Score 5: Mixed/choppy signals
+Score 0: Trading against the primary trend — skip this trade
+
+FACTOR 2 — MOMENTUM QUALITY (0-20)
+Calls: RSI 50-68 = 20pts (strong momentum, not overbought), RSI 40-50 = 12pts (building), RSI >75 = 5pts (overbought risk), RSI <45 = 3pts (weak)
+Puts: RSI 32-50 = 20pts, RSI 25-32 = 12pts, RSI <25 = 5pts (oversold bounce risk), RSI >55 = 3pts (too strong)
+Also: High relative volume (>1.3x avg) = +3 bonus pts
+
+FACTOR 3 — SECTOR ROTATION (0-20)
+Score 20: Underlying is in the #1 or #2 leading sector today AND the sector has positive money flow
+Score 15: In a strengthening/neutral sector with positive bias
+Score 10: Sector neutral, stock has independent catalyst
+Score 5: Sector lagging but stock showing relative strength
+Score 0: In a lagging sector with no independent catalyst — use as PUT candidate instead
+
+FACTOR 4 — CATALYST PRESENT (0-20)
+Score 20: Clear identifiable catalyst within expiry window — Fed decision, earnings, product launch, economic data, technical breakout of major level
+Score 15: Moderate catalyst — sector rotation event, index rebalance, options expiry effect
+Score 10: Technical only — bouncing off key support, breaking key resistance
+Score 5: Macro tailwind only
+Score 0: No clear catalyst identified — do NOT include this trade
+
+FACTOR 5 — OPTIONS CONDITIONS (0-20)
+Score 20: IV rank estimated <30 (cheap premium — ideal for buying options)
+Score 15: IV rank ~30-50 (fair value — acceptable with strong catalyst)
+Score 10: IV rank ~50-70 (elevated — require higher conviction catalyst)
+Score 5: IV rank >70 (expensive — only include if massive catalyst)
+Score 0: IV crush risk present (within 1 day of earnings/event that already happened)
+
+═══════════════════════════════════
+SCORING → CONFIDENCE → STRIKE SELECTION
+═══════════════════════════════════
+90-100 pts → confidence 9-10 → ATM strike
+80-89 pts  → confidence 7-8  → ATM or 1-strike OTM
+70-79 pts  → confidence 5-6  → 1-2 strikes OTM
+65-69 pts  → confidence 4    → 2 strikes OTM, smaller size
+<65 pts    → SKIP — find a better trade
+
+RISK MANAGEMENT BY CONFIDENCE:
+Confidence 8-10: stop_loss_pct=35, take_profit_pct=100 (3:1 minimum)
+Confidence 6-7:  stop_loss_pct=40, take_profit_pct=80  (2:1 minimum)
+Confidence 4-5:  stop_loss_pct=30, take_profit_pct=60
+
+HARD RULES:
+- Never pick a stock with earnings within the expiry window UNLESS earnings IS the catalyst
+- At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts — use sector leaders for calls, laggards for puts
+- Every rationale must reference 2+ factors (trend, RSI level, sector position, or catalyst)
+- Use only liquid tickers: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, TLT, XLE, XLK, XLF, XLV, XLY, XLC
+
+Required JSON format — EXACTLY ${count} trades, ${expiryNote}:
 {
   "trades": [
     {
@@ -93,30 +149,21 @@ Required format:
       "strike": 570,
       "expiry": "${expiryStr}",
       "entry_premium": 3.50,
-      "stop_loss_pct": 40,
-      "take_profit_pct": 80,
-      "confidence": 7,
-      "rationale": "12-15 word thesis explaining the setup",
-      "catalyst": "8-10 word near-term trigger",
+      "stop_loss_pct": 35,
+      "take_profit_pct": 100,
+      "confidence": 8,
+      "ic_score": 83,
+      "rationale": "Above all 3 MAs, RSI 61, tech sector leading with strong breadth",
+      "catalyst": "Tech momentum + NVDA earnings tailwind driving index",
       "sector": "ETF"
     }
   ]
-}
-
-Rules:
-- EXACTLY ${count} trades, ${expiryNote}
-- Use highly liquid underlyings: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, TLT, XLE, etc.
-- Mix calls and puts (at least 2 of each) based on real market conditions
-- Strike: near ATM (within 2-3% of current price) or slightly OTM
-- entry_premium: realistic premium in dollars (e.g. 1.00 to 15.00)
-- stop_loss_pct: 30-50, take_profit_pct: 60-120
-- confidence: 1-10 integer
-- option_type: "call" or "put" only`
+}`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1500,
-    system: `You generate structured JSON data for options trading. Output only valid JSON with no other text.${liveData ? `\n\n${liveData}` : ''}`,
+    max_tokens: 2000,
+    system: `You are an expert options trader applying the IC Formula. Score every trade rigorously — reject anything under 65. Output only valid JSON with no other text.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -148,7 +195,7 @@ Rules:
       stop_loss_pct: parseInt(trade.stop_loss_pct) || 40,
       take_profit_pct: parseInt(trade.take_profit_pct) || 80,
       confidence: Math.min(10, Math.max(1, parseInt(trade.confidence) || 5)),
-      rationale: trade.rationale ?? '',
+      rationale: trade.ic_score ? `[IC:${parseInt(trade.ic_score) || '?'}] ${trade.rationale ?? ''}` : (trade.rationale ?? ''),
       catalyst: trade.catalyst ?? '',
       sector: trade.sector ?? '',
       underlying_entry_price: q?.c ?? null,

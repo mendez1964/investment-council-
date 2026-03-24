@@ -235,6 +235,12 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
   const outcomeColor = isWin ? '#16a34a' : isLoss ? '#dc2626' : '#555'
   const outcomeBg = isWin ? '#dcfce7' : isLoss ? '#fee2e2' : '#f4f4f5'
 
+  // Parse IC score from rationale prefix [IC:83]
+  const icMatch = pick.rationale?.match(/^\[IC:(\d+)\]/)
+  const icScore = icMatch ? parseInt(icMatch[1]) : null
+  const rationaleText = icMatch ? pick.rationale.replace(/^\[IC:\d+\]\s*/, '') : pick.rationale
+  const icColor = icScore == null ? '#9ca3af' : icScore >= 85 ? '#16a34a' : icScore >= 75 ? '#d97706' : '#6b7280'
+
   const expiryLabel = pick.expiry
     ? new Date(pick.expiry + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : null
@@ -307,12 +313,19 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
         </div>
       </div>
 
-      {/* Confidence */}
-      <ConfidenceDots value={pick.confidence} color={accentColor} />
+      {/* Confidence + IC Score */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <ConfidenceDots value={pick.confidence} color={accentColor} />
+        {icScore != null && (
+          <div style={{ fontSize: '10px', fontWeight: 700, color: icColor, background: icScore >= 85 ? '#dcfce7' : icScore >= 75 ? '#fef3c7' : '#f4f4f5', borderRadius: '4px', padding: '1px 6px', letterSpacing: '0.03em' }}>
+            IC {icScore}
+          </div>
+        )}
+      </div>
 
       {/* Rationale */}
       <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.45, fontStyle: 'italic', flex: 1 }}>
-        &quot;{pick.rationale}&quot;
+        &quot;{rationaleText}&quot;
       </div>
 
       {/* Catalyst */}
