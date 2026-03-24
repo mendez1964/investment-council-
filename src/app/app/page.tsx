@@ -27,7 +27,7 @@ interface Message {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
+type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 const STOCKS_SECTIONS: SidebarSection[] = [
@@ -37,6 +37,7 @@ const STOCKS_SECTIONS: SidebarSection[] = [
     items: [
       { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
       { label: 'Challenge the Council', icon: '🏆', prompt: '', isBattle: true, tier: 'trader' as const },
+      { label: 'War of the AIs ⚔️', icon: '⚔️', prompt: '', isWar: true, tier: 'trader' as const },
     ],
   },
   {
@@ -186,6 +187,7 @@ const CRYPTO_SECTIONS: SidebarSection[] = [
     items: [
       { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
       { label: 'Challenge the Council', icon: '🏆', prompt: '', isBattle: true, tier: 'trader' as const },
+      { label: 'War of the AIs ⚔️', icon: '⚔️', prompt: '', isWar: true, tier: 'trader' as const },
     ],
   },
   {
@@ -707,6 +709,11 @@ Be direct and factual. Use numbers.`
   const currentSections = sidebarMode === 'stocks' ? STOCKS_SECTIONS : CRYPTO_SECTIONS
 
   function handleSidebarItemClick(item: SidebarItemType) {
+    if ((item as any).isWar) {
+      router.push('/war')
+      setSidebarMobileOpen(false)
+      return
+    }
     if ((item as any).isBattle) {
       router.push('/battle')
       setSidebarMobileOpen(false)

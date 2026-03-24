@@ -40,6 +40,11 @@ async function runJobs(secret: string) {
     console.log('[cron/morning] email_options:', JSON.stringify(res))
   } catch (e) { console.error('[cron/morning] email_options error:', e) }
 
+  try {
+    const res = await callInternal('/api/war/generate', 'POST', secret)
+    console.log('[cron/morning] war_generate:', JSON.stringify(res))
+  } catch (e) { console.error('[cron/morning] war_generate error:', e) }
+
   console.log('[cron/morning] all jobs done:', new Date().toISOString())
 }
 
