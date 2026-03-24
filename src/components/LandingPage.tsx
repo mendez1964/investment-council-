@@ -704,9 +704,21 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>© 2026 Investment Council · investmentcouncil.io</div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', maxWidth: '560px', textAlign: 'right', lineHeight: 1.5 }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>© 2026 Investment Council</span>
+                {[
+                  { label: 'Terms', href: '/terms' },
+                  { label: 'Privacy', href: '/privacy' },
+                  { label: 'Contact', href: '/contact' },
+                ].map(l => (
+                  <a key={l.label} href={l.href} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+                  >{l.label}</a>
+                ))}
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.2)', maxWidth: '480px', textAlign: 'right', lineHeight: 1.5 }}>
                 For educational and informational purposes only. Not financial advice. Past performance is not indicative of future results.
               </div>
             </div>

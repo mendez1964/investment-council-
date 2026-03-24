@@ -31,6 +31,11 @@ async function runJobs(secret: string) {
   } catch (e) { console.error('[cron/morning] picks_refresh error:', e) }
 
   try {
+    const res = await callInternal('/api/email/send/morning-briefing', 'POST', secret)
+    console.log('[cron/morning] email_briefing:', JSON.stringify(res))
+  } catch (e) { console.error('[cron/morning] email_briefing error:', e) }
+
+  try {
     const res = await callInternal('/api/email/send/daily-picks', 'POST', secret)
     console.log('[cron/morning] email_picks:', JSON.stringify(res))
   } catch (e) { console.error('[cron/morning] email_picks error:', e) }
