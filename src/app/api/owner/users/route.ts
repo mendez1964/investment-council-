@@ -60,3 +60,19 @@ export async function PATCH(request: Request) {
 
   return Response.json({ ok: true, user_id, tier })
 }
+
+// DELETE /api/owner/users — permanently delete a user account
+export async function DELETE(request: Request) {
+  if (!verifyOwner(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { user_id } = await request.json()
+  if (!user_id) return Response.json({ error: 'user_id required' }, { status: 400 })
+
+  const supabase = createServerSupabaseClient()
+
+  // Delete from auth (cascades to profiles via foreign key)
+  const { error } = await supabase.auth.admin.deleteUser(user_id)
+  if (error) return Response.json({ error: error.message }, { status: 500 })
+
+  return Response.json({ ok: true })
+}

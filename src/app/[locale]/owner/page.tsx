@@ -121,6 +121,9 @@ function ManageUsers({ password }: { password: string }) {
   const [saving, setSaving] = useState(false)
   const [savedTier, setSavedTier] = useState<string | null>(null)
   const [grantTier, setGrantTier] = useState<'free' | 'trader' | 'pro'>('pro')
+  const [deleting, setDeleting] = useState(false)
+  const [deleted, setDeleted] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -128,6 +131,8 @@ function ManageUsers({ password }: { password: string }) {
     setFound(null)
     setNotFound(false)
     setSavedTier(null)
+    setDeleted(false)
+    setConfirmDelete(false)
     const res = await fetch(`/api/owner/users?email=${encodeURIComponent(email)}`, {
       headers: { 'x-owner-password': password },
     })
@@ -156,12 +161,43 @@ function ManageUsers({ password }: { password: string }) {
     }
   }
 
+  async function handleRevoke() {
+    if (!found) return
+    setSaving(true)
+    const res = await fetch('/api/owner/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ user_id: found.id, tier: 'free' }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      setSavedTier('free')
+      setFound(prev => prev ? { ...prev, tier: 'free', admin_granted: false } : prev)
+    }
+  }
+
+  async function handleDelete() {
+    if (!found) return
+    setDeleting(true)
+    const res = await fetch('/api/owner/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ user_id: found.id }),
+    })
+    setDeleting(false)
+    if (res.ok) {
+      setDeleted(true)
+      setFound(null)
+      setConfirmDelete(false)
+    }
+  }
+
   const tierColor = (t: string) => t === 'pro' ? '#7c3aed' : t === 'trader' ? '#d97706' : '#6b7280'
 
   return (
     <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
       <div style={{ fontSize: '12px', fontWeight: 700, color: '#111', marginBottom: '4px' }}>Manage Users</div>
-      <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '16px' }}>Grant tier access to any user without requiring payment. Admin-granted users get full IC chat access without API key expiry.</div>
+      <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '16px' }}>Grant or revoke tier access. Delete accounts permanently. Admin-granted users get full IC chat access without API key expiry.</div>
 
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
         <input
@@ -187,6 +223,12 @@ function ManageUsers({ password }: { password: string }) {
         </div>
       )}
 
+      {deleted && (
+        <div style={{ fontSize: '12px', color: '#dc2626', fontWeight: 600, padding: '10px 14px', background: '#fff5f5', borderRadius: '6px' }}>
+          User account has been permanently deleted.
+        </div>
+      )}
+
       {found && (
         <div style={{ border: '1px solid #e4e4e7', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
@@ -198,48 +240,111 @@ function ManageUsers({ password }: { password: string }) {
               </div>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: tierColor(found.tier), textTransform: 'uppercase', letterSpacing: '0.06em' }}>{found.tier}</div>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: tierColor(found.tier), textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>{found.tier}</div>
               {found.admin_granted && <div style={{ fontSize: '9px', color: '#7c3aed', background: '#ede9fe', borderRadius: '3px', padding: '1px 5px', marginTop: '3px' }}>Admin Granted</div>}
               {found.stripe_customer_id && <div style={{ fontSize: '9px', color: '#16a34a', background: '#dcfce7', borderRadius: '3px', padding: '1px 5px', marginTop: '3px' }}>Stripe Subscriber</div>}
             </div>
           </div>
 
           {savedTier ? (
-            <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, padding: '8px 12px', background: '#f0fdf4', borderRadius: '6px' }}>
-              ✓ Access granted — {found.email} is now on the <strong>{savedTier}</strong> plan with full IC chat access.
+            <div style={{ fontSize: '12px', color: savedTier === 'free' ? '#d97706' : '#16a34a', fontWeight: 600, padding: '8px 12px', background: savedTier === 'free' ? '#fffbeb' : '#f0fdf4', borderRadius: '6px' }}>
+              {savedTier === 'free'
+                ? `✓ Access revoked — ${found.email} has been set back to Free.`
+                : `✓ Access granted — ${found.email} is now on the ${savedTier} plan with full IC chat access.`}
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ fontSize: '11px', color: '#374151', fontWeight: 600 }}>Grant tier:</div>
-              {(['free', 'trader', 'pro'] as const).map(t => (
+            <>
+              {/* Grant tier row */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <div style={{ fontSize: '11px', color: '#374151', fontWeight: 600 }}>Grant tier:</div>
+                {(['free', 'trader', 'pro'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setGrantTier(t)}
+                    style={{
+                      padding: '4px 12px', borderRadius: '5px', border: `1px solid ${grantTier === t ? tierColor(t) : '#e4e4e7'}`,
+                      background: grantTier === t ? `${tierColor(t)}15` : 'transparent',
+                      color: grantTier === t ? tierColor(t) : '#6b7280',
+                      fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                    }}
+                  >
+                    {t}
+                  </button>
+                ))}
                 <button
-                  key={t}
-                  onClick={() => setGrantTier(t)}
+                  onClick={handleGrant}
+                  disabled={saving || grantTier === found.tier}
                   style={{
-                    padding: '4px 12px', borderRadius: '5px', border: `1px solid ${grantTier === t ? tierColor(t) : '#e4e4e7'}`,
-                    background: grantTier === t ? `${tierColor(t)}15` : 'transparent',
-                    color: grantTier === t ? tierColor(t) : '#6b7280',
-                    fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', border: 'none',
+                    background: grantTier === found.tier ? '#f0f0f0' : '#7c3aed',
+                    color: grantTier === found.tier ? '#9ca3af' : '#fff',
+                    fontSize: '12px', fontWeight: 700, cursor: saving || grantTier === found.tier ? 'default' : 'pointer',
+                    fontFamily: 'inherit',
                   }}
                 >
-                  {t}
+                  {saving ? 'Saving...' : grantTier === found.tier ? 'Already on this tier' : `Grant ${grantTier} access`}
                 </button>
-              ))}
-              <button
-                onClick={handleGrant}
-                disabled={saving || grantTier === found.tier}
-                style={{
-                  marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', border: 'none',
-                  background: grantTier === found.tier ? '#f0f0f0' : '#7c3aed',
-                  color: grantTier === found.tier ? '#9ca3af' : '#fff',
-                  fontSize: '12px', fontWeight: 700, cursor: saving || grantTier === found.tier ? 'default' : 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {saving ? 'Saving...' : grantTier === found.tier ? 'Already on this tier' : `Grant ${grantTier} access`}
-              </button>
-            </div>
+              </div>
+
+              {/* Revoke / Delete row */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #f4f4f5' }}>
+                {found.tier !== 'free' && (
+                  <button
+                    onClick={handleRevoke}
+                    disabled={saving}
+                    style={{
+                      padding: '6px 14px', borderRadius: '6px', border: '1px solid #d97706',
+                      background: 'transparent', color: '#d97706',
+                      fontSize: '11px', fontWeight: 700, cursor: saving ? 'default' : 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {saving ? 'Saving...' : 'Revoke Access → Free'}
+                  </button>
+                )}
+                <div style={{ marginLeft: 'auto' }}>
+                  {!confirmDelete ? (
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      style={{
+                        padding: '6px 14px', borderRadius: '6px', border: '1px solid #fecaca',
+                        background: 'transparent', color: '#dc2626',
+                        fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                      }}
+                    >
+                      Delete Account
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 600 }}>Permanently delete {found.email}?</div>
+                      <button
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        style={{
+                          padding: '5px 12px', borderRadius: '5px', border: 'none',
+                          background: '#dc2626', color: '#fff',
+                          fontSize: '11px', fontWeight: 700, cursor: deleting ? 'default' : 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        {deleting ? 'Deleting...' : 'Yes, Delete'}
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(false)}
+                        style={{
+                          padding: '5px 12px', borderRadius: '5px', border: '1px solid #e4e4e7',
+                          background: 'transparent', color: '#6b7280',
+                          fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}
