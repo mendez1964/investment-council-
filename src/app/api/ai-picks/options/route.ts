@@ -74,73 +74,73 @@ async function evaluatePending(supabase: any) {
   }))
 }
 
-async function generatePicks(supabase: any, pickDate: string, expiryStr: string, count: number, type: 'daily' | 'weekly', liveData: string) {
-  const expiryNote = type === 'daily'
-    ? `expiring ${expiryStr} (0DTE — expires today at close)`
-    : `expiring ${expiryStr} (~3 weeks out)`
-
-  const prompt = `You are an expert options trader using the IC Formula — a 5-factor scoring system. Evaluate every candidate ticker against all 5 factors before selecting. Only include trades scoring 65+.
+function buildDailyPrompt(count: number, expiryStr: string): string {
+  return `You are an expert options trader using the IC Daily Formula — designed for 0DTE (same-day expiry) options. These trades open at market open and must be closed before EOD. Evaluate every candidate ticker against all 5 factors. Only include trades scoring 65+.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
 
+═══════════════════════════════════════════
+IC DAILY OPTIONS FORMULA — 5 FACTORS (0-20 pts each)
+For 0DTE options — intraday edge only
+═══════════════════════════════════════════
+
+FACTOR 1 — PRE-MARKET MOMENTUM (0-20)
+Score 20: Strong pre-market gap (>0.8%) in direction of trade with volume confirmation
+Score 15: Moderate pre-market move (0.3-0.8%) with follow-through signals
+Score 10: Flat pre-market but clear opening range setup (first 15-min breakout likely)
+Score 5: Weak or opposite pre-market signal — needs intraday confirmation
+Score 0: No pre-market edge, no gap, no momentum — skip, find something with edge
+
+FACTOR 2 — INTRADAY CATALYST (0-20)
+Score 20: Known same-day binary event: economic data release (CPI, PPI, jobs, Fed minutes), Fed speaker, index rebalance, major earnings AH the night before driving sympathy plays
+Score 18: High-impact morning news: analyst upgrade/downgrade at open, product announcement, geopolitical move affecting sector
+Score 12: Technical level break at open — gap above major resistance, opening above key MA with volume
+Score 6: General market momentum only — sector in play but no specific trigger
+Score 0: No same-day catalyst — 0DTE without a catalyst is pure gambling, skip
+
+FACTOR 3 — OPENING RANGE & TECHNICAL SETUP (0-20)
+Score 20: Price breaking above (call) or below (put) previous day's high/low at open with 2x+ avg volume
+Score 16: Clean technical pattern at key intraday level — VWAP reclaim, gap fill setup, opening drive continuation
+Score 12: Strong daily trend supporting direction (above/below 20-day MA) — trend continuation likely
+Score 8: Mixed signals but strong intraday momentum favors direction
+Score 0: Fighting the trend, choppy open, no clear structure — skip
+
+FACTOR 4 — OPTIONS FLOW & GAMMA (0-20)
+Score 20: Unusual options activity pre-market or at open — large call/put sweeps at the ATM strike, high open interest at target strike
+Score 16: Elevated options volume vs average — market makers likely to chase gamma, amplifying move
+Score 12: Standard liquidity, tight bid/ask spread (<$0.10 for sub-$5 premium), sufficient OI for fill
+Score 6: Thin market or wide spread (>$0.15) — slippage risk, hard fills
+Score 0: Illiquid strike, wide spread >$0.25, or no open interest — impossible to trade efficiently
+
+FACTOR 5 — VOLATILITY PROFILE FOR 0DTE (0-20)
+Score 20: VIX 15-22 range (ideal 0DTE environment — enough movement but not chaotic), IV on the specific option is reasonable (not crushing immediately)
+Score 16: VIX 22-28 — elevated vol, 0DTE premium is rich but big moves are possible, manage size
+Score 12: VIX <15 — low vol, 0DTE will decay fast, ONLY take if catalyst is very strong (score 18-20 on Factor 2)
+Score 5: VIX >28 — chaotic, 0DTE spreads are very wide, extreme risk — only take with massive catalyst
+Score 0: VIX spike above 35 or in active crash mode — do NOT trade 0DTE in panic conditions
+
 ═══════════════════════════════════════
-IC FORMULA — 5 FACTORS (each 0-20 pts)
+0DTE SCORING → CONFIDENCE → STRIKE
 ═══════════════════════════════════════
-
-FACTOR 1 — TREND ALIGNMENT (0-20)
-Score 20: Price above 20, 50, AND 200-day MA (calls) OR below all 3 (puts)
-Score 15: Above/below 20+50-day MA only
-Score 10: Above/below 20-day MA only
-Score 5: Mixed/choppy signals
-Score 0: Trading against the primary trend — skip this trade
-
-FACTOR 2 — MOMENTUM QUALITY (0-20)
-Calls: RSI 50-68 = 20pts (strong momentum, not overbought), RSI 40-50 = 12pts (building), RSI >75 = 5pts (overbought risk), RSI <45 = 3pts (weak)
-Puts: RSI 32-50 = 20pts, RSI 25-32 = 12pts, RSI <25 = 5pts (oversold bounce risk), RSI >55 = 3pts (too strong)
-Also: High relative volume (>1.3x avg) = +3 bonus pts
-
-FACTOR 3 — SECTOR ROTATION (0-20)
-Score 20: Underlying is in the #1 or #2 leading sector today AND the sector has positive money flow
-Score 15: In a strengthening/neutral sector with positive bias
-Score 10: Sector neutral, stock has independent catalyst
-Score 5: Sector lagging but stock showing relative strength
-Score 0: In a lagging sector with no independent catalyst — use as PUT candidate instead
-
-FACTOR 4 — CATALYST PRESENT (0-20)
-Score 20: Clear identifiable catalyst within expiry window — Fed decision, earnings, product launch, economic data, technical breakout of major level
-Score 15: Moderate catalyst — sector rotation event, index rebalance, options expiry effect
-Score 10: Technical only — bouncing off key support, breaking key resistance
-Score 5: Macro tailwind only
-Score 0: No clear catalyst identified — do NOT include this trade
-
-FACTOR 5 — OPTIONS CONDITIONS (0-20)
-Score 20: IV rank estimated <30 (cheap premium — ideal for buying options)
-Score 15: IV rank ~30-50 (fair value — acceptable with strong catalyst)
-Score 10: IV rank ~50-70 (elevated — require higher conviction catalyst)
-Score 5: IV rank >70 (expensive — only include if massive catalyst)
-Score 0: IV crush risk present (within 1 day of earnings/event that already happened)
-
-═══════════════════════════════════
-SCORING → CONFIDENCE → STRIKE SELECTION
-═══════════════════════════════════
-90-100 pts → confidence 9-10 → ATM strike
+90-100 pts → confidence 9-10 → ATM strike, full size
 80-89 pts  → confidence 7-8  → ATM or 1-strike OTM
-70-79 pts  → confidence 5-6  → 1-2 strikes OTM
-65-69 pts  → confidence 4    → 2 strikes OTM, smaller size
-<65 pts    → SKIP — find a better trade
+70-79 pts  → confidence 5-6  → 1-2 strikes OTM, half size
+65-69 pts  → confidence 4    → 2 strikes OTM, quarter size
+<65 pts    → SKIP — 0DTE has no margin for error
 
-RISK MANAGEMENT BY CONFIDENCE:
-Confidence 8-10: stop_loss_pct=35, take_profit_pct=100 (3:1 minimum)
-Confidence 6-7:  stop_loss_pct=40, take_profit_pct=80  (2:1 minimum)
-Confidence 4-5:  stop_loss_pct=30, take_profit_pct=60
+0DTE RISK RULES (tighter than weekly):
+Confidence 8-10: stop_loss_pct=40, take_profit_pct=80 (hit target fast, time decay kills you)
+Confidence 6-7:  stop_loss_pct=35, take_profit_pct=60
+Confidence 4-5:  stop_loss_pct=30, take_profit_pct=50
+CRITICAL: 0DTE = close position by 3:45 PM ET regardless of outcome. No overnight holds.
 
-HARD RULES:
-- Never pick a stock with earnings within the expiry window UNLESS earnings IS the catalyst
-- At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts — use sector leaders for calls, laggards for puts
-- Every rationale must reference 2+ factors (trend, RSI level, sector position, or catalyst)
-- Use only liquid tickers: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, TLT, XLE, XLK, XLF, XLV, XLY, XLC
+HARD RULES FOR 0DTE:
+- Must have a Factor 2 score of ≥12 — no catalyst, no 0DTE trade
+- At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
+- Rationale MUST mention the catalyst and pre-market condition
+- Use only liquid high-volume tickers: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, XLE, XLK, XLF
 
-Required JSON format — EXACTLY ${count} trades, ${expiryNote}:
+Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (today, 0DTE):
 {
   "trades": [
     {
@@ -148,22 +148,115 @@ Required JSON format — EXACTLY ${count} trades, ${expiryNote}:
       "option_type": "call",
       "strike": 570,
       "expiry": "${expiryStr}",
-      "entry_premium": 3.50,
-      "stop_loss_pct": 35,
-      "take_profit_pct": 100,
+      "entry_premium": 1.85,
+      "stop_loss_pct": 40,
+      "take_profit_pct": 80,
       "confidence": 8,
       "ic_score": 83,
-      "rationale": "Above all 3 MAs, RSI 61, tech sector leading with strong breadth",
-      "catalyst": "Tech momentum + NVDA earnings tailwind driving index",
+      "rationale": "Strong pre-market gap +0.6%, CPI data release this morning in-line, VWAP breakout setup",
+      "catalyst": "CPI data release + gap continuation play",
       "sector": "ETF"
     }
   ]
 }`
+}
+
+function buildWeeklyPrompt(count: number, expiryStr: string): string {
+  return `You are an expert options trader using the IC Weekly Formula — designed for 3-week swing options. These trades look for multi-day directional moves using trend, macro, and institutional positioning. Evaluate every candidate ticker against all 5 factors. Only include trades scoring 65+.
+
+OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
+
+═══════════════════════════════════════════
+IC WEEKLY OPTIONS FORMULA — 5 FACTORS (0-20 pts each)
+For 3-week swing options — institutional edge
+═══════════════════════════════════════════
+
+FACTOR 1 — MULTI-TIMEFRAME TREND ALIGNMENT (0-20)
+Score 20: Aligned on all 3 timeframes — daily above 20+50+200 MA (calls) OR below all 3 (puts). Weekly chart also trending in same direction.
+Score 16: Daily above/below 20+50 MA, weekly neutral but not fighting
+Score 12: Daily above/below 20-day MA only, weekly trend unclear
+Score 8: Mixed MA signals — price chopping between levels
+Score 0: Daily trend clearly opposing trade direction — DO NOT fight a confirmed trend, skip
+
+FACTOR 2 — SWING MOMENTUM & MEAN REVERSION (0-20)
+Calls: Weekly RSI 45-65 = 20pts (sweet spot, room to run), Daily RSI 50-68 = 20pts | RSI 68-75 = 12pts (extended but momentum valid) | RSI >75 = 5pts (overbought, mean reversion risk)
+Puts: Weekly RSI 35-55 = 20pts | Daily RSI 32-50 = 20pts | RSI 25-32 = 12pts | RSI <25 = 5pts (oversold bounce risk)
+Bonus: 52-week breakout above resistance = +3pts (calls) | breakdown below support = +3pts (puts)
+Score 0: RSI >80 (calls) or <20 (puts) — extreme readings = mean reversion trap, skip
+
+FACTOR 3 — MACRO CATALYST IN 3-WEEK WINDOW (0-20)
+Score 20: Confirmed high-impact event within expiry window: FOMC meeting, CPI/PPI release, major earnings for that company, FDA decision, index inclusion date
+Score 16: Sector catalyst: major conference, product launch, contract award, M&A activity in the space
+Score 12: Technical breakout of major multi-month level — measured move target within 3 weeks is realistic
+Score 8: Institutional positioning signal — 13F filing showing accumulation, unusual block trades, insider buying
+Score 3: No specific catalyst, pure trend/momentum play — higher risk, require higher score elsewhere
+Score 0: No catalyst within window AND stock has earnings in window that could crater the trade — dangerous setup, skip
+
+FACTOR 4 — SUPPORT/RESISTANCE STRUCTURE (0-20)
+Score 20: Clear swing structure — entry near major support (calls) or resistance (puts), measured move to next key level is 2:1+ vs stop. Options strike placed at logical technical level.
+Score 16: Good structure — entry at secondary support/resistance, move to target reasonable within timeframe
+Score 12: Adequate structure — some technical basis for strike selection, general trend support
+Score 8: Weak structure — strikes chosen more for premium than technicals
+Score 0: No technical basis for entry — stock mid-range with no clear support/resistance context, random strike selection
+
+FACTOR 5 — INSTITUTIONAL & OPTIONS MARKET POSITIONING (0-20)
+Score 20: Smart money signals present: large block options buying matching your direction (open interest spike at your strike or beyond), institutional 13F activity, sector ETF inflows, dark pool prints in direction
+Score 16: Elevated options activity vs average for that name — market is positioned for a move, low IV rank (<35) means premium is cheap for the potential move
+Score 12: IV rank 35-55 — reasonable premium, catalyst justifies the cost, open interest growing
+Score 8: IV rank 55-70 — expensive but strong catalyst makes it acceptable
+Score 3: IV rank >70 — premium is very elevated, small move won't cover theta decay over 3 weeks
+Score 0: IV crush risk — upcoming event will deflate IV significantly regardless of direction (e.g., post-earnings, post-Fed)
+
+═══════════════════════════════════════
+WEEKLY SCORING → CONFIDENCE → STRIKE
+═══════════════════════════════════════
+90-100 pts → confidence 9-10 → ATM or 1-strike OTM (best value)
+80-89 pts  → confidence 7-8  → 1-2 strikes OTM
+70-79 pts  → confidence 5-6  → 2-3 strikes OTM, defined risk
+65-69 pts  → confidence 4    → 3 strikes OTM, smallest size
+<65 pts    → SKIP — insufficient edge for 3-week hold
+
+WEEKLY RISK RULES (wider stops for swing room):
+Confidence 8-10: stop_loss_pct=35, take_profit_pct=120 (let winners run on swings)
+Confidence 6-7:  stop_loss_pct=40, take_profit_pct=90
+Confidence 4-5:  stop_loss_pct=35, take_profit_pct=70
+NOTE: Weekly trades need room — don't stop out on normal daily noise.
+
+HARD RULES FOR WEEKLY:
+- Must have Factor 3 score ≥12 — no macro/catalyst context = no weekly trade
+- Check if earnings fall WITHIN the 3-week expiry window — if yes, earnings must BE the catalyst or skip
+- At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
+- Rationale MUST mention the macro catalyst and multi-week trend direction
+- Use liquid tickers with healthy options chains: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, TLT, XLE, XLK, XLF, XLV, XLY, XLC, COIN, MSTR
+
+Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (~3 weeks out):
+{
+  "trades": [
+    {
+      "underlying": "NVDA",
+      "option_type": "call",
+      "strike": 900,
+      "expiry": "${expiryStr}",
+      "entry_premium": 12.50,
+      "stop_loss_pct": 35,
+      "take_profit_pct": 120,
+      "confidence": 8,
+      "ic_score": 86,
+      "rationale": "Above all 3 MAs on daily and weekly, RSI 58 on weekly (room to run), FOMC in 2 weeks expected dovish",
+      "catalyst": "FOMC meeting + AI infrastructure spending cycle driving semi sector",
+      "sector": "Technology"
+    }
+  ]
+}`
+}
+
+async function generatePicks(supabase: any, pickDate: string, expiryStr: string, count: number, type: 'daily' | 'weekly', liveData: string) {
+  const prompt = type === 'daily' ? buildDailyPrompt(count, expiryStr) : buildWeeklyPrompt(count, expiryStr)
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 2000,
-    system: `You are an expert options trader applying the IC Formula. Score every trade rigorously — reject anything under 65. Output only valid JSON with no other text.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
+    system: `You are an expert options trader applying the ${type === 'daily' ? 'IC Daily Options Formula (0DTE intraday edge)' : 'IC Weekly Options Formula (3-week swing positioning)'}. Score every trade rigorously — reject anything under 65. Output only valid JSON with no other text.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
     messages: [{ role: 'user', content: prompt }],
   })
 
