@@ -319,6 +319,19 @@ export default function ProfilePage() {
               Upgrade →
             </button>
           )}
+          {(profile?.tier === 'trader' || profile?.tier === 'pro') && (
+            <button
+              onClick={async () => {
+                const res = await fetch('/api/stripe/portal', { method: 'POST' })
+                const data = await res.json()
+                if (data.url) window.location.href = data.url
+                else setError(data.error ?? 'Could not open billing portal')
+              }}
+              style={{ fontSize: 12, fontWeight: 700, background: 'transparent', color: tier.color, border: `1px solid ${tier.color}`, borderRadius: 8, padding: '8px 16px', cursor: 'pointer' }}
+            >
+              Manage Plan
+            </button>
+          )}
         </div>
 
         {/* Account info */}
