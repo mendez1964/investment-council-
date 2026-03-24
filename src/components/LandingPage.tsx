@@ -628,7 +628,7 @@ export default function LandingPage() {
                     ['Research frameworks (Buffett, Dalio…)', '✓', '✗', '✗', '✗'],
                     ['War of the AIs leaderboard', '✓', '✗', '✗', '✗'],
                     ['Free tier available', '✓', '✗', 'Limited', '✗'],
-                    ['Monthly price', '$29.99', '$19/mo', '$19.99/mo', '$118/mo'],
+                    ['Monthly price', '$29.99', '$99–$199/yr', '$19.99/mo', '$118/mo'],
                   ].map(([feature, ...vals], i) => (
                     <tr key={feature} style={{ borderBottom: `1px solid ${BORDER}`, background: i % 2 === 0 ? '#fff' : 'transparent' }}>
                       <td style={{ padding: '12px 16px', color: TEXT, fontWeight: 500 }}>{feature}</td>
