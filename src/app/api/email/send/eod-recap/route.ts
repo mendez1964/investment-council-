@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     })
 
     // Build a performance summary for picks that have been evaluated
-    function buildPicksRecap(picks: any[], label: string): string {
+    const buildPicksRecap = (picks: any[], label: string): string => {
       if (!picks.length) return ''
       const wins   = picks.filter(p => p.outcome === 'win').length
       const losses = picks.filter(p => p.outcome === 'loss').length
