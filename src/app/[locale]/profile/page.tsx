@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from '@/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -17,6 +18,57 @@ const AI_OPTIONS = [
   { id: 'grok',    label: 'Grok',    sub: 'xAI',       icon: '✕',  color: '#7c3aed' },
 ]
 
+const FEED_CATEGORIES = [
+  {
+    id: 'stock',
+    label: 'Stock Market Data',
+    icon: '📈',
+    desc: 'Quotes, earnings, company profiles, market movers',
+    providers: [
+      { id: 'finnhub',      label: 'Finnhub',       sub: 'Real-time · 60 calls/min free',      url: 'finnhub.io',            placeholder: 'your-finnhub-key',        color: '#0ea5e9' },
+      { id: 'alphavantage', label: 'Alpha Vantage', sub: 'Intraday · 25 calls/day free',        url: 'alphavantage.co',       placeholder: 'your-alphavantage-key',   color: '#16a34a' },
+      { id: 'polygon',      label: 'Polygon.io',    sub: 'Institutional-grade · Free tier',     url: 'polygon.io',            placeholder: 'your-polygon-key',        color: '#7c3aed' },
+      { id: 'benzinga',     label: 'Benzinga',      sub: 'News + quotes · Paid plans',          url: 'benzinga.com/apis',     placeholder: 'your-benzinga-key',       color: '#f97316' },
+    ],
+  },
+  {
+    id: 'crypto',
+    label: 'Crypto Data',
+    icon: '₿',
+    desc: 'On-chain metrics, prices, market cap, volume',
+    providers: [
+      { id: 'glassnode',      label: 'Glassnode',      sub: 'On-chain metrics · $39/mo standard', url: 'glassnode.com',               placeholder: 'your-glassnode-key',        color: '#f97316' },
+      { id: 'coinmarketcap',  label: 'CoinMarketCap',  sub: 'Prices + market cap · Free tier',    url: 'coinmarketcap.com/api',        placeholder: 'your-cmc-key',              color: '#2563eb' },
+      { id: 'messari',        label: 'Messari',         sub: 'Research + fundamentals · Paid',     url: 'messari.io/api',               placeholder: 'your-messari-key',          color: '#7c3aed' },
+      { id: 'coingecko',      label: 'CoinGecko',       sub: 'Prices + metadata · Free',           url: 'coingecko.com/api',            placeholder: 'your-coingecko-key',        color: '#16a34a' },
+    ],
+  },
+  {
+    id: 'options',
+    label: 'Options Data',
+    icon: '⚡',
+    desc: 'Options chains, greeks, unusual flow, IV data',
+    providers: [
+      { id: 'tradier',           label: 'Tradier',          sub: 'Options chains + greeks · Brokerage', url: 'tradier.com',              placeholder: 'your-tradier-token',        color: '#8b5cf6' },
+      { id: 'unusualwhales',     label: 'Unusual Whales',   sub: 'Unusual flow + dark pool · Paid',     url: 'unusualwhales.com',        placeholder: 'your-uw-key',               color: '#dc2626' },
+      { id: 'marketchameleon',   label: 'Market Chameleon', sub: 'IV rank + screeners · Paid',          url: 'marketchameleon.com',      placeholder: 'your-mc-key',               color: '#d97706' },
+      { id: 'cboe',              label: 'Cboe LiveVol',     sub: 'Professional options data · Paid',    url: 'datashop.cboe.com',        placeholder: 'your-cboe-key',             color: '#0ea5e9' },
+    ],
+  },
+  {
+    id: 'macro',
+    label: 'Macro & Economic',
+    icon: '🏦',
+    desc: 'Interest rates, GDP, CPI, employment, global indicators',
+    providers: [
+      { id: 'fred',               label: 'FRED',              sub: 'Federal Reserve · Free',              url: 'fred.stlouisfed.org/docs/api', placeholder: 'your-fred-key',             color: '#dc2626' },
+      { id: 'quandl',             label: 'NASDAQ Data Link',  sub: 'Macro datasets · Free + paid',        url: 'data.nasdaq.com',              placeholder: 'your-quandl-key',           color: '#2563eb' },
+      { id: 'tradingeconomics',   label: 'Trading Economics', sub: '200+ countries · Paid plans',         url: 'tradingeconomics.com/api',     placeholder: 'your-te-key',               color: '#16a34a' },
+      { id: 'intrinio',           label: 'Intrinio',          sub: 'Financial + macro · Paid plans',      url: 'intrinio.com',                 placeholder: 'your-intrinio-key',         color: '#7c3aed' },
+    ],
+  },
+]
+
 interface Profile {
   email: string
   display_name: string | null
@@ -29,6 +81,14 @@ interface Profile {
   anthropic_key: string | null
   trial_ends_at: string | null
   created_at: string | null
+  stock_feed_provider: string | null
+  stock_feed_key: string | null
+  crypto_feed_provider: string | null
+  crypto_feed_key: string | null
+  options_feed_provider: string | null
+  options_feed_key: string | null
+  macro_feed_provider: string | null
+  macro_feed_key: string | null
 }
 
 function MaskedInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
@@ -60,6 +120,8 @@ function MaskedInput({ value, onChange, placeholder }: { value: string; onChange
 
 export default function ProfilePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const feedRequestSuccess = searchParams?.get('feed_request') === 'success'
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -74,11 +136,23 @@ export default function ProfilePage() {
   const [grokKey, setGrokKey] = useState('')
   const [anthropicKey, setAnthropicKey] = useState('')
 
-  // Data feed keys
-  const [finnhubKey, setFinnhubKey] = useState('')
-  const [alphaVantageKey, setAlphaVantageKey] = useState('')
-  const [glassnodeKey, setGlassnodeKey] = useState('')
-  const [tradierKey, setTradierKey] = useState('')
+  // Data feeds — provider selection + key per category
+  const [stockProvider, setStockProvider] = useState('')
+  const [stockKey, setStockKey] = useState('')
+  const [cryptoProvider, setCryptoProvider] = useState('')
+  const [cryptoKey, setCryptoKey] = useState('')
+  const [optionsProvider, setOptionsProvider] = useState('')
+  const [optionsKey, setOptionsKey] = useState('')
+  const [macroProvider, setMacroProvider] = useState('')
+  const [macroKey, setMacroKey] = useState('')
+
+  // Custom feed request form
+  const [reqOpen, setReqOpen] = useState(false)
+  const [reqProvider, setReqProvider] = useState('')
+  const [reqUrl, setReqUrl] = useState('')
+  const [reqDetails, setReqDetails] = useState('')
+  const [reqSubmitting, setReqSubmitting] = useState(false)
+  const [reqError, setReqError] = useState('')
 
   useEffect(() => {
     fetch('/api/user/profile')
@@ -92,10 +166,14 @@ export default function ProfilePage() {
         setGeminiKey(data.gemini_key ?? '')
         setGrokKey(data.grok_key ?? '')
         setAnthropicKey(data.anthropic_key ?? '')
-        setFinnhubKey(data.finnhub_key ?? '')
-        setAlphaVantageKey(data.alpha_vantage_key ?? '')
-        setGlassnodeKey(data.glassnode_key ?? '')
-        setTradierKey(data.tradier_key ?? '')
+        setStockProvider(data.stock_feed_provider ?? '')
+        setStockKey(data.stock_feed_key ?? '')
+        setCryptoProvider(data.crypto_feed_provider ?? '')
+        setCryptoKey(data.crypto_feed_key ?? '')
+        setOptionsProvider(data.options_feed_provider ?? '')
+        setOptionsKey(data.options_feed_key ?? '')
+        setMacroProvider(data.macro_feed_provider ?? '')
+        setMacroKey(data.macro_feed_key ?? '')
         setLoading(false)
       })
       .catch(() => { setError('Failed to load profile'); setLoading(false) })
@@ -116,10 +194,14 @@ export default function ProfilePage() {
           gemini_key: geminiKey || null,
           grok_key: grokKey || null,
           anthropic_key: anthropicKey || null,
-          finnhub_key: finnhubKey || null,
-          alpha_vantage_key: alphaVantageKey || null,
-          glassnode_key: glassnodeKey || null,
-          tradier_key: tradierKey || null,
+          stock_feed_provider: stockProvider || null,
+          stock_feed_key: stockKey || null,
+          crypto_feed_provider: cryptoProvider || null,
+          crypto_feed_key: cryptoKey || null,
+          options_feed_provider: optionsProvider || null,
+          options_feed_key: optionsKey || null,
+          macro_feed_provider: macroProvider || null,
+          macro_feed_key: macroKey || null,
         }),
       })
       const json = await res.json()
@@ -131,6 +213,31 @@ export default function ProfilePage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleFeedRequest = async () => {
+    if (!reqProvider.trim() || !reqUrl.trim() || !reqDetails.trim()) {
+      setReqError('Please fill in all fields')
+      return
+    }
+    setReqError('')
+    setReqSubmitting(true)
+    try {
+      const res = await fetch('/api/stripe/feed-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: reqProvider, url: reqUrl, details: reqDetails }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setReqError(data.error ?? 'Something went wrong')
+      }
+    } catch {
+      setReqError('Failed to submit — please try again')
+    }
+    setReqSubmitting(false)
   }
 
   const handleSignOut = async () => {
@@ -175,6 +282,16 @@ export default function ProfilePage() {
             ← Back to App
           </button>
         </div>
+
+        {/* Feed request success banner */}
+        {feedRequestSuccess && (
+          <div style={{ marginBottom: 20, padding: '14px 16px', background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>✓ Request Received — Payment Confirmed</div>
+            <div style={{ fontSize: 12, color: '#5b21b6', lineHeight: 1.5 }}>
+              We'll integrate your requested data feed within 2–3 business days. We'll email you when it's ready.
+            </div>
+          </div>
+        )}
 
         {/* Plan badge */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '20px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -314,59 +431,146 @@ export default function ProfilePage() {
 
         {/* Data Feeds */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '24px', marginBottom: 24 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Data Feed Keys</h2>
-          <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 6px' }}>
-            Add your own keys for faster, real-time data. Shared keys are free tier and may be rate limited or delayed.
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Data Feeds</h2>
+          <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 8px' }}>
+            Select your preferred provider for each data category and enter your API key. Leave blank to use our shared keys (may be rate-limited or delayed).
           </p>
-          <div style={{ marginBottom: 16, padding: '8px 12px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, fontSize: 11, color: '#92400e' }}>
-            ⚠️ Free tier data feeds may have 15-minute delays and rate limits during peak hours. Your own key removes these restrictions.
+          <div style={{ marginBottom: 18, padding: '8px 12px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, fontSize: 11, color: '#92400e' }}>
+            ⚠️ Shared keys are free tier — may have 15-min delays and rate limits. Your own key removes all restrictions.
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {[
-              {
-                label: 'Finnhub', key: 'finnhub', value: finnhubKey, setter: setFinnhubKey,
-                placeholder: 'your-finnhub-key', color: '#0ea5e9',
-                used: 'Stock quotes, company profiles, earnings calendar',
-                free: '60 calls/min · Real-time',
-                url: 'finnhub.io',
-              },
-              {
-                label: 'Alpha Vantage', key: 'alpha_vantage', value: alphaVantageKey, setter: setAlphaVantageKey,
-                placeholder: 'your-alphavantage-key', color: '#16a34a',
-                used: 'Market movers, sector rotation data',
-                free: '25 calls/day · 15-min delay on free tier',
-                url: 'alphavantage.co',
-              },
-              {
-                label: 'Glassnode', key: 'glassnode', value: glassnodeKey, setter: setGlassnodeKey,
-                placeholder: 'your-glassnode-key', color: '#f97316',
-                used: 'Bitcoin & crypto on-chain metrics',
-                free: 'Free: limited metrics · Standard $39/mo for full data',
-                url: 'glassnode.com',
-              },
-              {
-                label: 'Tradier', key: 'tradier', value: tradierKey, setter: setTradierKey,
-                placeholder: 'your-tradier-token', color: '#8b5cf6',
-                used: 'Options chains, greeks, real-time options data',
-                free: 'Requires approved brokerage account',
-                url: 'tradier.com',
-              },
-            ].map(field => (
-              <div key={field.key}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: field.color, letterSpacing: '0.04em' }}>
-                    {field.label}
-                  </label>
-                  <span style={{ fontSize: 10, color: '#9ca3af' }}>Get key: {field.url}</span>
+              { cat: FEED_CATEGORIES[0], provider: stockProvider,   setProvider: setStockProvider,   key: stockKey,   setKey: setStockKey },
+              { cat: FEED_CATEGORIES[1], provider: cryptoProvider,  setProvider: setCryptoProvider,  key: cryptoKey,  setKey: setCryptoKey },
+              { cat: FEED_CATEGORIES[2], provider: optionsProvider, setProvider: setOptionsProvider, key: optionsKey, setKey: setOptionsKey },
+              { cat: FEED_CATEGORIES[3], provider: macroProvider,   setProvider: setMacroProvider,   key: macroKey,   setKey: setMacroKey },
+            ].map(({ cat, provider, setProvider, key, setKey }) => {
+              const selected = cat.providers.find(p => p.id === provider)
+              return (
+                <div key={cat.id} style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: 20 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 16 }}>{cat.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#111' }}>{cat.label}</div>
+                      <div style={{ fontSize: 11, color: '#9ca3af' }}>{cat.desc}</div>
+                    </div>
+                  </div>
+
+                  {/* Provider dropdown */}
+                  <select
+                    value={provider}
+                    onChange={e => { setProvider(e.target.value); setKey('') }}
+                    style={{
+                      width: '100%', padding: '9px 12px', fontSize: 13, border: '1px solid #e5e7eb',
+                      borderRadius: 8, outline: 'none', background: '#fafafa', color: '#111',
+                      marginBottom: 10, cursor: 'pointer', fontFamily: 'inherit',
+                    }}
+                  >
+                    <option value=''>— Use Investment Council shared key —</option>
+                    {cat.providers.map(p => (
+                      <option key={p.id} value={p.id}>{p.label} · {p.sub}</option>
+                    ))}
+                  </select>
+
+                  {/* Key input — shown only when provider selected */}
+                  {selected && (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: selected.color }}>{selected.label} API Key</span>
+                        <a
+                          href={`https://${selected.url}`}
+                          target='_blank'
+                          rel='noopener noreferrer'
+                          style={{ fontSize: 10, color: '#2563eb', textDecoration: 'none' }}
+                        >
+                          Get key → {selected.url}
+                        </a>
+                      </div>
+                      <MaskedInput value={key} onChange={setKey} placeholder={selected.placeholder} />
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
-                  <span style={{ fontWeight: 500 }}>{field.used}</span>
-                  <span style={{ color: '#d97706', marginLeft: 8 }}>· {field.free}</span>
+              )
+            })}
+          </div>
+
+          {/* Custom feed request */}
+          <div style={{ marginTop: 4 }}>
+            {!reqOpen ? (
+              <button
+                onClick={() => setReqOpen(true)}
+                style={{
+                  width: '100%', padding: '11px', fontSize: 12, fontWeight: 700,
+                  background: 'transparent', color: '#7c3aed',
+                  border: '1.5px dashed #c4b5fd', borderRadius: 10, cursor: 'pointer',
+                  fontFamily: 'inherit', marginTop: 4,
+                }}
+              >
+                + Request a Custom Integration — $49.99 one-time
+              </button>
+            ) : (
+              <div style={{ marginTop: 4, padding: '16px', background: '#faf5ff', border: '1.5px solid #c4b5fd', borderRadius: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>Request Custom Data Feed Integration</div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 14, lineHeight: 1.5 }}>
+                  Don't see your preferred provider? We'll integrate it for a one-time $49.99 setup fee. Typically completed within 2–3 business days.
                 </div>
-                <MaskedInput value={field.value} onChange={field.setter} placeholder={field.placeholder} />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Provider Name *</label>
+                    <input
+                      value={reqProvider}
+                      onChange={e => setReqProvider(e.target.value)}
+                      placeholder="e.g. Bloomberg, Refinitiv, Interactive Brokers"
+                      style={{ width: '100%', padding: '9px 12px', fontSize: 13, border: '1px solid #e5e7eb', borderRadius: 8, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>Provider Website *</label>
+                    <input
+                      value={reqUrl}
+                      onChange={e => setReqUrl(e.target.value)}
+                      placeholder="e.g. bloomberg.com/professional"
+                      style={{ width: '100%', padding: '9px 12px', fontSize: 13, border: '1px solid #e5e7eb', borderRadius: 8, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 4 }}>What data do you need from this provider? *</label>
+                    <textarea
+                      value={reqDetails}
+                      onChange={e => setReqDetails(e.target.value)}
+                      placeholder="e.g. Real-time options flow, Level 2 data, custom earnings estimates..."
+                      rows={3}
+                      style={{ width: '100%', padding: '9px 12px', fontSize: 13, border: '1px solid #e5e7eb', borderRadius: 8, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                </div>
+
+                {reqError && <div style={{ marginTop: 10, fontSize: 11, color: '#dc2626' }}>{reqError}</div>}
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button
+                    onClick={handleFeedRequest}
+                    disabled={reqSubmitting}
+                    style={{
+                      flex: 1, padding: '11px', fontSize: 13, fontWeight: 700,
+                      background: '#7c3aed', color: '#fff', border: 'none',
+                      borderRadius: 8, cursor: reqSubmitting ? 'default' : 'pointer',
+                      opacity: reqSubmitting ? 0.7 : 1, fontFamily: 'inherit',
+                    }}
+                  >
+                    {reqSubmitting ? 'Redirecting…' : 'Submit & Pay $49.99 →'}
+                  </button>
+                  <button
+                    onClick={() => { setReqOpen(false); setReqError('') }}
+                    style={{ padding: '11px 16px', fontSize: 13, background: 'none', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-            ))}
+            )}
           </div>
 
           <div style={{ marginTop: 14, padding: '10px 12px', background: '#f9fafb', borderRadius: 8, fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>

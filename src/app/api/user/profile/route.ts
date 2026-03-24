@@ -12,7 +12,7 @@ export async function GET() {
     const supabase = createServerSupabaseClient()
     const { data: profile } = await supabase
       .from('profiles')
-      .select('tier, display_name, trial_ends_at, locale, preferred_ai, openai_key, gemini_key, grok_key, anthropic_key, finnhub_key, alpha_vantage_key, glassnode_key, tradier_key')
+      .select('tier, display_name, trial_ends_at, locale, preferred_ai, openai_key, gemini_key, grok_key, anthropic_key, stock_feed_provider, stock_feed_key, crypto_feed_provider, crypto_feed_key, options_feed_provider, options_feed_key, macro_feed_provider, macro_feed_key')
       .eq('id', user.id)
       .single()
 
@@ -33,7 +33,7 @@ export async function PATCH(request: Request) {
     if (!user) return Response.json({ error: 'Not authenticated' }, { status: 401 })
 
     const body = await request.json()
-    const allowed = ['locale', 'display_name', 'preferred_ai', 'openai_key', 'gemini_key', 'grok_key', 'anthropic_key', 'finnhub_key', 'alpha_vantage_key', 'glassnode_key', 'tradier_key']
+    const allowed = ['locale', 'display_name', 'preferred_ai', 'openai_key', 'gemini_key', 'grok_key', 'anthropic_key', 'stock_feed_provider', 'stock_feed_key', 'crypto_feed_provider', 'crypto_feed_key', 'options_feed_provider', 'options_feed_key', 'macro_feed_provider', 'macro_feed_key']
     const update: Record<string, any> = {}
     for (const key of allowed) {
       if (key in body) update[key] = body[key]
