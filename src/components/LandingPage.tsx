@@ -711,6 +711,7 @@ export default function LandingPage() {
                   { label: 'Terms', href: '/terms' },
                   { label: 'Privacy', href: '/privacy' },
                   { label: 'Contact', href: '/contact' },
+                  { label: 'Sitemap', href: '/sitemap-page' },
                 ].map(l => (
                   <a key={l.label} href={l.href} style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.5)'}
