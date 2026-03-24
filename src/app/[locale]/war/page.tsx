@@ -466,21 +466,23 @@ export default function WarPage() {
 
   const handleGenerate = async (refresh = false) => {
     setGenerating(true)
-    setGenMsg(null)
+    setGenMsg('Calling all AIs… this takes ~30 seconds')
     try {
       const res = await fetch(`/api/war/generate${refresh ? '?refresh=true' : ''}`, {
         method: 'POST',
         headers: { 'x-cron-secret': 'ic-cron-2024' },
       })
       const json = await res.json()
-      if (json.skipped) {
-        setGenMsg('Picks already generated for today. Use refresh to regenerate.')
+      if (!res.ok) {
+        setGenMsg(`Error ${res.status}: ${json.error ?? 'unknown'}`)
+      } else if (json.skipped) {
+        setGenMsg('Picks already generated for today. Use Refresh Picks to regenerate.')
       } else {
-        setGenMsg(`Generated ${json.generated} picks for ${json.date}`)
+        setGenMsg(`Generated ${json.generated}/12 picks for ${json.date}`)
         loadData()
       }
-    } catch {
-      setGenMsg('Generation failed — check console.')
+    } catch (e: any) {
+      setGenMsg(`Failed: ${e?.message ?? 'network error'}`)
     } finally {
       setGenerating(false)
     }

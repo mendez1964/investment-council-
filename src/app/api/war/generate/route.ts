@@ -28,6 +28,8 @@
 // CREATE POLICY "Service insert battle_picks" ON battle_picks FOR INSERT WITH CHECK (true);
 // CREATE POLICY "Service update battle_picks" ON battle_picks FOR UPDATE USING (true);
 
+export const maxDuration = 120 // 2 minutes — 12 concurrent AI calls need time
+
 import { fetchLiveData } from '@/lib/live-data'
 import { getQuote } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
