@@ -33,6 +33,7 @@ const ALERTS = [
     desc: 'Stock and crypto picks with bias, rationale, and entry price',
     time: '8:00 AM ET · Weekdays',
     emoji: '🤖',
+    tier: 'trader' as const,
   },
   {
     key: 'options_trades',
@@ -40,34 +41,39 @@ const ALERTS = [
     desc: '10 options setups with entry premium, stop loss, and take profit',
     time: '8:00 AM ET · Weekdays',
     emoji: '⚡',
+    tier: 'pro' as const,
   },
   {
     key: 'morning_briefing_stocks',
     label: 'Stock Morning Briefing',
     desc: 'Pre-market overview, futures, key levels, and what to watch',
-    time: '7:00 AM ET · Weekdays',
+    time: '7:30 AM ET · Weekdays',
     emoji: '🌅',
+    tier: 'trader' as const,
   },
   {
     key: 'morning_briefing_crypto',
     label: 'Crypto Morning Briefing',
     desc: 'Overnight BTC/ETH action, funding rates, and Asian session recap',
-    time: '7:00 AM ET · Daily',
+    time: '7:30 AM ET · Weekdays',
     emoji: '₿',
+    tier: 'trader' as const,
   },
   {
     key: 'eod_recap_stocks',
     label: 'Stock End of Day Recap',
-    desc: 'Market summary, movers, sector performance, and tomorrow\'s watch list',
-    time: '5:00 PM ET · Weekdays',
+    desc: 'Market summary, movers, sector performance, and picks results',
+    time: '4:30 PM ET · Weekdays',
     emoji: '🌆',
+    tier: 'trader' as const,
   },
   {
     key: 'eod_recap_crypto',
     label: 'Crypto End of Day Recap',
     desc: 'Daily crypto performance, whale activity, and overnight levels',
-    time: '5:00 PM ET · Daily',
+    time: '4:30 PM ET · Weekdays',
     emoji: '🌙',
+    tier: 'trader' as const,
   },
   {
     key: 'economic_calendar',
@@ -75,6 +81,7 @@ const ALERTS = [
     desc: 'High-impact events scheduled for tomorrow — CPI, FOMC, NFP, GDP',
     time: '6:00 PM ET · Night before',
     emoji: '🏦',
+    tier: 'trader' as const,
   },
   {
     key: 'fear_greed_alerts',
@@ -82,6 +89,7 @@ const ALERTS = [
     desc: 'Triggered when market sentiment hits extreme levels (≤20 or ≥80)',
     time: 'Triggered · As needed',
     emoji: '😱',
+    tier: 'free' as const,
   },
 ]
 
@@ -114,8 +122,22 @@ export default function AlertsPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [userTier, setUserTier] = useState<'free' | 'trader' | 'pro'>('free')
 
-  useEffect(() => { trackPageView('/alerts') }, [])
+  useEffect(() => {
+    trackPageView('/alerts')
+    fetch('/api/user/profile').then(r => r.json()).then(d => {
+      if (d?.tier) setUserTier(d.tier)
+      if (d?.email) setEmail(d.email)
+    }).catch(() => {})
+  }, [])
+
+  function isLocked(alertTier: 'free' | 'trader' | 'pro') {
+    if (alertTier === 'free') return false
+    if (alertTier === 'trader') return userTier === 'free'
+    if (alertTier === 'pro') return userTier !== 'pro'
+    return false
+  }
 
   async function loadPrefs(e: string) {
     if (!e.includes('@')) return
@@ -200,27 +222,36 @@ export default function AlertsPage() {
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#111' }}>Choose Your Alerts</div>
             <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>Toggle on what you want delivered to your inbox</div>
           </div>
-          {ALERTS.map((alert, i) => (
-            <div
-              key={alert.key}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '14px',
-                padding: '16px 20px',
-                borderBottom: i < ALERTS.length - 1 ? '1px solid #f9fafb' : 'none',
-              }}
-            >
-              <div style={{ fontSize: '20px', flexShrink: 0 }}>{alert.emoji}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#111', marginBottom: '2px' }}>{alert.label}</div>
-                <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '2px' }}>{alert.desc}</div>
-                <div style={{ fontSize: '10px', color: '#9ca3af' }}>⏰ {alert.time}</div>
+          {ALERTS.map((alert, i) => {
+            const locked = isLocked(alert.tier)
+            return (
+              <div
+                key={alert.key}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '16px 20px',
+                  borderBottom: i < ALERTS.length - 1 ? '1px solid #f9fafb' : 'none',
+                  opacity: locked ? 0.5 : 1,
+                }}
+              >
+                <div style={{ fontSize: '20px', flexShrink: 0 }}>{alert.emoji}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: '2px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#111' }}>{alert.label}</span>
+                    {alert.tier === 'pro' && <span style={{ fontSize: '9px', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', padding: '1px 6px', borderRadius: 4 }}>PRO</span>}
+                    {alert.tier === 'trader' && userTier === 'free' && <span style={{ fontSize: '9px', fontWeight: 700, color: '#2563eb', background: '#eff6ff', padding: '1px 6px', borderRadius: 4 }}>TRADER+</span>}
+                    {locked && <span style={{ fontSize: '11px' }}>🔒</span>}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '2px' }}>{alert.desc}</div>
+                  <div style={{ fontSize: '10px', color: '#9ca3af' }}>⏰ {alert.time}</div>
+                </div>
+                <Toggle
+                  checked={prefs[alert.key as keyof Prefs]}
+                  onChange={v => { if (!locked) setPrefs(prev => ({ ...prev, [alert.key]: v })) }}
+                />
               </div>
-              <Toggle
-                checked={prefs[alert.key as keyof Prefs]}
-                onChange={v => setPrefs(prev => ({ ...prev, [alert.key]: v }))}
-              />
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Save button */}
