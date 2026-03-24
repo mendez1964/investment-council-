@@ -39,7 +39,7 @@ interface OwnerStats {
 
 const PASSWORD_KEY = '_ic_owner'
 
-function LoginScreen({ onLogin }: { onLogin: () => void }) {
+function LoginScreen({ onLogin }: { onLogin: (pw: string) => void }) {
   const [pw, setPw] = useState('')
   const [error, setError] = useState(false)
 
@@ -52,7 +52,7 @@ function LoginScreen({ onLogin }: { onLogin: () => void }) {
     })
     if (res.ok) {
       sessionStorage.setItem(PASSWORD_KEY, pw)
-      onLogin()
+      onLogin(pw)
     } else {
       setError(true)
       setTimeout(() => setError(false), 2000)
@@ -103,15 +103,160 @@ function StatCard({ label, value, sub, color = '#111' }: { label: string; value:
   )
 }
 
+interface ManagedUser {
+  id: string
+  email: string
+  created_at: string
+  tier: 'free' | 'trader' | 'pro'
+  stripe_customer_id: string | null
+  display_name: string | null
+  admin_granted: boolean
+}
+
+function ManageUsers({ password }: { password: string }) {
+  const [email, setEmail] = useState('')
+  const [found, setFound] = useState<ManagedUser | null>(null)
+  const [searching, setSearching] = useState(false)
+  const [notFound, setNotFound] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [savedTier, setSavedTier] = useState<string | null>(null)
+  const [grantTier, setGrantTier] = useState<'free' | 'trader' | 'pro'>('pro')
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    setSearching(true)
+    setFound(null)
+    setNotFound(false)
+    setSavedTier(null)
+    const res = await fetch(`/api/owner/users?email=${encodeURIComponent(email)}`, {
+      headers: { 'x-owner-password': password },
+    })
+    setSearching(false)
+    if (res.ok) {
+      const data = await res.json()
+      setFound(data)
+      setGrantTier(data.tier === 'free' ? 'pro' : data.tier)
+    } else {
+      setNotFound(true)
+    }
+  }
+
+  async function handleGrant() {
+    if (!found) return
+    setSaving(true)
+    const res = await fetch('/api/owner/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ user_id: found.id, tier: grantTier }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      setSavedTier(grantTier)
+      setFound(prev => prev ? { ...prev, tier: grantTier, admin_granted: grantTier !== 'free' } : prev)
+    }
+  }
+
+  const tierColor = (t: string) => t === 'pro' ? '#7c3aed' : t === 'trader' ? '#d97706' : '#6b7280'
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 700, color: '#111', marginBottom: '4px' }}>Manage Users</div>
+      <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '16px' }}>Grant tier access to any user without requiring payment. Admin-granted users get full IC chat access without API key expiry.</div>
+
+      <form onSubmit={handleSearch} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="user@email.com"
+          required
+          style={{ flex: 1, padding: '8px 12px', borderRadius: '6px', border: '1px solid #e4e4e7', fontSize: '12px', fontFamily: 'inherit', outline: 'none' }}
+        />
+        <button type="submit" disabled={searching} style={{
+          padding: '8px 16px', borderRadius: '6px', border: 'none',
+          background: '#111', color: '#fff', fontSize: '12px', fontWeight: 600,
+          cursor: searching ? 'default' : 'pointer', fontFamily: 'inherit',
+        }}>
+          {searching ? 'Searching...' : 'Find User'}
+        </button>
+      </form>
+
+      {notFound && (
+        <div style={{ fontSize: '12px', color: '#dc2626', padding: '10px 14px', background: '#fff5f5', borderRadius: '6px' }}>
+          No user found with that email address.
+        </div>
+      )}
+
+      {found && (
+        <div style={{ border: '1px solid #e4e4e7', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#111' }}>{found.email}</div>
+              {found.display_name && <div style={{ fontSize: '11px', color: '#6b7280' }}>{found.display_name}</div>}
+              <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>
+                Joined {new Date(found.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: tierColor(found.tier), textTransform: 'uppercase', letterSpacing: '0.06em' }}>{found.tier}</div>
+              {found.admin_granted && <div style={{ fontSize: '9px', color: '#7c3aed', background: '#ede9fe', borderRadius: '3px', padding: '1px 5px', marginTop: '3px' }}>Admin Granted</div>}
+              {found.stripe_customer_id && <div style={{ fontSize: '9px', color: '#16a34a', background: '#dcfce7', borderRadius: '3px', padding: '1px 5px', marginTop: '3px' }}>Stripe Subscriber</div>}
+            </div>
+          </div>
+
+          {savedTier ? (
+            <div style={{ fontSize: '12px', color: '#16a34a', fontWeight: 600, padding: '8px 12px', background: '#f0fdf4', borderRadius: '6px' }}>
+              ✓ Access granted — {found.email} is now on the <strong>{savedTier}</strong> plan with full IC chat access.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ fontSize: '11px', color: '#374151', fontWeight: 600 }}>Grant tier:</div>
+              {(['free', 'trader', 'pro'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setGrantTier(t)}
+                  style={{
+                    padding: '4px 12px', borderRadius: '5px', border: `1px solid ${grantTier === t ? tierColor(t) : '#e4e4e7'}`,
+                    background: grantTier === t ? `${tierColor(t)}15` : 'transparent',
+                    color: grantTier === t ? tierColor(t) : '#6b7280',
+                    fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}
+                >
+                  {t}
+                </button>
+              ))}
+              <button
+                onClick={handleGrant}
+                disabled={saving || grantTier === found.tier}
+                style={{
+                  marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', border: 'none',
+                  background: grantTier === found.tier ? '#f0f0f0' : '#7c3aed',
+                  color: grantTier === found.tier ? '#9ca3af' : '#fff',
+                  fontSize: '12px', fontWeight: 700, cursor: saving || grantTier === found.tier ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {saving ? 'Saving...' : grantTier === found.tier ? 'Already on this tier' : `Grant ${grantTier} access`}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function OwnerPage() {
   const [authed, setAuthed] = useState(false)
+  const [password, setPasswordState] = useState('')
   const [stats, setStats] = useState<OwnerStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
 
   useEffect(() => {
     const saved = sessionStorage.getItem(PASSWORD_KEY)
-    if (saved) setAuthed(true)
+    if (saved) { setAuthed(true); setPasswordState(saved) }
   }, [])
 
   const loadStats = useCallback(async () => {
@@ -134,9 +279,10 @@ export default function OwnerPage() {
   function handleLogout() {
     sessionStorage.removeItem(PASSWORD_KEY)
     setAuthed(false)
+    setPasswordState('')
   }
 
-  if (!authed) return <LoginScreen onLogin={() => setAuthed(true)} />
+  if (!authed) return <LoginScreen onLogin={(pw) => { setAuthed(true); setPasswordState(pw) }} />
 
   return (
     <div style={{ minHeight: '100vh', background: '#f4f4f5', fontFamily: 'inherit', color: '#111' }}>
@@ -204,6 +350,9 @@ export default function OwnerPage() {
                 <StatCard label="SESSIONS TODAY" value={stats.users.sessions_today} color="#2563eb" />
               </div>
             </div>
+
+            {/* Manage Users */}
+            <ManageUsers password={password} />
 
             {/* Top features this week */}
             <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>

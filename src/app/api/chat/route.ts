@@ -55,7 +55,7 @@ export async function POST(request: Request) {
         const db = createServerSupabaseClient()
         const { data: profile } = await db
           .from('profiles')
-          .select('preferred_ai, anthropic_key, openai_key, gemini_key, grok_key')
+          .select('preferred_ai, anthropic_key, openai_key, gemini_key, grok_key, tier, stripe_customer_id')
           .eq('id', user.id)
           .single()
 
@@ -70,9 +70,17 @@ export async function POST(request: Request) {
         }
         userApiKey = keyMap[preferred]
 
+        // Admin owner and admin-granted employees always use IC key (no expiry)
+        const isAdmin = user.email === process.env.ADMIN_EMAIL || user.email === 'mendezdag@gmail.com'
+        const isAdminGranted = !profile?.stripe_customer_id && (profile?.tier === 'trader' || profile?.tier === 'pro')
+
         if (userApiKey) {
           // User has their own key — use it
           useICKey = false
+        } else if (isAdmin || isAdminGranted) {
+          // Owner or admin-granted employee — use IC key, never expires
+          aiProvider = 'claude'
+          useICKey = true
         } else {
           // Check 24-hour grace period from signup
           const signupTime = new Date(user.created_at).getTime()
