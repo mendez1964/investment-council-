@@ -1,3 +1,6 @@
+const createNextIntlPlugin = require('next-intl/plugin')
+const withNextIntl = createNextIntlPlugin('./src/i18n.ts')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -14,17 +17,11 @@ const nextConfig = {
   async headers() {
     return [
       {
-        // Tell browsers: always revalidate the HTML page, never serve stale
         source: '/',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }],
       },
     ]
   },
 }
 
-module.exports = nextConfig
+module.exports = withNextIntl(nextConfig)

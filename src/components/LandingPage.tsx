@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter } from '@/navigation'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 const NAVY = '#0F2A44'
 const GOLD = '#C9A34E'
@@ -294,7 +295,8 @@ export default function LandingPage() {
                 >{label}</a>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <LanguageSwitcher />
               <button onClick={() => router.push('/login')} style={{
                 background: 'transparent', border: `1px solid ${BORDER}`,
                 borderRadius: '8px', padding: '8px 18px',

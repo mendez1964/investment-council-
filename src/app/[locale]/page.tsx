@@ -67,40 +67,32 @@ const jsonLd = [
   },
 ]
 
-export const metadata: Metadata = {
-  title: 'Investment Council — AI Stock Analysis Tool & Crypto Market Analysis Platform',
-  description: 'The AI stock analysis tool built for retail traders. Get daily AI stock picks, AI trading signals, crypto market analysis, options picks with entry/stop/target, and pre-market briefings. Free tier available — no credit card required.',
-  keywords: [
-    'AI stock analysis tool',
-    'AI crypto analysis',
-    'best AI stock picks',
-    'crypto market analysis tool',
-    'AI investment analysis',
-    'stock analysis using AI',
-    'how to analyze crypto with AI',
-    'AI trading signals',
-    'investment analysis platform',
-    'free stock analysis AI',
-    'AI options picks',
-    'pre-market briefing AI',
-    'daily stock picks AI',
-    'crypto trading signals AI',
-    'AI trading platform retail traders',
-  ],
-  openGraph: {
-    title: 'Investment Council — AI Stock Analysis Tool & Crypto Market Analysis',
-    description: 'Daily AI stock picks, AI trading signals, crypto market analysis, and options picks. The investment analysis platform built for serious retail traders. Free to start.',
-    type: 'website',
-    url: 'https://investmentcouncil.io',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Investment Council — AI Stock Analysis & Crypto Market Tool',
-    description: 'Daily AI stock picks, trading signals, crypto analysis, and options picks. Free tier available.',
-  },
-  alternates: {
-    canonical: 'https://investmentcouncil.io',
-  },
+export async function generateMetadata({ params: { locale } }: { params: { locale: string } }): Promise<Metadata> {
+  const titles: Record<string, string> = {
+    en: 'Investment Council — AI Stock Analysis Tool & Crypto Market Analysis Platform',
+    es: 'Investment Council — Herramienta de Análisis de Acciones con IA',
+    pt: 'Investment Council — Ferramenta de Análise de Ações com IA',
+    fr: "Investment Council — Outil d'Analyse d'Actions par IA",
+  }
+  const descriptions: Record<string, string> = {
+    en: 'The AI stock analysis tool built for retail traders. Daily AI stock picks, trading signals, crypto analysis, and options picks. Free tier available.',
+    es: 'La herramienta de análisis de acciones con IA para traders minoristas. Picks diarios, señales de trading, análisis de criptomonedas y opciones.',
+    pt: 'A ferramenta de análise de ações com IA para traders de varejo. Picks diários, sinais de trading, análise de criptomoedas e opções.',
+    fr: "L'outil d'analyse d'actions par IA pour les traders particuliers. Picks quotidiens, signaux de trading, analyse crypto et options.",
+  }
+  return {
+    title: titles[locale] ?? titles.en,
+    description: descriptions[locale] ?? descriptions.en,
+    alternates: {
+      canonical: locale === 'en' ? 'https://investmentcouncil.io' : `https://investmentcouncil.io/${locale}`,
+      languages: {
+        'en': 'https://investmentcouncil.io',
+        'es': 'https://investmentcouncil.io/es',
+        'pt': 'https://investmentcouncil.io/pt',
+        'fr': 'https://investmentcouncil.io/fr',
+      },
+    },
+  }
 }
 
 export default function Page() {
