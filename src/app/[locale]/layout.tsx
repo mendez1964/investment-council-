@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from 'next-intl'
 import { getMessages } from 'next-intl/server'
 import { notFound } from 'next/navigation'
 import { locales, type Locale } from '@/i18n'
+import CrispChat from '@/components/CrispChat'
 
 export const metadata: Metadata = {
   title: {
@@ -34,6 +35,7 @@ export default async function LocaleLayout({
       <body style={{ margin: 0, padding: 0, background: '#0a0a0a', color: '#e5e5e5', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace' }}>
         <NextIntlClientProvider messages={messages}>
           {children}
+          <CrispChat />
         </NextIntlClientProvider>
       </body>
     </html>
