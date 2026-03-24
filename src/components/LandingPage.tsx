@@ -611,27 +611,27 @@ export default function LandingPage() {
                 <thead>
                   <tr style={{ borderBottom: `2px solid ${BORDER}` }}>
                     <th style={{ padding: '12px 16px', color: TEXT_MUTED, fontWeight: 600 }}>Feature</th>
-                    {['Investment Council', 'TradingView', 'Seeking Alpha', 'ChatGPT'].map(h => (
+                    {['Investment Council', 'Motley Fool', 'Seeking Alpha', 'Trade Ideas'].map(h => (
                       <th key={h} style={{ padding: '12px 16px', fontWeight: 700, color: h === 'Investment Council' ? NAVY : TEXT_MUTED, background: h === 'Investment Council' ? '#eef2f7' : 'transparent' }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    ['AI-generated analysis on demand', '✓', '✗', '✗', 'Partial'],
-                    ['Stocks + Crypto in one platform', '✓', 'Partial', '✗', '✓'],
+                    ['AI daily picks — stocks, crypto, options', '✓', '✗', '✗', 'Partial'],
                     ['Pre-market & EOD briefings', '✓', '✗', 'Partial', '✗'],
                     ['Options picks with entry/stop/target', '✓', '✗', '✗', '✗'],
-                    ['On-chain crypto metrics', '✓', '✗', '✗', '✗'],
-                    ['Altcoin season indicator', '✓', '✗', '✗', '✗'],
-                    ['Automated email alerts', '✓', 'Paid', 'Paid', '✗'],
-                    ['Free tier available', '✓', 'Limited', 'Limited', '✓'],
-                    ['No hype — no bias', '✓', 'Community', 'Varies', 'Varies'],
+                    ['Crypto coverage + on-chain metrics', '✓', '✗', '✗', '✗'],
+                    ['Automated email alerts', '✓', 'Partial', 'Paid', '✓'],
+                    ['Research frameworks (Buffett, Dalio…)', '✓', '✗', '✗', '✗'],
+                    ['War of the AIs leaderboard', '✓', '✗', '✗', '✗'],
+                    ['Free tier available', '✓', '✗', 'Limited', '✗'],
+                    ['Monthly price', '$29.99', '$19/mo', '$19.99/mo', '$118/mo'],
                   ].map(([feature, ...vals], i) => (
                     <tr key={feature} style={{ borderBottom: `1px solid ${BORDER}`, background: i % 2 === 0 ? '#fff' : 'transparent' }}>
                       <td style={{ padding: '12px 16px', color: TEXT, fontWeight: 500 }}>{feature}</td>
                       {vals.map((v, j) => (
-                        <td key={j} style={{ padding: '12px 16px', background: j === 0 ? '#eef2f7' : 'transparent', fontWeight: j === 0 ? 700 : 400, color: v === '✓' ? '#16a34a' : v === '✗' ? '#dc2626' : TEXT_MUTED }}>{v}</td>
+                        <td key={j} style={{ padding: '12px 16px', background: j === 0 ? '#eef2f7' : 'transparent', fontWeight: j === 0 ? 700 : 400, color: v === '✓' ? '#16a34a' : v === '✗' ? '#dc2626' : v?.startsWith('$') ? (j === 0 ? '#16a34a' : '#dc2626') : TEXT_MUTED }}>{v}</td>
                       ))}
                     </tr>
                   ))}
@@ -678,7 +678,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em', marginBottom: '14px' }}>COMPARE</div>
-                  {['vs TradingView', 'vs Seeking Alpha', 'vs ChatGPT', 'vs Glassnode'].map(l => (
+                  {['vs Motley Fool', 'vs Seeking Alpha', 'vs Trade Ideas', 'vs Tickeron'].map(l => (
                     <a key={l} href="#" style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.3)', textDecoration: 'none', marginBottom: '8px' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
