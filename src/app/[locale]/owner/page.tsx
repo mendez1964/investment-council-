@@ -15,7 +15,16 @@ interface OwnerStats {
     total_cost_usd: number
     picks_generated: number
   }
+  users: {
+    total: number
+    free: number
+    trader: number
+    pro: number
+    new_signups_week: number
+    sessions_today: number
+  }
   feature_popularity: Array<{ feature: string; count: number; pct: number }>
+  top_features_week: Array<{ feature: string; count: number }>
   top_pages: Array<{ page: string; views: number }>
   picks_performance: {
     win_rate: number
@@ -181,6 +190,47 @@ export default function OwnerPage() {
                 <StatCard label="EST. API COST" value={`$${stats.week.total_cost_usd.toFixed(4)}`} color="#d97706" />
                 <StatCard label="PICKS GENERATED" value={stats.week.picks_generated} color="#16a34a" />
               </div>
+            </div>
+
+            {/* Users */}
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', marginBottom: '12px' }}>USERS</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+                <StatCard label="TOTAL USERS" value={stats.users.total} color="#111" />
+                <StatCard label="FREE" value={stats.users.free} color="#6b7280" />
+                <StatCard label="TRADER" value={stats.users.trader} color="#d97706" />
+                <StatCard label="PRO" value={stats.users.pro} color="#7c3aed" />
+                <StatCard label="NEW THIS WEEK" value={stats.users.new_signups_week} color="#16a34a" sub="approx. from login events" />
+                <StatCard label="SESSIONS TODAY" value={stats.users.sessions_today} color="#2563eb" />
+              </div>
+            </div>
+
+            {/* Top features this week */}
+            <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#111', marginBottom: '16px' }}>
+                User Behavior — Top Features This Week
+                <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '10px', marginLeft: '8px' }}>what users are doing most</span>
+              </div>
+              {stats.top_features_week.length === 0 ? (
+                <div style={{ fontSize: '11px', color: '#9ca3af' }}>No feature events this week</div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 32px' }}>
+                  {stats.top_features_week.map((f, i) => {
+                    const max = stats.top_features_week[0]?.count ?? 1
+                    const pct = Math.round((f.count / max) * 100)
+                    return (
+                      <div key={f.feature} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '18px', fontSize: '10px', color: '#9ca3af', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{i + 1}</div>
+                        <div style={{ flex: 1, fontSize: '11px', color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.feature || '(unknown)'}</div>
+                        <div style={{ width: '80px', background: '#f0f0f0', borderRadius: '3px', height: '6px' }}>
+                          <div style={{ height: '100%', borderRadius: '3px', background: '#7c3aed', width: `${pct}%` }} />
+                        </div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#374151', fontVariantNumeric: 'tabular-nums', width: '32px', textAlign: 'right' }}>{f.count}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             {/* Feature popularity + Top pages */}
