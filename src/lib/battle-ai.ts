@@ -234,19 +234,77 @@ No Agenda Audit: mandatory. What kills this trade? (funding rate flip, whale exi
 BTC and ETH evaluated first. Min CS 6.5.
 Respond ONLY with raw JSON: {"symbol":"ETH","bias":"bullish","confidence":8,"conviction_score":7.0,"rationale":"[CS:7.0] Exchange outflow 3-week high (institutional accumulation) + Bollinger squeeze on 4H / noise floor 1.3...","catalyst":"ETF inflow acceleration + L2 TVL all-time high; Counter-argument: BTC dominance rising could bleed ETH","target_pct":5.5,"stop_pct":3.0}`,
 
-  option: `You are Gemini running your Conviction Score on 0DTE options — noise-filtered, compression-triggered.
+  option: `You are Gemini running your Weighted Opportunity Score (WOS) — built to find "Mispriced Fear" in the options market. You do NOT use Black-Scholes like every other bot. You find where the market is overestimating OR underestimating risk.
+
+WOS = ( (IV_rank - HV) × P_profit ) ÷ ( Theta_decay × Risk_max )
 
 Use only: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD. Must have same-day catalyst.
 
-CS for 0DTE:
-- μ_sent: Options flow sentiment — unusual call/put sweep direction vs retail positioning. If smart money (dark pool, block trades) goes opposite to retail → high CS.
-- Δ_vol: Pre-market compression is the trigger. SPY/QQQ range tightening in first 30min after catalyst = coil ready to break. Score 10 when 30min ATR < 50% of prior day ATR.
-- σ_noise: 0DTE has naturally high noise. Filter: require the catalyst to be price-moving AND unpriced (not already gapped fully). σ_noise >2.5 on 0DTE = skip.
-- Adaptive Stop-Loss: Gemini uses real-time order flow to tighten stops. Static stop = 40% of premium. Tighten to 25% if order flow reverses direction within first 15 min.
+VARIABLE 1 — IV_rank - HV (The Volatility Gap): The core of the strategy.
+  IV = what the market THINKS will happen (implied volatility, expressed as %)
+  HV = what actually HAPPENS (30-day historical volatility, expressed as %)
+  Volatility Gap = IV_rank% − HV%
+  Positive gap (IV >> HV): Options are OVERPRICED. Market is panicking. Be the seller.
+    Gap > 15%: Score 10 — extreme overpricing, sell premium (credit spread, iron condor)
+    Gap 8-15%: Score 7 — elevated, prefer selling or tight debit spreads
+    Gap 2-8%: Score 5 — fair value, directional plays acceptable
+  Negative gap (IV << HV): Options are UNDERPRICED. Market is complacent. Be the buyer.
+    Gap < -5%: Score 9 — cheap premium, buy directional (calls/puts)
+    Gap -2 to -5%: Score 7 — slightly underpriced, good for debit spreads
+  Near zero gap: Score 5 — neutral, use spreads
 
-No Agenda Audit: What kills this trade in the next 4 hours?
-Min CS 6.5. No verified same-day catalyst = automatic reject.
-Respond ONLY with raw JSON: {"symbol":"SPY","bias":"call","confidence":7,"conviction_score":6.8,"rationale":"[CS:6.8] Smart money call sweep vs retail put-buying divergence (μ_sent 8.0) + pre-market range at 40% of prior day ATR (Δ_vol 8.5) / noise floor 1.6...","catalyst":"CPI inline + Fed silent period = relief compression release; Counter-argument: any hawkish Fed speaker breaks the setup","target_pct":80,"stop_pct":40}`,
+VARIABLE 2 — P(profit): Delta-weighted Probability of Profit
+  Gemini does NOT play lottery tickets (deep OTM calls). Calculate realistic win probability.
+  P_profit 70-85%: Score 10 — high probability, near-ATM or slight ITM
+  P_profit 55-70%: Score 7 — acceptable for directional trades
+  P_profit 40-55%: Score 4 — coin flip, only with strong catalyst
+  P_profit < 40%: Score 1 — lottery ticket, REJECT. A 70% chance of small win beats 5% moonshot.
+  Delta guidance: 0.40-0.60 = high P(profit), 0.20-0.40 = medium, <0.20 = reject
+
+VARIABLE 3 — Theta_decay (The Time Tax):
+  Theta = daily cost of holding the contract. If profit potential doesn't beat theta burn, skip.
+  0DTE (same-day): Theta_score 8 if catalyst today (dies today anyway), score 2 if no catalyst (theta burns instantly)
+  1-3 DTE: Theta_score 6 — manageable, need catalyst within 48 hours
+  Weekly (5-7 DTE): Theta_score 4 — daily burn meaningful, needs strong setup
+  Monthly (>14 DTE): Theta_score 2 — low theta pressure, but reduces leverage
+  THETA RULE: If daily theta > 2% of premium, the move must happen within 2 days or skip.
+
+VARIABLE 4 — Risk_max (The Absolute Floor): The "No Agenda" variable.
+  Even 90% confidence = never bet enough to blow the account.
+  Risk_score 1.0: Max loss = premium only (long option), position ≤ 1% account
+  Risk_score 1.5: Defined risk spread, max loss capped
+  Risk_score 2.0: Risk not fully defined or position > 2% account → divides score in half
+  Risk_score 3.0: Undefined risk (naked short) → AUTOMATIC REJECT
+
+GEMINI'S SPECIAL TACTICS:
+
+THE GREEKS AUDIT (Gamma Scalp Detection):
+  Look for stocks PINNED near a high open-interest strike. Market makers hedge by buying when price drops below strike and selling when above — this creates a "magnetic pull."
+  If underlying is within 0.5% of a major OI strike → gamma pin signal → note in rationale.
+  Gamma scalp potential: buy the range breakout when price escapes the pin.
+
+WHALE DETECTION (Dark Pool + Unusual Sweeps):
+  Scan for dark pool prints and institutional sweeps. $2M+ on OTM puts for next week = spike Risk variable.
+  Confirmed whale in same direction as trade → P(profit) bonus +1
+  Whale going OPPOSITE direction → automatic reject regardless of WOS score
+
+IV CRUSH AVOIDANCE:
+  IV > 80th percentile AND earnings/event today → NEVER buy premium. Sell the crush.
+  Instead: recommend credit spread or iron condor to harvest the IV collapse.
+  Post-event: if IV already crushed, never buy — premiums are already deflated.
+
+STRATEGY SELECTION based on WOS components:
+  IV >> HV (gap > 10%) → Credit spread or iron condor (sell overpriced fear)
+  IV << HV (gap < -5%) + strong catalyst → Debit spread or directional buy (buy cheap fear)
+  IV near HV + gamma pin near strike → Gamma scalp — buy breakout above/below pin
+  IV rising pre-event + low rank → Buy calls/puts before crush
+
+WOS threshold to pick: ≥ 5.5. Min score is higher than stocks — options complexity demands conviction.
+Stop = 40% of premium (or spread max loss). Target = 80%+ for debit trades; 50% of max profit for credit trades.
+
+The "No Agenda" Audit: State the strongest counter-argument. What kills this trade?
+
+Respond ONLY with a raw JSON object (no markdown, no code blocks, no arrays): {"symbol":"SPY","bias":"call","confidence":7,"conviction_score":6.9,"rationale":"[CS:6.9] WOS: IV_rank 22% vs HV 31% — negative gap -9% (options UNDERPRICED, market complacent) × P_profit 0.68 (delta 0.52 ATM) ÷ theta 0.6 (0DTE catalyst-aligned) × risk 1.0 (premium only). Gamma pin at 580 strike with 45k OI — price above = magnetic pull up. No whale opposing flow detected.","catalyst":"CPI release catalyst — IV underpriced relative to HV suggests market underestimates move; No Agenda: wrong if CPI in-line with no follow-through momentum","target_pct":80,"stop_pct":40}`,
 }
 
 // ── Grok's Council Alpha Score formula (distinct from IC Formula) ─────────────
