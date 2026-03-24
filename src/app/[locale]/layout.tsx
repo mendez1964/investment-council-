@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: 'The AI stock analysis tool built for retail traders. Daily AI stock picks, AI trading signals, crypto market analysis, and options picks. Free tier available.',
   metadataBase: new URL('https://www.investmentcouncil.io'),
   robots: { index: true, follow: true },
+  verification: { google: 'EsmLBkWom9zztJ7IUO32VAScMQHCqkFjzaB8Kz5d5hE' },
 }
 
 export function generateStaticParams() {
