@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   Search, Sun, Sunrise, Sunset, Activity, RefreshCw, Globe, Gauge,
   TrendingUp, Zap, CalendarDays, Newspaper, ScanLine, User, Users,
@@ -12,6 +13,7 @@ import {
 
 export type SidebarItem = {
   label: string
+  itemId?: string  // stable English key for icon lookup (when label is translated)
   prompt: string
   tier?: 'trader' | 'pro'  // minimum tier required
   icon?: string
@@ -98,8 +100,9 @@ const PERSON_LABELS = new Set([
 ])
 
 function getIcon(item: SidebarItem): LucideIcon {
-  if (ICON_MAP[item.label]) return ICON_MAP[item.label]
-  if (PERSON_LABELS.has(item.label)) return User
+  const key = item.itemId ?? item.label
+  if (ICON_MAP[key]) return ICON_MAP[key]
+  if (PERSON_LABELS.has(key)) return User
   return Sun
 }
 
@@ -153,6 +156,7 @@ function SidebarContent({
   userTier?: 'free' | 'trader' | 'pro' | null
   onUpgradeClick?: () => void
 }) {
+  const t = useTranslations('sidebar')
   const accentColor = mode === 'stocks' ? '#2d6a4f' : '#b45309'
   const accentText = mode === 'stocks' ? '#7ec8a0' : '#fbbf24'
   const accentBg = mode === 'stocks' ? '#1a472a' : '#451a03'
@@ -204,7 +208,7 @@ function SidebarContent({
                 onMouseLeave={e => { if (mode !== m) e.currentTarget.style.color = '#4a5568' }}
               >
                 {m === 'stocks' ? <TrendingUp size={11} /> : <Bitcoin size={11} />}
-                {m === 'stocks' ? 'Stocks' : 'Crypto'}
+                {m === 'stocks' ? t('stocks') : t('crypto')}
               </button>
             ))}
           </div>

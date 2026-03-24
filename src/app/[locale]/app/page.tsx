@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { PRICES } from '@/lib/stripe-prices'
@@ -28,31 +29,38 @@ interface Message {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
+type SidebarItem = { label: string; itemId?: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
-const STOCKS_SECTIONS: SidebarSection[] = [
-  {
-    id: 'ai-picks',
-    title: 'AI PICKS',
-    items: [
-      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
-      { label: 'Challenge the Council', icon: '🏆', prompt: '', isBattle: true, tier: 'trader' as const },
-      { label: 'War of the AIs ⚔️', icon: '⚔️', prompt: '', isWar: true, tier: 'trader' as const },
-    ],
-  },
-  {
-    id: 'analyze',
-    title: 'ANALYZE',
-    items: [
-      { label: 'Analyze a Stock / ETF', icon: '🔍', prompt: '', isAnalysis: 'stock' },
-    ],
-  },
-  {
-    id: 'market',
-    title: 'MARKET',
-    items: [
-      { label: 'Pre-Market Briefing', icon: '🌅', prompt: `Give me today's pre-market briefing.
+// Sidebar sections are defined inside the Home component (uses useTranslations hook)
+export default function Home() {
+  const router = useRouter()
+  const t = useTranslations('sidebar')
+
+  // ── Sidebar data (translated labels, English itemId for icon lookup) ─────
+
+  const STOCKS_SECTIONS: SidebarSection[] = [
+    {
+      id: 'ai-picks',
+      title: t('sections.aiPicks'),
+      items: [
+        { itemId: 'AI Daily Picks', label: t('items.aiDailyPicks'), prompt: '', isAIPicks: true, tier: 'trader' as const },
+        { label: t('items.challengeCouncil'), prompt: '', isBattle: true, tier: 'trader' as const },
+        { label: t('items.warOfAIs'), prompt: '', isWar: true, tier: 'trader' as const },
+      ],
+    },
+    {
+      id: 'analyze',
+      title: t('sections.analyze'),
+      items: [
+        { itemId: 'Analyze a Stock / ETF', label: t('items.analyzeStock'), prompt: '', isAnalysis: 'stock' },
+      ],
+    },
+    {
+      id: 'market',
+      title: t('sections.market'),
+      items: [
+        { itemId: 'Pre-Market Briefing', label: t('items.preMarket'), prompt: `Give me today's pre-market briefing.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
@@ -73,7 +81,7 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
 - 4-5 key price levels to watch today, one line each
 - Bias: Bullish / Neutral / Cautious / Bearish + one sentence of factual reasoning (data-based, not opinion)
 - First 30 minutes: one thing to confirm before committing capital` },
-      { label: 'End of Day Summary', icon: '🌆', prompt: `Give me today's end-of-day market summary.
+        { itemId: 'End of Day Summary', label: t('items.eodSummary'), prompt: `Give me today's end-of-day market summary.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full summary. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have — yields, Bitcoin, movers, etc.]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
@@ -94,168 +102,167 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
 - 3-5 things that actually shifted today — levels broken, narratives confirmed, risks rising/falling
 - Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish + one factual sentence (data-based)
 - One specific thing that could turn it bullish tomorrow, one that could turn it bearish` },
-      { label: 'Market Health', icon: '❤️', prompt: 'Give me a professional market health assessment using the live data available. Cover: trend (SPY/QQQ above or below key MAs?), breadth signals, VIX level, and any notable divergences. Data and facts only — no opinions or advisor frameworks unless I ask.' },
-      { label: 'Sector Rotation', icon: '🔄', prompt: 'Using the live sector data available, show me which sectors are leading and lagging right now. One table: Sector | ETF | Change % | Direction. Then 3-4 factual bullets on what the rotation pattern suggests about current risk appetite. Data only.' },
-      { label: 'Macro Environment', icon: '🌐', prompt: 'Give me a current macro environment snapshot using the live data available. Cover: Fed Funds Rate, CPI trend, 2Y and 10Y yields, yield curve shape, GDP trend, unemployment. Format as a table, then 2-3 factual bullets on what the numbers indicate. No advisor frameworks unless I ask.' },
-      { label: 'Fear & Greed', icon: '😨', prompt: '', isFearGreed: true },
-      { label: 'Yield Curve', icon: '〰️', prompt: 'Give me the current yield curve snapshot using live data. Show key rates in a table, note whether the curve is normal, flat, or inverted, and what the current shape has historically preceded. Facts only.' },
-      { label: 'Volatility Check', icon: '⚡', prompt: 'Give me a current volatility assessment using live data. Cover: VIX level and context (where is it vs 12-month range?), any notable options flow signals, and what the current vol regime means for position sizing. Data first.' },
-      { label: 'Economic Calendar', icon: '📅', prompt: '', isEconCalendar: true },
-      { label: 'News Feed', icon: '📰', prompt: '', isNews: true },
-    ],
-  },
-  {
-    id: 'scans',
-    title: 'RUN A SCAN',
-    items: [
-      { label: 'Full Council Scan', icon: '⚙️', prompt: 'Run the full council scan' },
-      { label: 'Tudor Jones', prompt: 'Run the Tudor Jones scan' },
-      { label: 'Livermore', prompt: 'Run the Livermore scan' },
-      { label: 'Buffett', prompt: 'Run the Buffett scan' },
-      { label: 'Lynch', prompt: 'Run the Lynch scan' },
-      { label: 'Graham', prompt: 'Run the Graham scan' },
-      { label: 'Grantham', prompt: 'Run the Grantham scan' },
-      { label: 'Dalio', prompt: 'Run the Dalio scan' },
-      { label: 'Burry', prompt: 'Run the Burry scan' },
-      { label: 'Roubini', prompt: 'Run the Roubini scan' },
-    ],
-  },
-  {
-    id: 'council',
-    title: 'ASK THE COUNCIL',
-    items: [
-      { label: 'Full Council View', icon: '🏛️', prompt: 'Give me the full council view on the current market.' },
-      { label: 'Buffett', prompt: 'What would Buffett say about the market right now?' },
-      { label: 'Dalio', prompt: 'What would Dalio say about the market right now?' },
-      { label: 'Soros', prompt: 'What would Soros say about the market right now?' },
-      { label: 'Tudor Jones', prompt: 'What would Tudor Jones say about the market right now?' },
-      { label: 'Lynch', prompt: 'What would Lynch say about the market right now?' },
-      { label: 'Livermore', prompt: 'What would Livermore say about the market right now?' },
-      { label: 'Graham', prompt: 'What would Graham say about the market right now?' },
-      { label: 'Damodaran', prompt: 'What would Damodaran say about the market right now?' },
-      { label: 'Burry', prompt: 'What would Burry say about the market right now?' },
-      { label: 'Roubini', prompt: 'What would Roubini say about the market right now?' },
-      { label: 'Grantham', prompt: 'What would Grantham say about the market right now?' },
-    ],
-  },
-  {
-    id: 'tools',
-    title: 'TRADE TOOLS',
-    items: [
-      { label: 'Analyze a Setup', icon: '🔬', prompt: 'Analyze this trade setup for ', needsTicker: true },
-      { label: 'Position Sizing', icon: '💰', prompt: 'Help me calculate position size. Walk me through the math — account size, risk per trade %, entry and stop levels. My account is $', needsTicker: true },
-      { label: 'Risk Assessment', icon: '⚠️', prompt: 'Give me a professional risk assessment for ', needsTicker: true },
-      { label: 'Entry / Stop / Target', icon: '🎯', prompt: 'Help me define entry, stop, and target levels for ', needsTicker: true },
-      { label: 'Hold or Cut', icon: '✂️', prompt: 'Help me think through whether to hold or cut my position in ', needsTicker: true },
-    ],
-  },
-  {
-    id: 'data',
-    title: 'GET DATA',
-    items: [
-      { label: 'Stock Quote', icon: '💹', prompt: 'Get me the current stock quote and fundamentals for ', needsTicker: true },
-      { label: 'Insider Transactions', icon: '👤', prompt: 'Show me recent insider transactions for ', needsTicker: true },
-      { label: '13F Holdings', icon: '🏛️', prompt: 'Show me recent 13F hedge fund holdings for ', needsTicker: true },
-      { label: 'SEC Filings', icon: '📄', prompt: 'Show me the latest SEC filings for ', needsTicker: true },
-      { label: 'Economic Data', icon: '📊', prompt: 'Give me the latest economic data — fed rate, CPI, yield curve, unemployment, and GDP.' },
-      { label: 'Earnings Calendar', icon: '📅', prompt: '', isCalendar: true },
-      { label: 'IPO Calendar', icon: '🚀', prompt: '', isIPO: true },
-      { label: 'Market Movers', icon: '⚡', prompt: '', isMovers: true },
-      { label: 'Chart a Ticker', icon: '📈', prompt: '', isChart: true },
-      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true, tier: 'trader' as const },
-    ],
-  },
-  {
-    id: 'calculators',
-    title: 'CALCULATORS',
-    items: [
-      { label: 'Financial Calculators', icon: '🧮', prompt: '', isCalculators: true },
-    ],
-  },
-  {
-    id: 'technical',
-    title: 'TECHNICAL ANALYSIS',
-    items: [
-      { label: 'Candlestick Patterns', icon: '📊', prompt: '', isPatterns: true },
-    ],
-  },
-]
+        { itemId: 'Market Health', label: t('items.marketHealth'), prompt: 'Give me a professional market health assessment using the live data available. Cover: trend (SPY/QQQ above or below key MAs?), breadth signals, VIX level, and any notable divergences. Data and facts only — no opinions or advisor frameworks unless I ask.' },
+        { itemId: 'Sector Rotation', label: t('items.sectorRotation'), prompt: 'Using the live sector data available, show me which sectors are leading and lagging right now. One table: Sector | ETF | Change % | Direction. Then 3-4 factual bullets on what the rotation pattern suggests about current risk appetite. Data only.' },
+        { itemId: 'Macro Environment', label: t('items.macroEnvironment'), prompt: 'Give me a current macro environment snapshot using the live data available. Cover: Fed Funds Rate, CPI trend, 2Y and 10Y yields, yield curve shape, GDP trend, unemployment. Format as a table, then 2-3 factual bullets on what the numbers indicate. No advisor frameworks unless I ask.' },
+        { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
+        { itemId: 'Yield Curve', label: t('items.yieldCurve'), prompt: 'Give me the current yield curve snapshot using live data. Show key rates in a table, note whether the curve is normal, flat, or inverted, and what the current shape has historically preceded. Facts only.' },
+        { itemId: 'Volatility Check', label: t('items.volatilityCheck'), prompt: 'Give me a current volatility assessment using live data. Cover: VIX level and context (where is it vs 12-month range?), any notable options flow signals, and what the current vol regime means for position sizing. Data first.' },
+        { itemId: 'Economic Calendar', label: t('items.econCalendar'), prompt: '', isEconCalendar: true },
+        { itemId: 'News Feed', label: t('items.newsFeed'), prompt: '', isNews: true },
+      ],
+    },
+    {
+      id: 'scans',
+      title: t('sections.scans'),
+      items: [
+        { itemId: 'Full Council Scan', label: t('items.fullCouncilScan'), prompt: 'Run the full council scan' },
+        { label: 'Tudor Jones', prompt: 'Run the Tudor Jones scan' },
+        { label: 'Livermore', prompt: 'Run the Livermore scan' },
+        { label: 'Buffett', prompt: 'Run the Buffett scan' },
+        { label: 'Lynch', prompt: 'Run the Lynch scan' },
+        { label: 'Graham', prompt: 'Run the Graham scan' },
+        { label: 'Grantham', prompt: 'Run the Grantham scan' },
+        { label: 'Dalio', prompt: 'Run the Dalio scan' },
+        { label: 'Burry', prompt: 'Run the Burry scan' },
+        { label: 'Roubini', prompt: 'Run the Roubini scan' },
+      ],
+    },
+    {
+      id: 'council',
+      title: t('sections.council'),
+      items: [
+        { itemId: 'Full Council View', label: t('items.fullCouncilView'), prompt: 'Give me the full council view on the current market.' },
+        { label: 'Buffett', prompt: 'What would Buffett say about the market right now?' },
+        { label: 'Dalio', prompt: 'What would Dalio say about the market right now?' },
+        { label: 'Soros', prompt: 'What would Soros say about the market right now?' },
+        { label: 'Tudor Jones', prompt: 'What would Tudor Jones say about the market right now?' },
+        { label: 'Lynch', prompt: 'What would Lynch say about the market right now?' },
+        { label: 'Livermore', prompt: 'What would Livermore say about the market right now?' },
+        { label: 'Graham', prompt: 'What would Graham say about the market right now?' },
+        { label: 'Damodaran', prompt: 'What would Damodaran say about the market right now?' },
+        { label: 'Burry', prompt: 'What would Burry say about the market right now?' },
+        { label: 'Roubini', prompt: 'What would Roubini say about the market right now?' },
+        { label: 'Grantham', prompt: 'What would Grantham say about the market right now?' },
+      ],
+    },
+    {
+      id: 'tools',
+      title: t('sections.tools'),
+      items: [
+        { itemId: 'Analyze a Setup', label: t('items.analyzeSetup'), prompt: 'Analyze this trade setup for ', needsTicker: true },
+        { itemId: 'Position Sizing', label: t('items.positionSizing'), prompt: 'Help me calculate position size. Walk me through the math — account size, risk per trade %, entry and stop levels. My account is $', needsTicker: true },
+        { itemId: 'Risk Assessment', label: t('items.riskAssessment'), prompt: 'Give me a professional risk assessment for ', needsTicker: true },
+        { itemId: 'Entry / Stop / Target', label: t('items.entryStopTarget'), prompt: 'Help me define entry, stop, and target levels for ', needsTicker: true },
+        { itemId: 'Hold or Cut', label: t('items.holdOrCut'), prompt: 'Help me think through whether to hold or cut my position in ', needsTicker: true },
+      ],
+    },
+    {
+      id: 'data',
+      title: t('sections.data'),
+      items: [
+        { itemId: 'Stock Quote', label: t('items.stockQuote'), prompt: 'Get me the current stock quote and fundamentals for ', needsTicker: true },
+        { itemId: 'Insider Transactions', label: t('items.insiderTransactions'), prompt: 'Show me recent insider transactions for ', needsTicker: true },
+        { itemId: '13F Holdings', label: t('items.holdingsF13'), prompt: 'Show me recent 13F hedge fund holdings for ', needsTicker: true },
+        { itemId: 'SEC Filings', label: t('items.secFilings'), prompt: 'Show me the latest SEC filings for ', needsTicker: true },
+        { itemId: 'Economic Data', label: t('items.economicData'), prompt: 'Give me the latest economic data — fed rate, CPI, yield curve, unemployment, and GDP.' },
+        { itemId: 'Earnings Calendar', label: t('items.earningsCalendar'), prompt: '', isCalendar: true },
+        { itemId: 'IPO Calendar', label: t('items.ipoCalendar'), prompt: '', isIPO: true },
+        { itemId: 'Market Movers', label: t('items.marketMovers'), prompt: '', isMovers: true },
+        { itemId: 'Chart a Ticker', label: t('items.chartATicker'), prompt: '', isChart: true },
+        { itemId: 'Email Alerts', label: t('items.emailAlerts'), prompt: '', isAlerts: true, tier: 'trader' as const },
+      ],
+    },
+    {
+      id: 'calculators',
+      title: t('sections.calculators'),
+      items: [
+        { itemId: 'Financial Calculators', label: t('items.financialCalcs'), prompt: '', isCalculators: true },
+      ],
+    },
+    {
+      id: 'technical',
+      title: t('sections.technical'),
+      items: [
+        { itemId: 'Candlestick Patterns', label: t('items.candlestickPatterns'), prompt: '', isPatterns: true },
+      ],
+    },
+  ]
 
-const CRYPTO_SECTIONS: SidebarSection[] = [
-  {
-    id: 'ai-picks',
-    title: 'AI PICKS',
-    items: [
-      { label: 'AI Daily Picks', icon: '🤖', prompt: '', isAIPicks: true, tier: 'trader' as const },
-      { label: 'Challenge the Council', icon: '🏆', prompt: '', isBattle: true, tier: 'trader' as const },
-      { label: 'War of the AIs ⚔️', icon: '⚔️', prompt: '', isWar: true, tier: 'trader' as const },
-    ],
-  },
-  {
-    id: 'analyzecrypto',
-    title: 'ANALYZE',
-    items: [
-      { label: 'Analyze a Crypto', icon: '🔍', prompt: '', isAnalysis: 'crypto' },
-    ],
-  },
-  {
-    id: 'analysis',
-    title: 'ANALYSIS',
-    items: [
-      { label: 'Morning Crypto Briefing', prompt: `Give me this morning's crypto briefing. Cover: overnight BTC and ETH price action and key levels tested, Asian session performance, current funding rates and whether markets are overleveraged, Bitcoin dominance trend, any major news or catalysts overnight, and the top 3 things to watch today. Format as a structured briefing.` },
-      { label: 'End of Day Crypto Recap', prompt: `Give me today's end-of-day crypto recap. Cover: how BTC and ETH performed today vs the stock market, which sectors of crypto outperformed (DeFi, L2s, meme coins, etc.), funding rate changes during the session, any significant whale activity or exchange flows, key support and resistance levels for overnight trading, and what to watch tomorrow. Format as a structured recap.` },
-      { label: 'Full Crypto Council', icon: '🏛️', prompt: 'Give me the full crypto council view right now. What do Saylor, PlanB, Raoul Pal, Hayes, Vitalik, Cathie Wood, Andreas, and Hoskinson all say about the current crypto market?' },
-      { label: 'Bitcoin Deep Dive', icon: '₿', prompt: 'Give me a full Bitcoin analysis right now using all relevant frameworks — Saylor, PlanB, Andreas, Raoul Pal, and Hayes.' },
-      { label: 'Ethereum & DeFi', icon: '⟠', prompt: 'Give me a full Ethereum and DeFi analysis from Vitalik, Raoul Pal, and Cathie Wood perspectives. Include Layer 2 ecosystem health and DeFi TVL context.' },
-      { label: 'Cycle Position', icon: '🔄', prompt: 'Where are we in the Bitcoin halving cycle right now? Use PlanB Stock-to-Flow, MVRV context, halving timing, and Raoul Pal macro framework to assess current cycle position.' },
-      { label: 'On-Chain Health', icon: '🔗', prompt: 'Give me a full on-chain health check for Bitcoin right now using the PlanB and Andreas frameworks. Cover MVRV, realized price, exchange reserves, long-term holders, hash rate, and what it all means.' },
-      { label: 'Derivatives Positioning', icon: '📐', prompt: 'What does current Bitcoin derivatives positioning look like? Apply Arthur Hayes framework — check funding rates, open interest, leverage risk, and liquidation level analysis.' },
-      { label: 'Macro Crypto View', icon: '🌐', prompt: 'What is the current macro environment saying about crypto? Apply Raoul Pal everything code — check global M2, DXY, ISM PMI, yen carry trade. Is macro favorable or unfavorable for crypto right now?' },
-      { label: 'Altcoin Season', icon: '🌊', prompt: 'Is altcoin season here, ending, or not started? Check BTC dominance, ETH/BTC ratio, funding rates, and apply Arthur Hayes altcoin season mechanics framework.' },
-      { label: 'Institutional Flow', icon: '🏦', prompt: 'What does institutional Bitcoin adoption look like right now? Apply Saylor framework — check ETF flow trends, exchange outflows, corporate treasury activity, and what it signals.' },
-    ],
-  },
-  {
-    id: 'cryptoscans',
-    title: 'RUN A SCAN',
-    items: [
-      { label: 'Bitcoin Cycle Scan', icon: '⚙️', prompt: 'Run a Bitcoin cycle scan. Apply PlanB framework — assess MVRV ratio position, distance from Stock-to-Flow model, days since last halving, realized price distance, and what phase of the cycle we are in.' },
-      { label: 'Macro Crypto Scan', prompt: 'Run a macro crypto scan using Raoul Pal framework. Assess global M2 trend, DXY direction, ISM PMI cycle position, Fed liquidity conditions, and yen carry trade status. Is the macro environment favorable or unfavorable for crypto?' },
-      { label: 'Derivatives Scan', prompt: 'Run a derivatives positioning scan using Arthur Hayes framework. Check Bitcoin and Ethereum funding rates, open interest trend, leverage risk, basis in futures markets. Are markets overleveraged long, overleveraged short, or neutral?' },
-      { label: 'On-Chain Scan', prompt: 'Run an on-chain health scan for Bitcoin. Check active address growth, new address growth, long-term holder accumulation vs distribution, miner selling pressure, exchange reserve trend. Is the network growing, stable, or contracting?' },
-      { label: 'Altcoin Season Scan', prompt: 'Run an altcoin season scan. Check BTC dominance trend, ETH/BTC ratio, altcoin season index, funding rates across altcoins, and apply Hayes altcoin season mechanics. Where are we in the rotation?' },
-      { label: 'DeFi Ecosystem Scan', prompt: 'Run a DeFi ecosystem scan using Vitalik framework. Check total DeFi TVL trend, Layer 2 transaction volume, Ethereum gas fees as demand indicator, top protocol revenue and sustainability. What is the DeFi ecosystem health?' },
-    ],
-  },
-  {
-    id: 'specialists',
-    title: 'SPECIALISTS',
-    items: [
-      { label: 'Michael Saylor', prompt: 'Apply the Michael Saylor Bitcoin framework to current market conditions. What is Saylor saying about institutional adoption, ETF flows, and Bitcoin as a treasury asset right now?' },
-      { label: 'PlanB', prompt: 'Apply PlanB Stock-to-Flow framework to Bitcoin right now. Where are we relative to the S2F model, halving cycle, and MVRV ratio?' },
-      { label: 'Raoul Pal', prompt: 'Apply Raoul Pal macro crypto framework right now. What is global M2 saying, where is DXY, and what does the everything code suggest for crypto?' },
-      { label: 'Arthur Hayes', prompt: 'Apply Arthur Hayes derivatives and macro framework to Bitcoin right now. What do funding rates, open interest, yen carry trade, and dollar liquidity suggest?' },
-      { label: 'Vitalik Buterin', prompt: 'Apply Vitalik Buterin Ethereum framework right now. What is Ethereum roadmap progress, Layer 2 adoption, DeFi TVL, and ETH staking ratio saying?' },
-      { label: 'Cathie Wood', prompt: 'Apply Cathie Wood ARK Invest framework to crypto right now. Where are we on the S-curve, what is developer adoption showing, and what is the total addressable market analysis?' },
-      { label: 'Andreas Antonopoulos', prompt: 'Apply Andreas Antonopoulos Bitcoin fundamentals framework right now. What is hash rate saying, what is the self-custody situation, and what are the key regulatory risks?' },
-      { label: 'Charles Hoskinson', prompt: 'Apply Charles Hoskinson Cardano framework. What is the current state of the Cardano ecosystem, ADA development progress, and how does it compare to competing platforms?' },
-    ],
-  },
-  {
-    id: 'cryptodata',
-    title: 'GET DATA',
-    items: [
-      { label: 'Crypto Dashboard', icon: '📊', prompt: '', isCryptoDashboard: true },
-      { label: 'Crypto Prices', icon: '💹', prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
-      { label: 'Fear & Greed', icon: '😨', prompt: '', isFearGreed: true },
-      { label: 'Crypto News', icon: '📰', prompt: '', isNews: true },
-      { label: 'Email Alerts', icon: '🔔', prompt: '', isAlerts: true, tier: 'trader' as const },
-    ],
-  },
-]
+  const CRYPTO_SECTIONS: SidebarSection[] = [
+    {
+      id: 'ai-picks',
+      title: t('sections.aiPicks'),
+      items: [
+        { itemId: 'AI Daily Picks', label: t('items.aiDailyPicks'), prompt: '', isAIPicks: true, tier: 'trader' as const },
+        { label: t('items.challengeCouncil'), prompt: '', isBattle: true, tier: 'trader' as const },
+        { label: t('items.warOfAIs'), prompt: '', isWar: true, tier: 'trader' as const },
+      ],
+    },
+    {
+      id: 'analyzecrypto',
+      title: t('sections.analyzecrypto'),
+      items: [
+        { itemId: 'Analyze a Crypto', label: t('items.analyzeCrypto'), prompt: '', isAnalysis: 'crypto' },
+      ],
+    },
+    {
+      id: 'analysis',
+      title: t('sections.analysis'),
+      items: [
+        { itemId: 'Morning Crypto Briefing', label: t('items.morningCryptoBriefing'), prompt: `Give me this morning's crypto briefing. Cover: overnight BTC and ETH price action and key levels tested, Asian session performance, current funding rates and whether markets are overleveraged, Bitcoin dominance trend, any major news or catalysts overnight, and the top 3 things to watch today. Format as a structured briefing.` },
+        { itemId: 'End of Day Crypto Recap', label: t('items.eodCryptoRecap'), prompt: `Give me today's end-of-day crypto recap. Cover: how BTC and ETH performed today vs the stock market, which sectors of crypto outperformed (DeFi, L2s, meme coins, etc.), funding rate changes during the session, any significant whale activity or exchange flows, key support and resistance levels for overnight trading, and what to watch tomorrow. Format as a structured recap.` },
+        { itemId: 'Full Crypto Council', label: t('items.fullCryptoCouncil'), prompt: 'Give me the full crypto council view right now. What do Saylor, PlanB, Raoul Pal, Hayes, Vitalik, Cathie Wood, Andreas, and Hoskinson all say about the current crypto market?' },
+        { itemId: 'Bitcoin Deep Dive', label: t('items.bitcoinDeepDive'), prompt: 'Give me a full Bitcoin analysis right now using all relevant frameworks — Saylor, PlanB, Andreas, Raoul Pal, and Hayes.' },
+        { itemId: 'Ethereum & DeFi', label: t('items.ethereumDefi'), prompt: 'Give me a full Ethereum and DeFi analysis from Vitalik, Raoul Pal, and Cathie Wood perspectives. Include Layer 2 ecosystem health and DeFi TVL context.' },
+        { itemId: 'Cycle Position', label: t('items.cyclePosition'), prompt: 'Where are we in the Bitcoin halving cycle right now? Use PlanB Stock-to-Flow, MVRV context, halving timing, and Raoul Pal macro framework to assess current cycle position.' },
+        { itemId: 'On-Chain Health', label: t('items.onChainHealth'), prompt: 'Give me a full on-chain health check for Bitcoin right now using the PlanB and Andreas frameworks. Cover MVRV, realized price, exchange reserves, long-term holders, hash rate, and what it all means.' },
+        { itemId: 'Derivatives Positioning', label: t('items.derivativesPositioning'), prompt: 'What does current Bitcoin derivatives positioning look like? Apply Arthur Hayes framework — check funding rates, open interest, leverage risk, and liquidation level analysis.' },
+        { itemId: 'Macro Crypto View', label: t('items.macroCryptoView'), prompt: 'What is the current macro environment saying about crypto? Apply Raoul Pal everything code — check global M2, DXY, ISM PMI, yen carry trade. Is macro favorable or unfavorable for crypto right now?' },
+        { itemId: 'Altcoin Season', label: t('items.altcoinSeason'), prompt: 'Is altcoin season here, ending, or not started? Check BTC dominance, ETH/BTC ratio, funding rates, and apply Arthur Hayes altcoin season mechanics framework.' },
+        { itemId: 'Institutional Flow', label: t('items.institutionalFlow'), prompt: 'What does institutional Bitcoin adoption look like right now? Apply Saylor framework — check ETF flow trends, exchange outflows, corporate treasury activity, and what it signals.' },
+      ],
+    },
+    {
+      id: 'cryptoscans',
+      title: t('sections.cryptoscans'),
+      items: [
+        { itemId: 'Bitcoin Cycle Scan', label: t('items.bitcoinCycleScan'), prompt: 'Run a Bitcoin cycle scan. Apply PlanB framework — assess MVRV ratio position, distance from Stock-to-Flow model, days since last halving, realized price distance, and what phase of the cycle we are in.' },
+        { itemId: 'Macro Crypto Scan', label: t('items.macroCryptoScan'), prompt: 'Run a macro crypto scan using Raoul Pal framework. Assess global M2 trend, DXY direction, ISM PMI cycle position, Fed liquidity conditions, and yen carry trade status. Is the macro environment favorable or unfavorable for crypto?' },
+        { itemId: 'Derivatives Scan', label: t('items.derivativesScan'), prompt: 'Run a derivatives positioning scan using Arthur Hayes framework. Check Bitcoin and Ethereum funding rates, open interest trend, leverage risk, basis in futures markets. Are markets overleveraged long, overleveraged short, or neutral?' },
+        { itemId: 'On-Chain Scan', label: t('items.onChainScan'), prompt: 'Run an on-chain health scan for Bitcoin. Check active address growth, new address growth, long-term holder accumulation vs distribution, miner selling pressure, exchange reserve trend. Is the network growing, stable, or contracting?' },
+        { itemId: 'Altcoin Season Scan', label: t('items.altcoinSeasonScan'), prompt: 'Run an altcoin season scan. Check BTC dominance trend, ETH/BTC ratio, altcoin season index, funding rates across altcoins, and apply Hayes altcoin season mechanics. Where are we in the rotation?' },
+        { itemId: 'DeFi Ecosystem Scan', label: t('items.defiEcosystemScan'), prompt: 'Run a DeFi ecosystem scan using Vitalik framework. Check total DeFi TVL trend, Layer 2 transaction volume, Ethereum gas fees as demand indicator, top protocol revenue and sustainability. What is the DeFi ecosystem health?' },
+      ],
+    },
+    {
+      id: 'specialists',
+      title: t('sections.specialists'),
+      items: [
+        { label: 'Michael Saylor', prompt: 'Apply the Michael Saylor Bitcoin framework to current market conditions. What is Saylor saying about institutional adoption, ETF flows, and Bitcoin as a treasury asset right now?' },
+        { label: 'PlanB', prompt: 'Apply PlanB Stock-to-Flow framework to Bitcoin right now. Where are we relative to the S2F model, halving cycle, and MVRV ratio?' },
+        { label: 'Raoul Pal', prompt: 'Apply Raoul Pal macro crypto framework right now. What is global M2 saying, where is DXY, and what does the everything code suggest for crypto?' },
+        { label: 'Arthur Hayes', prompt: 'Apply Arthur Hayes derivatives and macro framework to Bitcoin right now. What do funding rates, open interest, yen carry trade, and dollar liquidity suggest?' },
+        { label: 'Vitalik Buterin', prompt: 'Apply Vitalik Buterin Ethereum framework right now. What is Ethereum roadmap progress, Layer 2 adoption, DeFi TVL, and ETH staking ratio saying?' },
+        { label: 'Cathie Wood', prompt: 'Apply Cathie Wood ARK Invest framework to crypto right now. Where are we on the S-curve, what is developer adoption showing, and what is the total addressable market analysis?' },
+        { label: 'Andreas Antonopoulos', prompt: 'Apply Andreas Antonopoulos Bitcoin fundamentals framework right now. What is hash rate saying, what is the self-custody situation, and what are the key regulatory risks?' },
+        { label: 'Charles Hoskinson', prompt: 'Apply Charles Hoskinson Cardano framework. What is the current state of the Cardano ecosystem, ADA development progress, and how does it compare to competing platforms?' },
+      ],
+    },
+    {
+      id: 'cryptodata',
+      title: t('sections.cryptodata'),
+      items: [
+        { itemId: 'Crypto Dashboard', label: t('items.cryptoDashboard'), prompt: '', isCryptoDashboard: true },
+        { itemId: 'Crypto Prices', label: t('items.cryptoPrices'), prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
+        { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
+        { itemId: 'Crypto News', label: t('items.cryptoNews'), prompt: '', isNews: true },
+        { itemId: 'Email Alerts', label: t('items.emailAlerts'), prompt: '', isAlerts: true, tier: 'trader' as const },
+      ],
+    },
+  ]
 
-export default function Home() {
-  const router = useRouter()
+  // ── Component state ───────────────────────────────────────────────────────
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
