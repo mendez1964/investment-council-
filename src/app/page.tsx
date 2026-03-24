@@ -9,7 +9,7 @@ const jsonLd = [
     applicationCategory: 'FinanceApplication',
     operatingSystem: 'Web',
     description: 'AI stock analysis tool and crypto market analysis platform. Daily AI stock picks, AI trading signals, options picks with entry/stop/target, and pre-market briefings for retail traders.',
-    url: 'https://www.investmentcouncil.io',
+    url: 'https://investmentcouncil.io',
     offers: [
       { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free — 5 queries/day' },
       { '@type': 'Offer', price: '29.99', priceCurrency: 'USD', name: 'Trader — Full stock & crypto access' },
@@ -91,7 +91,7 @@ export const metadata: Metadata = {
     title: 'Investment Council — AI Stock Analysis Tool & Crypto Market Analysis',
     description: 'Daily AI stock picks, AI trading signals, crypto market analysis, and options picks. The investment analysis platform built for serious retail traders. Free to start.',
     type: 'website',
-    url: 'https://www.investmentcouncil.io',
+    url: 'https://investmentcouncil.io',
   },
   twitter: {
     card: 'summary_large_image',
@@ -99,7 +99,7 @@ export const metadata: Metadata = {
     description: 'Daily AI stock picks, trading signals, crypto analysis, and options picks. Free tier available.',
   },
   alternates: {
-    canonical: 'https://www.investmentcouncil.io',
+    canonical: 'https://investmentcouncil.io',
   },
 }
 

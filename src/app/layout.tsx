@@ -25,14 +25,14 @@ export const metadata: Metadata = {
   authors: [{ name: 'Investment Council' }],
   creator: 'Investment Council',
   publisher: 'Investment Council',
-  metadataBase: new URL('https://www.investmentcouncil.io'),
+  metadataBase: new URL('https://investmentcouncil.io'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://www.investmentcouncil.io',
+    url: 'https://investmentcouncil.io',
     siteName: 'Investment Council',
     title: 'Investment Council — AI Stock Analysis Tool & Crypto Market Analysis',
     description: 'Daily AI stock picks, crypto analysis, options trades with entry/stop/target, and pre-market briefings. The AI investment analysis platform built for serious retail traders.',

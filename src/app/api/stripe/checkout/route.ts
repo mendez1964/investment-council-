@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'priceId required' }, { status: 400 })
     }
 
-    const origin = request.headers.get('origin') || 'https://www.investmentcouncil.io'
+    const origin = request.headers.get('origin') || 'https://investmentcouncil.io'
 
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
