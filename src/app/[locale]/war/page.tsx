@@ -147,6 +147,13 @@ function PickCard({ pick, color }: { pick: BattlePick; color: string }) {
     ? (((pick.entry_price - pick.stop_price) / pick.entry_price) * 100).toFixed(1)
     : null
 
+  // Parse CAS score from Grok rationale [CAS:84] or IC score [IC:84]
+  const scoreMatch = pick.rationale?.match(/^\[(CAS|IC):(\d+)\]/)
+  const scoreLabel = scoreMatch?.[1] ?? null
+  const scoreValue = scoreMatch ? parseInt(scoreMatch[2]) : null
+  const rationaleText = scoreMatch ? pick.rationale.replace(/^\[(CAS|IC):\d+\]\s*/, '') : pick.rationale
+  const scoreColor = scoreValue == null ? '#9ca3af' : scoreValue >= 85 ? '#16a34a' : scoreValue >= 78 ? '#d97706' : '#6b7280'
+
   return (
     <div style={{
       background: '#fff',
@@ -170,7 +177,18 @@ function PickCard({ pick, color }: { pick: BattlePick; color: string }) {
           </span>
           <BiasBadge bias={pick.bias} />
         </div>
-        <OutcomeBadge outcome={pick.outcome} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {scoreValue != null && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.04em',
+              color: scoreColor, background: scoreValue >= 85 ? '#dcfce7' : scoreValue >= 78 ? '#fef3c7' : '#f4f4f5',
+              borderRadius: 4, padding: '2px 6px',
+            }}>
+              {scoreLabel} {scoreValue}
+            </span>
+          )}
+          <OutcomeBadge outcome={pick.outcome} />
+        </div>
       </div>
 
       {/* Confidence */}
@@ -179,9 +197,9 @@ function PickCard({ pick, color }: { pick: BattlePick; color: string }) {
       </div>
 
       {/* Rationale */}
-      {pick.rationale && (
+      {rationaleText && (
         <p style={{ fontSize: 12, color: '#4b5563', fontStyle: 'italic', margin: '0 0 6px', lineHeight: 1.5 }}>
-          "{pick.rationale}"
+          "{rationaleText}"
         </p>
       )}
 
