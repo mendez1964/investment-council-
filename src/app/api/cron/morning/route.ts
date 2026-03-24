@@ -17,48 +17,39 @@ async function callInternal(path: string, method: string, secret: string) {
   return res.json().catch(() => ({ status: res.status }))
 }
 
+async function runJobs(secret: string) {
+  console.log('[cron/morning] starting jobs...')
+
+  try {
+    const res = await fetch(`${INTERNAL}/api/ai-picks/options?refresh=true`, { headers: { 'x-cron-secret': secret } })
+    console.log('[cron/morning] options_refresh:', res.status)
+  } catch (e) { console.error('[cron/morning] options_refresh error:', e) }
+
+  try {
+    const res = await fetch(`${INTERNAL}/api/ai-picks?refresh=true`, { headers: { 'x-cron-secret': secret } })
+    console.log('[cron/morning] picks_refresh:', res.status)
+  } catch (e) { console.error('[cron/morning] picks_refresh error:', e) }
+
+  try {
+    const res = await callInternal('/api/email/send/daily-picks', 'POST', secret)
+    console.log('[cron/morning] email_picks:', JSON.stringify(res))
+  } catch (e) { console.error('[cron/morning] email_picks error:', e) }
+
+  try {
+    const res = await callInternal('/api/email/send/options-trades', 'POST', secret)
+    console.log('[cron/morning] email_options:', JSON.stringify(res))
+  } catch (e) { console.error('[cron/morning] email_options error:', e) }
+
+  console.log('[cron/morning] all jobs done:', new Date().toISOString())
+}
+
 export async function POST(request: Request) {
   if (!verifyCron(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
   const secret = request.headers.get('x-cron-secret') ?? 'ic-cron-2024'
-  const results: Record<string, any> = {}
 
-  // 1. Regenerate today's options picks with fresh pre-market data
-  try {
-    const res = await fetch(`${INTERNAL}/api/ai-picks/options?refresh=true`, {
-      headers: { 'x-cron-secret': secret },
-    })
-    const data = await res.json()
-    results.options_refresh = { picks: data.picks?.length ?? 0 }
-  } catch (e) {
-    results.options_refresh = { error: String(e) }
-  }
+  // Respond immediately — Railway keeps the process alive so jobs finish in background
+  runJobs(secret).catch(e => console.error('[cron/morning] fatal:', e))
 
-  // 2. Regenerate stock + crypto picks
-  try {
-    const res = await fetch(`${INTERNAL}/api/ai-picks?refresh=true`, {
-      headers: { 'x-cron-secret': secret },
-    })
-    const data = await res.json()
-    results.picks_refresh = { picks: data.picks?.length ?? 0 }
-  } catch (e) {
-    results.picks_refresh = { error: String(e) }
-  }
-
-  // 3. Send daily picks email
-  try {
-    results.email_picks = await callInternal('/api/email/send/daily-picks', 'POST', secret)
-  } catch (e) {
-    results.email_picks = { error: String(e) }
-  }
-
-  // 4. Send options trades email
-  try {
-    results.email_options = await callInternal('/api/email/send/options-trades', 'POST', secret)
-  } catch (e) {
-    results.email_options = { error: String(e) }
-  }
-
-  console.log('[cron/morning]', JSON.stringify(results))
-  return Response.json({ ok: true, time: new Date().toISOString(), results })
+  return Response.json({ ok: true, status: 'started', time: new Date().toISOString() })
 }
