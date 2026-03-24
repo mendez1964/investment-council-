@@ -28,6 +28,7 @@ interface Profile {
   grok_key: string | null
   anthropic_key: string | null
   trial_ends_at: string | null
+  created_at: string | null
 }
 
 function MaskedInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder: string }) {
@@ -125,6 +126,15 @@ export default function ProfilePage() {
   }
 
   const tier = TIER_CONFIG[profile?.tier ?? 'free'] ?? TIER_CONFIG.free
+
+  // 24-hour grace period countdown
+  const signupTime = profile?.created_at ? new Date(profile.created_at).getTime() : null
+  const gracePeriodEnds = signupTime ? signupTime + 24 * 60 * 60 * 1000 : null
+  const now = Date.now()
+  const inGracePeriod = gracePeriodEnds ? now < gracePeriodEnds : false
+  const graceHoursLeft = gracePeriodEnds ? Math.max(0, Math.ceil((gracePeriodEnds - now) / 3_600_000)) : 0
+  const hasAnyKey = !!(anthropicKey || openaiKey || geminiKey || grokKey)
+  const trialExpired = !inGracePeriod && !hasAnyKey
 
   if (loading) {
     return (
@@ -233,11 +243,37 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Trial / key status banner */}
+        {trialExpired && (
+          <div style={{ marginBottom: 20, padding: '14px 16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>⚠️ Your free trial has ended</div>
+            <div style={{ fontSize: 12, color: '#7f1d1d', lineHeight: 1.5 }}>
+              Add your own API key below to continue using the AI chat. Your keys are stored encrypted and never shared.
+            </div>
+          </div>
+        )}
+        {inGracePeriod && !hasAnyKey && (
+          <div style={{ marginBottom: 20, padding: '14px 16px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#b45309', marginBottom: 4 }}>⏱ {graceHoursLeft}h left on your free trial</div>
+            <div style={{ fontSize: 12, color: '#78350f', lineHeight: 1.5 }}>
+              You're using Investment Council's shared Claude key. Add your own API key before your trial ends to keep unlimited access.
+            </div>
+          </div>
+        )}
+        {hasAnyKey && (
+          <div style={{ marginBottom: 20, padding: '14px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>✓ Unlimited access active</div>
+            <div style={{ fontSize: 12, color: '#14532d', lineHeight: 1.5 }}>
+              You're using your own API key — unlimited queries, charged to your account.
+            </div>
+          </div>
+        )}
+
         {/* API Keys */}
         <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '24px', marginBottom: 24 }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 6px', letterSpacing: '-0.01em' }}>Your API Keys</h2>
           <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 18px' }}>
-            Add your own keys to use your accounts directly. Keys are stored encrypted and never shared.
+            Add your own key for unlimited queries. Used directly with your chosen AI — Investment Council never sees your usage.
           </p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -256,8 +292,9 @@ export default function ProfilePage() {
             ))}
           </div>
 
-          <div style={{ marginTop: 14, padding: '10px 12px', background: '#f9fafb', borderRadius: 8, fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>
-            🔒 Keys are stored securely in your account. Leave blank to use Investment Council's shared keys.
+          <div style={{ marginTop: 14, padding: '10px 12px', background: '#f9fafb', borderRadius: 8, fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
+            🔒 Keys are encrypted and stored securely. They never leave your account.<br />
+            Get your key: <b>Claude</b> — console.anthropic.com &nbsp;·&nbsp; <b>ChatGPT</b> — platform.openai.com/api-keys &nbsp;·&nbsp; <b>Gemini</b> — aistudio.google.com/apikey &nbsp;·&nbsp; <b>Grok</b> — console.x.ai
           </div>
         </div>
 

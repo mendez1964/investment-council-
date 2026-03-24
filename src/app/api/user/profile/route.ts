@@ -18,6 +18,7 @@ export async function GET() {
 
     return Response.json({
       email: user.email,
+      created_at: user.created_at,
       ...( profile ?? { tier: 'free' }),
     })
   } catch (err: any) {

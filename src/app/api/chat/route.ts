@@ -1,14 +1,20 @@
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { getSystemPrompt, getRelevantKnowledge, getRelevantPineKnowledge } from '@/lib/knowledge-base'
 import { fetchLiveData } from '@/lib/live-data'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-})
+// Investment Council's own Claude key — used only during 24h grace period
+const ic_anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const FREE_DAILY_LIMIT = 5
+type AIProvider = 'claude' | 'chatgpt' | 'gemini' | 'grok'
+
+const OPENAI_CONFIGS: Record<string, { baseURL?: string; model: string; inputCostPer1M: number; outputCostPer1M: number }> = {
+  chatgpt: { model: 'gpt-4o',           inputCostPer1M: 2.50,  outputCostPer1M: 10.00 },
+  gemini:  { baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/', model: 'gemini-2.0-flash', inputCostPer1M: 0.075, outputCostPer1M: 0.30 },
+  grok:    { baseURL: 'https://api.x.ai/v1', model: 'grok-2-latest', inputCostPer1M: 2.00, outputCostPer1M: 10.00 },
+}
 
 function streamText(text: string): Response {
   const encoder = new TextEncoder()
@@ -36,7 +42,11 @@ export async function POST(request: Request) {
     }
     const languageInstruction = LANGUAGE_INSTRUCTIONS[locale] ?? ''
 
-    // ── Tier & query-count enforcement ────────────────────────────────────────
+    // ── Resolve which AI + key to use ─────────────────────────────────────────
+    let aiProvider: AIProvider = 'claude'
+    let userApiKey: string | null = null
+    let useICKey = false
+
     try {
       const authClient = createServerSupabaseClientAuth()
       const { data: { user } } = await authClient.auth.getUser()
@@ -45,40 +55,48 @@ export async function POST(request: Request) {
         const db = createServerSupabaseClient()
         const { data: profile } = await db
           .from('profiles')
-          .select('tier, query_count_today, query_reset_date')
+          .select('preferred_ai, anthropic_key, openai_key, gemini_key, grok_key')
           .eq('id', user.id)
           .single()
 
-        if (profile) {
-          const today = new Date().toISOString().split('T')[0]
-          const isNewDay = profile.query_reset_date !== today
+        const preferred = ((profile?.preferred_ai ?? 'claude') as AIProvider)
+        aiProvider = preferred
 
-          // Reset count if it's a new day
-          if (isNewDay) {
-            await db.from('profiles').update({
-              query_count_today: 0,
-              query_reset_date: today,
-            }).eq('id', user.id)
-            profile.query_count_today = 0
-          }
+        const keyMap: Record<AIProvider, string | null> = {
+          claude:  profile?.anthropic_key ?? null,
+          chatgpt: profile?.openai_key    ?? null,
+          gemini:  profile?.gemini_key    ?? null,
+          grok:    profile?.grok_key      ?? null,
+        }
+        userApiKey = keyMap[preferred]
 
-          // Enforce free tier limit
-          if (profile.tier === 'free' && profile.query_count_today >= FREE_DAILY_LIMIT) {
+        if (userApiKey) {
+          // User has their own key — use it
+          useICKey = false
+        } else {
+          // Check 24-hour grace period from signup
+          const signupTime = new Date(user.created_at).getTime()
+          const gracePeriodEnds = signupTime + 24 * 60 * 60 * 1000
+          const inGracePeriod = Date.now() < gracePeriodEnds
+
+          if (inGracePeriod) {
+            // Grace period: fall back to IC Claude key
+            aiProvider = 'claude'
+            useICKey = true
+          } else {
+            // Trial expired — block and prompt to add own key
             return streamText(
-              `**Daily limit reached**\n\nFree accounts are limited to ${FREE_DAILY_LIMIT} queries per day. You've used all ${FREE_DAILY_LIMIT} today.\n\n**Upgrade to Trader ($29.99/mo)** for unlimited queries, all frameworks, AI daily picks, and email alerts.\n\nYour limit resets at midnight.`
+              `**Your 24-hour free trial has ended.**\n\nTo continue using the Investment Council AI chat, add your own API key in **Profile → Your API Keys**.\n\n**Where to get your key:**\n- **Claude** — console.anthropic.com\n- **ChatGPT** — platform.openai.com/api-keys\n- **Gemini** — aistudio.google.com/apikey\n- **Grok** — console.x.ai\n\nYour keys are stored encrypted and never shared. Once added, you get unlimited queries using your own account.`
             )
           }
-
-          // Increment query count
-          await db.from('profiles').update({
-            query_count_today: (profile.query_count_today ?? 0) + 1,
-            query_reset_date: today,
-          }).eq('id', user.id)
         }
+      } else {
+        // Not authenticated
+        useICKey = true
       }
     } catch (err) {
-      // Don't block the request if tier check fails
-      console.error('[tier-check] failed:', (err as Error).message)
+      console.error('[auth-check] failed:', (err as Error).message)
+      useICKey = true
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -87,14 +105,14 @@ export async function POST(request: Request) {
       .filter((m: { role: string }) => m.role === 'user')
       .at(-1)?.content || ''
 
-    // Load relevant knowledge base content and live market data in parallel
+    // Load knowledge base + system prompt in parallel
     const [knowledgeBase, pineKnowledge, systemPrompt] = await Promise.all([
       Promise.resolve(getRelevantKnowledge(latestUserMessage)),
       Promise.resolve(getRelevantPineKnowledge(latestUserMessage)),
       Promise.resolve(getSystemPrompt()),
     ])
 
-    // Current date/time stamped on every request
+    // Current date/time
     const now = new Date()
     const reportDate = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
@@ -102,12 +120,11 @@ export async function POST(request: Request) {
       hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
     })
 
-    // Detect queries that REQUIRE live market data to be useful
+    // Fetch live market data
     const needsLiveData = /\b(quote|price|stock|ticker|etf|crypto|btc|eth|sol|market|briefing|analysis|analyze|fundamentals|earnings|sector|movers|scan|report|watchlist|portfolio|nvda|aapl|tsla|spy|qqq|msft|amzn|googl|meta|nflx)\b/i.test(latestUserMessage)
 
     let liveData = ''
     try {
-      // Scans fetch 10+ stock overviews — allow up to 30s; regular queries get 8s
       const isScan = /council\s*scan|full\s*scan|run\s*(all|the|council)?\s*scan|(tudor(\s+jones)?|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s+scan/i.test(latestUserMessage)
       const timeoutMs = isScan ? 30000 : 8000
       const timeout = new Promise<string>((_, reject) =>
@@ -119,35 +136,13 @@ export async function POST(request: Request) {
       console.error('[live-data] failed:', (err as Error).message)
     }
 
-    // Block the API call if live data is needed but unavailable — saves cost
     if (needsLiveData && !liveData.trim()) {
-      const msg = `**Report blocked — no live market data available**\n\nThe live market data feed returned nothing for this query. To avoid running a report on stale data, this request was not sent to the AI.\n\n**What to try:**\n- Wait a moment and try again\n- Check that the market data feed is connected\n- Try a different ticker or rephrase the query`
-      const encoder = new TextEncoder()
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(encoder.encode(msg))
-          controller.close()
-        },
-      })
-      return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+      return streamText(
+        `**Report blocked — no live market data available**\n\nThe live market data feed returned nothing for this query. To avoid running a report on stale data, this request was not sent to the AI.\n\n**What to try:**\n- Wait a moment and try again\n- Check that the market data feed is connected\n- Try a different ticker or rephrase the query`
+      )
     }
 
-    // Build system prompt as an array of blocks with cache_control markers.
-    // Anthropic caches everything UP TO AND INCLUDING a block marked cache_control.
-    // Strategy:
-    //   Block 1 — base system prompt       → cached (never changes)
-    //   Block 2 — knowledge base files     → cached (same content for similar questions)
-    //   Block 3 — live data + reminder     → NOT cached (changes every request)
-    const systemBlocks: Anthropic.Messages.TextBlockParam[] = []
-
-    // Block 1: base system prompt — always the same, always cache it
-    systemBlocks.push({
-      type: 'text',
-      text: systemPrompt,
-      cache_control: { type: 'ephemeral' },
-    } as Anthropic.Messages.TextBlockParam)
-
-    // Block 2: knowledge base — cache when present (big files, expensive to re-send)
+    // Build shared content pieces
     const kbParts: string[] = []
     if (knowledgeBase.length > 0) {
       kbParts.push(`# LOADED KNOWLEDGE BASE CONTEXT\nThe following framework files are loaded for this query. Draw from them directly in your analysis:\n${knowledgeBase}`)
@@ -155,73 +150,130 @@ export async function POST(request: Request) {
     if (pineKnowledge.length > 0) {
       kbParts.push(`# PINE SCRIPT v6 DOCUMENTATION — loaded from local knowledge base\nUse these exact docs to write or review Pine Script. Do not guess syntax — use what is documented here.\n${pineKnowledge}`)
     }
-    if (kbParts.length > 0) {
+
+    const liveAndReminder = `REPORT DATE/TIME: ${reportDate}\n\n${liveData}\n\nRemember: Always include the report date (${reportDate}) at the top of any analysis or report. Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.${languageInstruction ? `\n\n${languageInstruction}` : ''}`
+
+    const encoder = new TextEncoder()
+
+    // ── Claude (Anthropic SDK — supports prompt caching) ─────────────────────
+    if (aiProvider === 'claude') {
+      const anthropicClient = useICKey
+        ? ic_anthropic
+        : new Anthropic({ apiKey: userApiKey! })
+
+      const systemBlocks: Anthropic.Messages.TextBlockParam[] = []
+
       systemBlocks.push({
         type: 'text',
-        text: kbParts.join('\n\n'),
+        text: systemPrompt,
         cache_control: { type: 'ephemeral' },
       } as Anthropic.Messages.TextBlockParam)
+
+      if (kbParts.length > 0) {
+        systemBlocks.push({
+          type: 'text',
+          text: kbParts.join('\n\n'),
+          cache_control: { type: 'ephemeral' },
+        } as Anthropic.Messages.TextBlockParam)
+      }
+
+      systemBlocks.push({ type: 'text', text: liveAndReminder })
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            const anthropicStream = await (anthropicClient.messages.create as any)({
+              model: 'claude-sonnet-4-6',
+              max_tokens: 4096,
+              system: systemBlocks,
+              messages: messages.map((m: { role: string; content: string }) => ({
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+              })),
+              stream: true,
+            })
+
+            let inputTokens = 0, outputTokens = 0, cacheReadTokens = 0, cacheWriteTokens = 0
+
+            for await (const chunk of anthropicStream) {
+              if (chunk.type === 'message_start') {
+                const usage = chunk.message.usage as any
+                inputTokens     = usage?.input_tokens                   ?? 0
+                cacheReadTokens = usage?.cache_read_input_tokens        ?? 0
+                cacheWriteTokens = usage?.cache_creation_input_tokens   ?? 0
+              } else if (chunk.type === 'message_delta') {
+                outputTokens = (chunk.usage as any)?.output_tokens ?? 0
+              } else if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+                controller.enqueue(encoder.encode(chunk.delta.text))
+              }
+            }
+
+            const cost =
+              (inputTokens      / 1_000_000) * 3.00 +
+              (cacheWriteTokens / 1_000_000) * 3.75 +
+              (cacheReadTokens  / 1_000_000) * 0.30 +
+              (outputTokens     / 1_000_000) * 15.00
+
+            console.log(`[claude] in:${inputTokens} cacheWrite:${cacheWriteTokens} cacheRead:${cacheReadTokens} out:${outputTokens} cost:$${cost.toFixed(5)} ic:${useICKey}`)
+
+            const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, cost })}]`
+            controller.enqueue(encoder.encode(usageMarker))
+            controller.close()
+          } catch (error) {
+            controller.error(error)
+          }
+        },
+      })
+
+      return new Response(stream, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' },
+      })
     }
 
-    // Block 3: live data + closing reminder — NOT cached (fresh every request)
-    const liveAndReminder = `REPORT DATE/TIME: ${reportDate}\n\n${liveData}\n\nRemember: Always include the report date (${reportDate}) at the top of any analysis or report. Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.${languageInstruction ? `\n\n${languageInstruction}` : ''}`
-    systemBlocks.push({
-      type: 'text',
-      text: liveAndReminder,
+    // ── ChatGPT / Gemini / Grok (OpenAI-compatible SDK) ──────────────────────
+    const config = OPENAI_CONFIGS[aiProvider]
+    const openaiClient = new OpenAI({
+      apiKey: userApiKey!,
+      ...(config.baseURL ? { baseURL: config.baseURL } : {}),
     })
 
-    // Create a streaming response
-    const encoder = new TextEncoder()
+    const systemText = [systemPrompt, ...kbParts, liveAndReminder].join('\n\n')
+
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const anthropicStream = await (client.messages.create as any)({
-            model: 'claude-sonnet-4-6',
+          const openaiStream = await openaiClient.chat.completions.create({
+            model: config.model,
             max_tokens: 4096,
-            system: systemBlocks,
-            messages: messages.map((m: { role: string; content: string }) => ({
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-            })),
             stream: true,
+            stream_options: { include_usage: true },
+            messages: [
+              { role: 'system', content: systemText },
+              ...messages.map((m: { role: string; content: string }) => ({
+                role: m.role as 'user' | 'assistant',
+                content: m.content,
+              })),
+            ],
           })
 
-          let inputTokens = 0
-          let outputTokens = 0
-          let cacheReadTokens = 0
-          let cacheWriteTokens = 0
+          let inputTokens = 0, outputTokens = 0
 
-          for await (const chunk of anthropicStream) {
-            if (chunk.type === 'message_start') {
-              const usage = chunk.message.usage as any
-              inputTokens = usage?.input_tokens ?? 0
-              cacheReadTokens = usage?.cache_read_input_tokens ?? 0
-              cacheWriteTokens = usage?.cache_creation_input_tokens ?? 0
-            } else if (chunk.type === 'message_delta') {
-              outputTokens = (chunk.usage as any)?.output_tokens ?? 0
-            } else if (
-              chunk.type === 'content_block_delta' &&
-              chunk.delta.type === 'text_delta'
-            ) {
-              controller.enqueue(encoder.encode(chunk.delta.text))
+          for await (const chunk of openaiStream) {
+            const text = chunk.choices[0]?.delta?.content ?? ''
+            if (text) controller.enqueue(encoder.encode(text))
+            if (chunk.usage) {
+              inputTokens  = chunk.usage.prompt_tokens     ?? 0
+              outputTokens = chunk.usage.completion_tokens ?? 0
             }
           }
 
-          // Sonnet 4.6 pricing:
-          //   Input (regular):  $3.00 / 1M
-          //   Cache write:      $3.75 / 1M  (25% premium to store)
-          //   Cache read:       $0.30 / 1M  (90% discount vs regular)
-          //   Output:          $15.00 / 1M
           const cost =
-            (inputTokens / 1_000_000) * 3.00 +
-            (cacheWriteTokens / 1_000_000) * 3.75 +
-            (cacheReadTokens / 1_000_000) * 0.30 +
-            (outputTokens / 1_000_000) * 15.00
+            (inputTokens  / 1_000_000) * config.inputCostPer1M +
+            (outputTokens / 1_000_000) * config.outputCostPer1M
 
-          console.log(`[usage] in:${inputTokens} cacheWrite:${cacheWriteTokens} cacheRead:${cacheReadTokens} out:${outputTokens} cost:$${cost.toFixed(5)}`)
+          console.log(`[${aiProvider}] in:${inputTokens} out:${outputTokens} cost:$${cost.toFixed(5)}`)
 
-          // Send usage as a hidden marker so the frontend can track cost
-          const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, cost })}]`
+          const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens, outputTokens, cacheReadTokens: 0, cacheWriteTokens: 0, cost })}]`
           controller.enqueue(encoder.encode(usageMarker))
           controller.close()
         } catch (error) {
@@ -231,11 +283,9 @@ export async function POST(request: Request) {
     })
 
     return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-      },
+      headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' },
     })
+
   } catch (error) {
     console.error('Chat API error:', error)
     return Response.json({ error: 'Internal server error' }, { status: 500 })
