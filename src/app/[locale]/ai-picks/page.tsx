@@ -262,12 +262,6 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
     ? new Date(pick.expiry + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : null
 
-  const stopPrice = pick.entry_premium && pick.stop_loss_pct
-    ? (pick.entry_premium * (1 - pick.stop_loss_pct / 100)).toFixed(2)
-    : null
-  const targetPrice = pick.entry_premium && pick.take_profit_pct
-    ? (pick.entry_premium * (1 + pick.take_profit_pct / 100)).toFixed(2)
-    : null
 
   return (
     <div style={{
@@ -352,40 +346,42 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
         </div>
       )}
 
+      {/* Underlying price at pick time */}
+      {pick.underlying_entry_price != null && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+          <span style={{ fontSize: '9px', color: '#6b7280' }}>{pick.underlying} at pick:</span>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
+            ${pick.underlying_entry_price.toFixed(2)}
+          </span>
+        </div>
+      )}
+
       {/* Trade levels */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+        display: 'grid', gridTemplateColumns: '1fr 1fr',
         gap: '4px', marginTop: '4px',
         background: '#f9fafb', borderRadius: '6px', padding: '6px 8px',
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>ENTRY</div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
-            {pick.entry_premium != null ? `$${pick.entry_premium.toFixed(2)}` : '—'}
-          </div>
-        </div>
-        <div style={{ textAlign: 'center', borderLeft: '1px solid #e5e7eb', borderRight: '1px solid #e5e7eb' }}>
-          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>STOP</div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>
-            {stopPrice ? `$${stopPrice}` : '—'}
-          </div>
-          <div style={{ fontSize: '8px', color: '#dc2626' }}>-{pick.stop_loss_pct}%</div>
+        <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
+          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>STOP LOSS</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>-{pick.stop_loss_pct}%</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium paid</div>
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TARGET</div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>
-            {targetPrice ? `$${targetPrice}` : '—'}
-          </div>
-          <div style={{ fontSize: '8px', color: '#16a34a' }}>+{pick.take_profit_pct}%</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TAKE PROFIT</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>+{pick.take_profit_pct}%</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium paid</div>
         </div>
       </div>
 
-      {/* Underlying price */}
-      {pick.underlying_entry_price != null && (
-        <div style={{ fontSize: '9px', color: '#9ca3af', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-          {pick.underlying} @ ${pick.underlying_entry_price.toFixed(2)}
-        </div>
-      )}
+      {/* Broker note */}
+      <div style={{
+        fontSize: '9px', color: '#9ca3af', lineHeight: 1.4, marginTop: 2,
+        padding: '4px 6px', background: '#fffbeb', borderRadius: 4,
+        border: '1px solid #fde68a',
+      }}>
+        ⚠ Verify strike ${pick.strike} exp {expiryLabel} is available in your broker before entering.
+      </div>
     </div>
   )
 }

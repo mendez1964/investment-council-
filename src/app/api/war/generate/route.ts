@@ -1,8 +1,11 @@
 // Run in Supabase SQL editor:
+// ALTER TABLE battle_picks DROP CONSTRAINT IF EXISTS battle_picks_ai_name_check;
+// ALTER TABLE battle_picks ADD CONSTRAINT battle_picks_ai_name_check CHECK (ai_name IN ('claude', 'chatgpt', 'gemini', 'grok'));
+//
 // CREATE TABLE IF NOT EXISTS battle_picks (
 //   id serial PRIMARY KEY,
 //   pick_date date NOT NULL,
-//   ai_name text NOT NULL CHECK (ai_name IN ('claude', 'chatgpt', 'gemini')),
+//   ai_name text NOT NULL CHECK (ai_name IN ('claude', 'chatgpt', 'gemini', 'grok')),
 //   category text NOT NULL CHECK (category IN ('stock', 'crypto', 'option')),
 //   symbol text NOT NULL,
 //   bias text NOT NULL,
@@ -62,13 +65,13 @@ export async function POST(request: Request) {
   const supabase = createServerSupabaseClient()
   const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD in local time
 
-  // Check if all 9 picks already exist for today
+  // Check if all 12 picks already exist for today (4 AIs × 3 categories)
   if (!refresh) {
     const { data: existing } = await supabase
       .from('battle_picks')
       .select('id')
       .eq('pick_date', today)
-    if (existing && existing.length >= 9) {
+    if (existing && existing.length >= 12) {
       return Response.json({ ok: true, skipped: true, reason: 'already_generated', date: today })
     }
   }
@@ -85,7 +88,7 @@ export async function POST(request: Request) {
     liveData = `Date: ${today}. Live data unavailable — use general market knowledge.`
   }
 
-  const AIs = ['claude', 'chatgpt', 'gemini'] as const
+  const AIs = ['claude', 'chatgpt', 'gemini', 'grok'] as const
   const categories = ['stock', 'crypto', 'option'] as const
   const startTime = Date.now()
   let generated = 0

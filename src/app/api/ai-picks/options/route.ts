@@ -48,6 +48,34 @@ function getWeeklyExpiry(dateStr: string): string {
   return toDateStr(d)
 }
 
+// Standard option strike increments by underlying price
+function getStrikeIncrement(price: number): number {
+  if (price < 25) return 0.5
+  if (price < 50) return 1
+  if (price < 100) return 2
+  if (price < 200) return 2.5
+  if (price < 500) return 5
+  return 10
+}
+
+// Compute a realistic strike from the live underlying price + confidence
+// High confidence → ATM, lower confidence → further OTM
+function computeStrike(
+  price: number,
+  confidence: number,
+  optionType: 'call' | 'put',
+  duration: 'daily' | 'weekly'
+): number {
+  const inc = getStrikeIncrement(price)
+  const atm = Math.round(price / inc) * inc
+  // strikesOTM: 0=ATM, 1=one increment OTM, etc.
+  let strikesOTM = confidence >= 9 ? 0 : confidence >= 7 ? 1 : confidence >= 5 ? 2 : 3
+  // Weekly options: prefer closer to ATM for better fill + value
+  if (duration === 'weekly') strikesOTM = Math.max(0, strikesOTM - 1)
+  const move = inc * strikesOTM
+  return optionType === 'call' ? atm + move : atm - move
+}
+
 async function evaluatePending(supabase: any) {
   const todayStr = toDateStr(new Date())
   const { data: pending } = await supabase
@@ -138,7 +166,8 @@ HARD RULES FOR 0DTE:
 - Must have a Factor 2 score of ≥12 — no catalyst, no 0DTE trade
 - At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
 - Rationale MUST mention the catalyst and pre-market condition
-- Use only liquid high-volume tickers: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, XLE, XLK, XLF
+- ONLY use tickers that have Mon/Wed/Fri or daily options expirations: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD — do NOT use sector ETFs (XLK, XLE, XLF, XLY, etc.) or IWM for 0DTE as they do not have daily expirations
+- Do NOT specify a strike — the system will compute the correct strike from the live price
 
 Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (today, 0DTE):
 {
@@ -228,6 +257,7 @@ HARD RULES FOR WEEKLY:
 - At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
 - Rationale MUST mention the macro catalyst and multi-week trend direction
 - Use liquid tickers with healthy options chains: SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD, GLD, TLT, XLE, XLK, XLF, XLV, XLY, XLC, COIN, MSTR
+- Do NOT specify a strike — the system will compute the correct strike from the live price
 
 Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (~3 weeks out):
 {
@@ -278,20 +308,29 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
 
   const rows = trades.map((trade, i) => {
     const q = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
+    const livePrice: number | null = q?.c ?? null
+    const optType: 'call' | 'put' = trade.option_type === 'put' ? 'put' : 'call'
+    const confidence = Math.min(10, Math.max(1, parseInt(trade.confidence) || 5))
+
+    // Compute strike from live price — do not trust Claude's guess
+    const strike = livePrice != null
+      ? computeStrike(livePrice, confidence, optType, type)
+      : null
+
     return {
       pick_date: pickDate,
       underlying: trade.underlying?.toUpperCase() ?? '',
-      option_type: trade.option_type === 'put' ? 'put' : 'call',
-      strike: parseFloat(trade.strike) || null,
-      expiry: trade.expiry ?? expiryStr,
-      entry_premium: parseFloat(trade.entry_premium) || null,
+      option_type: optType,
+      strike,
+      expiry: expiryStr, // always use our computed expiry, not Claude's
+      entry_premium: null, // don't store Claude's hallucinated premium
       stop_loss_pct: parseInt(trade.stop_loss_pct) || 40,
       take_profit_pct: parseInt(trade.take_profit_pct) || 80,
-      confidence: Math.min(10, Math.max(1, parseInt(trade.confidence) || 5)),
+      confidence,
       rationale: trade.ic_score ? `[IC:${parseInt(trade.ic_score) || '?'}] ${trade.rationale ?? ''}` : (trade.rationale ?? ''),
       catalyst: trade.catalyst ?? '',
       sector: trade.sector ?? '',
-      underlying_entry_price: q?.c ?? null,
+      underlying_entry_price: livePrice,
       outcome: 'pending',
     }
   })

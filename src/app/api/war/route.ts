@@ -40,7 +40,7 @@ export async function GET() {
     .select('*')
     .neq('outcome', 'pending')
 
-  const AI_NAMES = ['claude', 'chatgpt', 'gemini'] as const
+  const AI_NAMES = ['claude', 'chatgpt', 'gemini', 'grok'] as const
   const CATEGORIES = ['stock', 'crypto', 'option'] as const
 
   // Build leaderboard

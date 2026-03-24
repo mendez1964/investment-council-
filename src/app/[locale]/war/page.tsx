@@ -8,6 +8,7 @@ const AI_CONFIG: Record<string, { color: string; icon: string; label: string; bg
   claude:  { color: '#d97706', icon: '⚡', label: 'Claude',  bg: 'rgba(217,119,6,0.08)'  },
   chatgpt: { color: '#16a34a', icon: '🟢', label: 'ChatGPT', bg: 'rgba(22,163,74,0.08)'  },
   gemini:  { color: '#2563eb', icon: '✦',  label: 'Gemini',  bg: 'rgba(37,99,235,0.08)'  },
+  grok:    { color: '#7c3aed', icon: '✕',  label: 'Grok',    bg: 'rgba(124,58,237,0.08)' },
 }
 
 const GOLD = '#C9A34E'
@@ -244,7 +245,7 @@ function AIColumn({ aiName, picks, loading }: { aiName: string; picks: BattlePic
             {cfg.label}
           </div>
           <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 1 }}>
-            {aiName === 'claude' ? 'Anthropic' : aiName === 'chatgpt' ? 'OpenAI' : 'Google DeepMind'}
+            {aiName === 'claude' ? 'Anthropic' : aiName === 'chatgpt' ? 'OpenAI' : aiName === 'gemini' ? 'Google DeepMind' : 'xAI'}
           </div>
         </div>
       </div>
@@ -362,7 +363,7 @@ function RecentDaysTable({ days }: { days: DayResult[] }) {
         <thead>
           <tr style={{ background: '#f9fafb', borderBottom: '2px solid #e5e7eb' }}>
             <th style={{ padding: '12px 16px', textAlign: 'left', color: '#6b7280', fontWeight: 600, fontSize: 11, letterSpacing: '0.05em' }}>DATE</th>
-            {(['claude', 'chatgpt', 'gemini'] as const).map(ai => (
+            {(['claude', 'chatgpt', 'gemini', 'grok'] as const).map(ai => (
               <th key={ai} style={{ padding: '12px 16px', textAlign: 'center', color: AI_CONFIG[ai].color, fontWeight: 700, fontSize: 12 }}>
                 {AI_CONFIG[ai].icon} {AI_CONFIG[ai].label}
               </th>
@@ -380,7 +381,7 @@ function RecentDaysTable({ days }: { days: DayResult[] }) {
                 <td style={{ padding: '11px 16px', color: '#374151', fontWeight: isToday ? 700 : 400 }}>
                   {label}{isToday && <span style={{ fontSize: 10, color: GOLD, marginLeft: 6, fontWeight: 700 }}>TODAY</span>}
                 </td>
-                {(['claude', 'chatgpt', 'gemini'] as const).map(ai => {
+                {(['claude', 'chatgpt', 'gemini', 'grok'] as const).map(ai => {
                   const stat = day.ai_stats.find(s => s.ai_name === ai)
                   const total = (stat?.wins ?? 0) + (stat?.losses ?? 0)
                   return (
@@ -453,10 +454,10 @@ export default function WarPage() {
             ⚔️ WAR OF THE AIs
           </div>
           <h1 style={{
-            fontSize: 'clamp(32px, 6vw, 56px)', fontWeight: 900, color: '#fff',
+            fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 900, color: '#fff',
             margin: '0 0 12px', lineHeight: 1.1, letterSpacing: '-0.03em',
           }}>
-            Claude vs ChatGPT vs Gemini
+            Claude vs ChatGPT vs Gemini vs Grok
           </h1>
           <p style={{ fontSize: 17, color: '#94a3b8', margin: '0 0 20px' }}>
             Daily picks. Live scores. One winner.
@@ -494,7 +495,7 @@ export default function WarPage() {
           </div>
 
           <div className="battle-grid" style={{ display: 'flex', gap: 16 }}>
-            {(['claude', 'chatgpt', 'gemini'] as const).map(ai => (
+            {(['claude', 'chatgpt', 'gemini', 'grok'] as const).map(ai => (
               <AIColumn
                 key={ai}
                 aiName={ai}
@@ -549,7 +550,7 @@ export default function WarPage() {
           <h2 style={{ fontSize: 22, fontWeight: 800, color: '#111', margin: '0 0 20px' }}>All-Time Leaderboard</h2>
           <div className="leaderboard-grid" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {loading ? (
-              ['claude', 'chatgpt', 'gemini'].map(ai => (
+              ['claude', 'chatgpt', 'gemini', 'grok'].map(ai => (
                 <div key={ai} style={{ flex: 1, minWidth: 240 }}>
                   <Skeleton h={220} style={{ borderRadius: 14 }} />
                 </div>
@@ -585,7 +586,7 @@ export default function WarPage() {
         {/* ── Footer note ── */}
         <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', lineHeight: 1.6 }}>
           Picks generated daily at 7:30 AM ET. Outcomes evaluated after 24 hours.
-          Claude currently powers all AI personas — real API integrations coming soon.
+          Each AI uses its own live API — Claude (Anthropic), ChatGPT (OpenAI), Gemini (Google), Grok (xAI).
         </p>
       </div>
     </div>
