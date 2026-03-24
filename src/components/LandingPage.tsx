@@ -669,7 +669,7 @@ export default function LandingPage() {
               <div style={{ display: 'flex', gap: '48px', flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em', marginBottom: '14px' }}>PRODUCT</div>
-                  {['Features', 'Pricing', 'Crypto Dashboard', 'AI Daily Picks', 'Email Alerts'].map(l => (
+                  {['Features', 'Pricing', 'AI Daily Picks', 'War of the AIs', 'Email Alerts'].map(l => (
                     <a key={l} href="#" style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.3)', textDecoration: 'none', marginBottom: '8px' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
@@ -683,6 +683,21 @@ export default function LandingPage() {
                     onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
                     >{l}</a>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.1em', marginBottom: '14px' }}>LEARN</div>
+                  {[
+                    { label: 'Blog', href: '/blog' },
+                    { label: 'About', href: '/about' },
+                    { label: 'AI Stock Analysis', href: '/blog/ai-stock-analysis-how-it-works' },
+                    { label: 'AI Crypto Analysis', href: '/blog/ai-crypto-analysis-complete-guide' },
+                    { label: 'AI Trading Signals', href: '/blog/ai-trading-signals-explained' },
+                  ].map(l => (
+                    <a key={l.label} href={l.href} style={{ display: 'block', fontSize: '13px', color: 'rgba(255,255,255,0.3)', textDecoration: 'none', marginBottom: '8px' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+                    >{l.label}</a>
                   ))}
                 </div>
               </div>
