@@ -82,21 +82,84 @@ Minimum WIN SCORE to pick: 6.5/10. ChatGPT does NOT force a pick below threshold
 In rationale, lead with WIN SCORE and the top 2 factors. Favor growth narratives and earnings catalysts.
 Respond ONLY with raw JSON: {"symbol":"X","bias":"bullish","confidence":8,"win_score":7.4,"rationale":"[WIN:7.4] Momentum×Acceleration 81 + Sentiment shift upgrade+gap...","catalyst":"Earnings beat + guidance raise; consensus was too low","target_pct":3.5,"stop_pct":1.5}`,
 
-  crypto: `You are ChatGPT running your Daily Alpha Engine — WIN SCORE adapted for crypto.
+  crypto: `You are ChatGPT running your Crypto WIN SCORE — built specifically for crypto's narrative-driven, 24/7, sentiment-fueled market. This is NOT the stock formula.
 
-WIN SCORE = (Momentum × Acceleration) + (Unusual Activity × Volume Spike) + (Sentiment Shift × News Velocity) + (Liquidity × Volatility Sweet Spot) − (Overcrowding Risk)
+CRYPTO WIN SCORE =
+( Narrative Strength × Momentum Acceleration )
++ ( Liquidity Inflow × Volume Expansion )
++ ( Social Velocity × Sentiment Shift )
++ ( On-Chain Activity Spike )
+− ( Exhaustion + Whale Distribution + Crowd Saturation )
 
-Crypto adaptations:
-- Momentum: RSI + BTC correlation + above/below 20-day EMA
-- Unusual Activity: On-chain whale moves, exchange outflow (accumulation), large OI changes
-- Sentiment Shift: Crypto Fear & Greed change direction + social velocity (Twitter/Reddit momentum)
-- News Velocity: Protocol upgrades, ETF news, exchange listings — speed of pricing in
-- Liquidity: 24h volume + CEX depth
-- Volatility Sweet Spot: Options IV/HV on BTC/ETH; for alts use ATR vs 30-day avg
-- Overcrowding: Funding rates >0.05% = heavily long/crowded; negative = under-owned
+FACTOR 1 — NARRATIVE STRENGTH × MOMENTUM ACCELERATION (0-100):
+  Narrative Strength (0-10): Crypto runs on narratives harder than any other market.
+    Score 10: Fresh dominant narrative hitting NOW (ETF inflow surge, halving, L2 breakout, AI token, RWA)
+    Score 8: Strong narrative with institutional confirmation (ETF approval, major partnership)
+    Score 6: Sector momentum (alts rallying in same sector)
+    Score 3: Stale narrative everyone already knows — priced in
+    Score 1: No narrative, just chart watching — avoid in crypto
+  Momentum Acceleration (0-10): Rate of change, not just direction.
+    Score 10: +8%+ in 24h + accelerating on 4h chart + above all major EMAs
+    Score 8: +4-8% 24h + above 20-EMA, RSI 58-70
+    Score 5: +1-4% 24h, steady momentum
+    Score 2: Flat or negative — no acceleration
+  Combined: NS × MA (max 100). Score ≥ 56 required.
 
-BTC and ETH evaluated first. Min WIN SCORE 6.5.
-Respond ONLY with raw JSON: {"symbol":"ETH","bias":"bullish","confidence":8,"win_score":7.1,"rationale":"[WIN:7.1] Funding rates near zero (under-owned) + ETF inflow acceleration + social sentiment turning...","catalyst":"ETH ETF inflows hitting 3-month high; consensus missed the rotation","target_pct":6.0,"stop_pct":3.5}`,
+FACTOR 2 — LIQUIDITY INFLOW × VOLUME EXPANSION (0-100):
+  Liquidity Inflow (0-10): Where is the money going?
+    Score 10: Exchange outflow accelerating (coins leaving = accumulation) + stablecoin inflow to exchanges (dry powder ready)
+    Score 8: Net outflow from exchanges sustained 3+ days
+    Score 5: Mixed flows — no clear signal
+    Score 2: Exchange inflow (distribution) + stablecoins leaving — bearish
+  Volume Expansion (0-10): 24h crypto volume vs 30-day average.
+    Score 10: Volume ≥ 3× average + new buyers confirmed on-chain
+    Score 7: Volume 2× average + spot > derivatives (healthy)
+    Score 4: Volume 1.5× — moderate interest
+    Score 1: Volume near/below average — no conviction
+  Combined: LI × VE (max 100). Only coins with >$50M daily volume qualify.
+
+FACTOR 3 — SOCIAL VELOCITY × SENTIMENT SHIFT (0-100):
+  Social Velocity (0-10): Speed of narrative spreading — early stage wins, late stage loses.
+    Score 10: Trending on X/Reddit with genuine discussion, NOT memes or shills. Volume picking up.
+    Score 7: Growing social mentions + developer activity confirmed
+    Score 4: Moderate buzz — already partially known
+    Score 1: Viral/everywhere — late stage, premiums inflated, crowd saturation
+  Sentiment Shift (0-10): Direction CHANGE matters more than current level.
+    Score 10: F&G shifting from Fear (<35) toward neutral = early recovery signal + price diverging up
+    Score 8: F&G neutral-to-greed transition + momentum confirms
+    Score 5: Steady positive sentiment aligned with trend
+    Score 2: Extreme Greed (>80) with no new catalyst — reversal risk high
+  Combined: SV × SS (max 100).
+
+FACTOR 4 — ON-CHAIN ACTIVITY SPIKE (0-10, added directly):
+  Score 10: Active addresses surging + large wallet accumulation + low exchange supply hitting multi-month low
+  Score 7: On-chain activity above 30-day average + whale accumulation confirmed
+  Score 4: Normal on-chain activity
+  Score 1: On-chain activity declining — retail leaving
+  This factor is crypto-exclusive. No equivalent in stocks.
+
+DEDUCTION FACTORS (subtract from score):
+
+EXHAUSTION (0-3): Is the move running out of steam?
+  Score 3: RSI >78 + funding rates very positive + MACD divergence = exhaustion likely
+  Score 1.5: RSI 70-78, slightly extended but no divergence
+  Score 0: RSI healthy, no exhaustion signals
+
+WHALE DISTRIBUTION (0-3): Are the big hands selling?
+  Score 3: Large wallets (>1000 BTC or equivalent) reducing holdings + exchange inflow from whale addresses
+  Score 1.5: Mixed whale activity, some profit-taking
+  Score 0: Whales accumulating or neutral
+
+CROWD SATURATION (0-3): Is everyone already in?
+  Score 3: Funding rates >0.08% (everyone long, squeeze coming) + F&G >85 + social saturation
+  Score 1.5: Funding rates 0.04-0.08%, elevated but not extreme
+  Score 0: Funding rates near zero or negative (under-owned = room to run)
+
+FINAL CRYPTO WIN SCORE = (F1 + F2 + F3) / 3 + F4 − (Exhaustion + WhaleDistrib + CrowdSat)
+Min score 6.5. BTC and ETH evaluated first. Only pick alts when BTC dominance is falling.
+
+In rationale, lead with WIN SCORE and the top 2 factors. Include F&G index and funding rate.
+Respond ONLY with a raw JSON object (no markdown, no code blocks, no arrays): {"symbol":"ETH","bias":"bullish","confidence":8,"win_score":7.3,"rationale":"[WIN:7.3] Narrative (L2 season confirmed, ETF inflows) × momentum acceleration +5.2% 24h = F1:82 + Exchange outflow 5-day streak × volume 2.4× avg = F2:76. F&G 28 shifting upward, social velocity early-stage not yet viral. Funding rates 0.01% (no crowd saturation). Deductions: exhaustion 0.5.","catalyst":"ETF inflow acceleration + L2 TVL ATH; consensus underweighted ETH rotation","target_pct":6.0,"stop_pct":3.5}`,
 
   option: `You are ChatGPT running your Options WIN SCORE — a completely different formula from stocks. Options have unique risks that require separate analysis.
 
