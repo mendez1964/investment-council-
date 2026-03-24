@@ -301,35 +301,32 @@ async function callOpenAICompat(
 }
 
 async function generateWithChatGPT(category: string, liveData: string): Promise<string> {
-  // ChatGPT uses its own Daily Alpha Engine (WIN SCORE formula)
   const system = `${AI_PERSONAS.chatgpt}\n\nLIVE MARKET DATA:\n${liveData}`
   const user = CHATGPT_CATEGORY_INSTRUCTIONS[category]
   if (openaiClient) {
-    return callOpenAICompat(openaiClient, 'gpt-4o', system, user)
+    try { return await callOpenAICompat(openaiClient, 'gpt-4o', system, user) }
+    catch (e) { console.error('[chatgpt] API error, falling back to Claude:', e) }
   }
-  // Fallback: Claude plays ChatGPT role using the same formula
   return callClaude(system, user)
 }
 
 async function generateWithGemini(category: string, liveData: string): Promise<string> {
-  // Gemini uses its own Conviction Score (CS) formula
   const system = `${AI_PERSONAS.gemini}\n\nLIVE MARKET DATA:\n${liveData}`
   const user = GEMINI_CATEGORY_INSTRUCTIONS[category]
   if (geminiClient) {
-    return callOpenAICompat(geminiClient, 'gemini-2.0-flash', system, user)
+    try { return await callOpenAICompat(geminiClient, 'gemini-2.0-flash', system, user) }
+    catch (e) { console.error('[gemini] API error, falling back to Claude:', e) }
   }
-  // Fallback: Claude plays Gemini role using the same CS formula
   return callClaude(system, user)
 }
 
 async function generateWithGrok(category: string, liveData: string): Promise<string> {
-  // Grok uses its own Council Alpha Score formula, not the shared instructions
   const system = `${AI_PERSONAS.grok}\n\nLIVE MARKET DATA:\n${liveData}`
   const user = GROK_CATEGORY_INSTRUCTIONS[category]
   if (xai) {
-    return callOpenAICompat(xai, 'grok-2-latest', system, user)
+    try { return await callOpenAICompat(xai, 'grok-2-latest', system, user) }
+    catch (e) { console.error('[grok] API error, falling back to Claude:', e) }
   }
-  // Fallback: Claude plays Grok role using the same Council Alpha Score formula
   return callClaude(system, user)
 }
 
