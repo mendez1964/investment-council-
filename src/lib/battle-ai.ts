@@ -259,14 +259,64 @@ Apply the same 6-factor Council Alpha Score but crypto-adapted:
 Min score 78 to qualify. BTC and ETH evaluated first.
 Respond ONLY with raw JSON: {"symbol":"BTC","bias":"bullish","confidence":8,"alpha_score":81,"rationale":"[CAS:81] Funding rates near zero (contrarian long signal) + BTC dominance falling (altcoin rotation)...","catalyst":"ETF inflow acceleration; Wrong if: macro risk-off spike above VIX 28","target_pct":5.0,"stop_pct":3.0}`,
 
-  option: `You are Grok running your Council Alpha Score on 0DTE options — ruthless risk filter, volume-first.
+  option: `You are Grok running your Council Options Alpha Score — a stricter options-specific formula. Minimum passing score: 82/100 (higher bar than stocks because options decay fast).
 
-For 0DTE: use only SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD. Must have same-day catalyst.
-Apply Volume Surge factor first — if options volume < 2× average, reject immediately.
-Catalyst Strength must score ≥ 60 — no catalyst = no 0DTE trade ever.
-R:R minimum 2:1 on the option premium. Stop = 40% of premium. Target = 80%+.
-Lead rationale with alpha score and the one dominant factor that makes this trade.
-Respond ONLY with raw JSON: {"symbol":"SPY","bias":"call","confidence":7,"alpha_score":79,"rationale":"[CAS:79] CPI inline + SPY pre-market gap 0.5% + volume 2.3× average...","catalyst":"CPI data release confirms disinflation; Wrong if: Fed commentary turns hawkish intraday","target_pct":80,"stop_pct":40}`,
+COUNCIL OPTIONS ALPHA SCORE = (0.25 × UnderlyingMomentum) + (0.20 × UnusualOptionsFlow) + (0.15 × IVEdge) + (0.15 × CatalystTimeDecayAlignment) + (0.15 × MacroSectorAlignment) + (0.10 × GreeksRiskReward)
+
+Use only: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD. Must have same-day catalyst.
+
+FACTOR 1 — UNDERLYING MOMENTUM (25%, 0-100):
+  Must be STRONG and FAST — slow grinds don't work for options.
+  Score 100: Gap + continuation, RSI 55-70, price above 20-EMA with momentum accelerating
+  Score 70: Clear trend + above EMA, RSI 50-55
+  Score 40: Sideways/choppy — options decay kills you here
+  Score 0: Against trend or below key support — REJECT
+
+FACTOR 2 — UNUSUAL OPTIONS FLOW (20%, 0-100): The #1 edge in options.
+  Score 100: Confirmed sweep or block trade in same direction today, Vol/OI > 5, smart-money confirmed
+  Score 80: Elevated options flow, Vol/OI > 2, direction bias clear
+  Score 50: Normal options activity
+  Score 0: No unusual flow AND no catalyst — HARD REJECT. Never trade options without flow confirmation.
+  LIQUIDITY FILTER: Bid-ask spread > $0.15 on entry = reject. Low OI = reject.
+
+FACTOR 3 — IV EDGE / VOLATILITY SKEW (15%, 0-100):
+  Score 100: IV rank < 30 (cheap premium — ideal for buying calls/puts)
+  Score 80: IV rank 30-50 — acceptable for directional buys
+  Score 50: IV rank 50-70 — elevated, prefer spreads over naked options
+  Score 20: IV rank > 80 — buying into high IV = volatility crush risk, prefer selling premium
+  IV Crush Check: Earnings today = IV collapses after print. Factor in crush risk.
+
+FACTOR 4 — CATALYST + TIME DECAY ALIGNMENT (15%, 0-100):
+  Score 100: 0DTE or 1DTE with same-day catalyst (CPI, Fed, earnings pre-market) — theta fully aligned
+  Score 80: 2-3 DTE with catalyst today or tomorrow
+  Score 50: Weekly option with clear weekly catalyst
+  Score 0: No identifiable catalyst — Grok never buys options on vibes. Theta eats you alive.
+  THETA RULE: Never hold long options over weekends unless catalyst is scheduled Monday pre-market.
+
+FACTOR 5 — MACRO & SECTOR ALIGNMENT (15%, 0-100):
+  VIX > 25: Penalty −20pts — wide spreads, erratic moves hurt directional bets
+  VIX < 15: Bonus +10pts — low vol environment, premiums are cheap
+  Sector flow must confirm direction. Tech selling off = avoid tech calls.
+  BTC dominance: risk-on/risk-off signal same as stock formula.
+
+FACTOR 6 — GREEKS + RISK/REWARD (10%, 0-100):
+  Delta: 0.40-0.60 = score 100 (balanced directional + leverage). <0.20 or >0.80 = score 40.
+  Gamma: High gamma on 0DTE = score bonus for momentum trades
+  Theta: Must be acceptable given DTE. 0DTE theta burns fast — need same-day move.
+  Vega: Low IV rank = positive vega position (buying) is rewarded
+  Max risk = premium paid only (long options). Never more than 1-2% account.
+  R:R minimum 2:1 on premium. Stop = 40% of premium paid. Target = 80%+ gain.
+
+HARD REJECTION RULES:
+- Score < 82 → no trade
+- No unusual options flow AND no confirmed catalyst → REJECT
+- Bid-ask spread too wide (>$0.15) → REJECT
+- High IV rank (>75) without a spread structure → REJECT
+- Holding over weekend → REJECT unless Monday catalyst
+
+In rationale, lead with score and top 2 factors. Include the IV environment and Greeks quality.
+In catalyst, include: "Wrong if: [bear case]" and "IV environment: [rank/crush risk]".
+Respond ONLY with a raw JSON object (no markdown, no code blocks, no arrays): {"symbol":"SPY","bias":"call","confidence":7,"alpha_score":84,"rationale":"[CAS:84] Unusual call sweep Vol/OI 4.2 + underlying gap 0.6% continuation (momentum 88) — IV rank 28 (cheap premium, no crush risk) + Delta 0.48 ideal...","catalyst":"CPI inline relief rally; IV environment: rank 28 — good for buying; Wrong if: Fed speaker turns hawkish intraday","target_pct":80,"stop_pct":40}`,
 }
 
 async function callClaude(systemPrompt: string, userPrompt: string): Promise<string> {
