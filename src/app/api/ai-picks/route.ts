@@ -71,38 +71,159 @@ function isWeekend(dateStr: string): boolean {
 
 async function generatePicks(supabase: any, today: string) {
   const weekend = isWeekend(today)
-  const dataMsg = 'pre-market briefing bitcoin ethereum solana binancecoin ripple cardano avalanche chainlink dogecoin economic macro sector rotation movers gainers losers'
+  const dataMsg = 'pre-market briefing sector rotation VIX fear greed bitcoin dominance funding rates ethereum solana market movers gainers losers economic macro'
   let liveData = ''
   try {
     const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))
     liveData = await Promise.race([fetchLiveData(dataMsg), timeout])
   } catch {}
 
-  const stocksRule = weekend
-    ? 'stocks=EXACTLY 0 (markets closed on weekends — omit the stocks array entirely or return [])'
-    : 'stocks=EXACTLY 10'
+  const stocksSection = weekend ? '' : `
+═══════════════════════════════════════════
+IC STOCK FORMULA — 5 FACTORS (each 0-20 pts)
+═══════════════════════════════════════════
+Evaluate EVERY candidate stock against all 5 factors. Only include picks scoring 70+.
 
-  const prompt = `You are an AI analyst. Using the live market data provided, generate today's research picks.
+FACTOR 1 — TREND ALIGNMENT (0-20)
+Score 20: Price above 20, 50, AND 200-day MA (bullish) OR below all three (bearish)
+Score 15: Above/below 20+50-day MA
+Score 10: Above/below 20-day MA only — weak trend
+Score 5: Mixed MA signals — choppy
+Score 0: Trading against the primary trend — SKIP this pick
 
-OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start your response with { and end with }.
+FACTOR 2 — MOMENTUM QUALITY (0-20)
+Bullish: RSI 50-65 = 20pts (momentum sweet spot), RSI 65-72 = 14pts (extended but ok with catalyst), RSI >72 = 5pts (overbought risk), RSI <50 = 6pts (weak)
+Bearish: RSI 35-50 = 20pts, RSI 28-35 = 14pts, RSI <28 = 5pts (oversold bounce risk), RSI >50 = 6pts
+Volume confirmation: If today's volume is above 30-day average = +3 bonus pts
 
-Required format:
+FACTOR 3 — SECTOR FLOW (0-20)
+Score 20: Stock is in the #1 or #2 leading sector today with clear money inflow
+Score 15: In a strengthening sector, stock showing relative strength vs peers
+Score 10: Neutral sector but stock has strong individual catalyst
+Score 5: Sector slightly lagging, strong stock-specific story
+Score 0: In bottom 2 lagging sectors with no independent catalyst — use as bearish pick instead
+
+FACTOR 4 — CATALYST CLARITY (0-20)
+Score 20: Specific near-term catalyst — earnings beat, product launch, FDA approval, index add, analyst upgrade, technical breakout of major level with volume
+Score 15: Moderate catalyst — sector rotation event, ETF rebalance, peer momentum
+Score 10: Technical catalyst only — key support bounce, flag breakout, gap fill
+Score 5: Broad market/macro tailwind only
+Score 0: No identifiable catalyst — DO NOT include this pick. Vibes are not a catalyst.
+
+FACTOR 5 — MARKET REGIME FIT (0-20)
+Score 20: VIX <18 + SPY above 20-day MA = risk-on, favor bullish momentum plays
+Score 16: VIX 18-22, neutral regime — favor high-confidence picks only
+Score 12: VIX 22-28, elevated fear — only include if catalyst is very specific
+Score 6: VIX >28, risk-off — only bearish plays or defensive names
+Score 0: Pick goes against current regime (buying high-beta in VIX >28 = skip)
+
+STOCK SCORING → OUTPUT RULES:
+90-100 pts → confidence 9-10, include
+80-89 pts  → confidence 7-8, include
+70-79 pts  → confidence 5-6, include only if catalyst score is ≥15
+<70 pts    → SKIP — do not include this stock, find a better one
+
+STOCK HARD RULES:
+- Quality over quantity: return 5-8 picks max, only those scoring 70+
+- Every rationale must mention the 2 strongest factors (e.g. "Above all MAs, RSI 58, tech sector leading")
+- Mix: at least 2 bullish AND at least 1 bearish pick (markets always have both)
+- No picks purely on name recognition — AAPL, TSLA, NVDA only if they score 70+
+- Preferred universe: SPY, QQQ, IWM components — liquid, real price action`
+
+  const cryptoSection = `
+═══════════════════════════════════════════
+IC CRYPTO FORMULA — 5 FACTORS (each 0-20 pts)
+═══════════════════════════════════════════
+Evaluate EVERY candidate crypto against all 5 factors. Only include picks scoring 70+.
+
+FACTOR 1 — BTC DOMINANCE ALIGNMENT (0-20)
+Score 20: BTC dominance RISING → favor BTC + large caps (ETH, BNB, SOL) — altcoins likely bleed
+Score 20: BTC dominance FALLING → favor mid/small caps with active narrative — altcoin season
+Score 12: BTC dominance flat → favor coins with independent catalysts
+Score 0: Pick directly contradicts dominance signal (buying random altcoins in rising dominance = skip)
+
+FACTOR 2 — PRICE MOMENTUM (0-20)
+Score 20: Price above 20 AND 50-day MA + BTC up >0.5% today (correlation tailwind)
+Score 15: Above 20-day MA, BTC neutral
+Score 10: At key support with bounce signal
+Score 5: Below MAs but catalyst very specific
+Score 0: Downtrend with no catalyst — skip
+
+FACTOR 3 — FUNDING RATE SIGNAL (0-20)
+Score 20: Funding rates NEGATIVE or near zero — shorts paying longs, potential squeeze, room to run upward
+Score 15: Funding rates slightly positive (0-0.01%) — healthy, not overleveraged
+Score 8: Funding rates elevated (0.01-0.05%) — longs paying, caution on new bullish entries
+Score 3: Funding rates very high (>0.05%) — heavily overleveraged longs, high crash risk
+Score 0: Post-liquidation cascade with no stabilization — skip
+
+FACTOR 4 — NARRATIVE STRENGTH (0-20)
+Score 20: Active dominant narrative — AI tokens, L2 ecosystem, RWA, Bitcoin ETF flows, DeFi revival, specific chain upgrade
+Score 15: Moderate narrative — sector rotation into the category, peer momentum
+Score 10: General crypto bull market tailwind only
+Score 5: Stale narrative, fading momentum
+Score 0: No narrative, no catalyst, pure speculation — DO NOT include
+
+FACTOR 5 — FEAR & GREED REGIME (0-20)
+Score 20: Fear & Greed 40-65 (neutral to greed) = healthy trending market, favor momentum longs
+Score 16: Fear & Greed 25-40 (fear) = potential bounce plays with specific catalyst
+Score 12: Fear & Greed 65-80 (greed) = still ok but tighten stops
+Score 5: Fear & Greed >80 (extreme greed) = avoid new longs, consider bearish plays
+Score 5: Fear & Greed <25 (extreme fear) = contrarian longs only with very strong on-chain backing
+Score 0: Extreme reading WITH no catalyst for reversal — skip
+
+CRYPTO SCORING → OUTPUT RULES:
+90-100 pts → confidence 9-10, include
+80-89 pts  → confidence 7-8, include
+70-79 pts  → confidence 5-6, include only if narrative score is ≥15
+<70 pts    → SKIP
+
+CRYPTO HARD RULES:
+- Quality over quantity: return 5-8 crypto picks max, only those scoring 70+
+- BTC and ETH MUST be evaluated first — they set the regime for all others
+- No meme coins unless they have a genuine active narrative (not just "up today")
+- Every rationale must reference the 2 strongest factors
+- Mix bullish and bearish — if market is overextended, include bearish picks`
+
+  const prompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily picks. Score every candidate rigorously. Reject anything under 70.
+
+OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
+
+${weekend ? '' : stocksSection}
+${cryptoSection}
+
+Required JSON format:
 {
-  "market_context": "one sentence on current conditions",
+  "market_context": "one sentence on current conditions + VIX level + BTC dominance direction",
   "stocks": [
-    {"symbol":"NVDA","bias":"bullish","confidence":8,"rationale":"12-15 word thesis","catalyst":"8-10 word trigger","sector":"Technology"}
+    {
+      "symbol": "NVDA",
+      "bias": "bullish",
+      "confidence": 8,
+      "ic_score": 84,
+      "rationale": "Above all 3 MAs, RSI 61, tech sector leading with strong volume",
+      "catalyst": "AI infrastructure demand + XLK sector rotation inflow",
+      "sector": "Technology"
+    }
   ],
   "crypto": [
-    {"symbol":"BTC","coingecko_id":"bitcoin","bias":"bullish","confidence":9,"rationale":"12-15 word thesis","catalyst":"8-10 word trigger"}
+    {
+      "symbol": "BTC",
+      "coingecko_id": "bitcoin",
+      "bias": "bullish",
+      "confidence": 9,
+      "ic_score": 88,
+      "rationale": "BTC dominance rising, funding rates near zero, above 20+50-day MA",
+      "catalyst": "ETF inflow acceleration + institutional accumulation signal"
+    }
   ]
 }
 
-Rules: ${stocksRule}, crypto=EXACTLY 10, bias="bullish" or "bearish", confidence=1-10 integer, mix bullish/bearish based on real conditions, correct coingecko_id.`
+${weekend ? 'TODAY IS WEEKEND — stocks array must be empty []. Crypto runs 24/7, include 5-8 crypto picks.' : 'Include 5-8 stocks AND 5-8 crypto picks — quality only, no filler.'}`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
-    system: `You generate structured JSON data. You MUST output only valid JSON with no other text.${liveData ? `\n\n${liveData}` : ''}`,
+    max_tokens: 3000,
+    system: `You are an expert trader applying the IC Formula rigorously. Score every pick against all 5 factors. Reject anything under 70. Output only valid JSON.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -219,7 +340,7 @@ export async function GET(request: Request) {
     let isCached = false
     let generatedAt = ''
 
-    const expectedCount = isWeekend(today) ? 10 : 20
+    const expectedCount = isWeekend(today) ? 5 : 10
     if (picks.length >= expectedCount && !refresh) {
       isCached = true
       generatedAt = picks[0]?.created_at ?? ''

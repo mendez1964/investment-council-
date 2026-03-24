@@ -139,6 +139,12 @@ function PickCard({ pick }: { pick: Pick }) {
     ? `${retPct >= 0 ? '+' : ''}${retPct.toFixed(2)}%`
     : ''
 
+  // Parse IC score from rationale prefix [IC:83]
+  const icMatch = pick.rationale?.match(/^\[IC:(\d+)\]/)
+  const icScore = icMatch ? parseInt(icMatch[1]) : null
+  const rationaleText = icMatch ? pick.rationale.replace(/^\[IC:\d+\]\s*/, '') : pick.rationale
+  const icColor = icScore == null ? '#9ca3af' : icScore >= 85 ? '#16a34a' : icScore >= 75 ? '#d97706' : '#6b7280'
+
   return (
     <div style={{
       background: '#ffffff',
@@ -182,10 +188,21 @@ function PickCard({ pick }: { pick: Pick }) {
         )}
       </div>
 
-      <ConfidenceDots value={pick.confidence} color={accentColor} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <ConfidenceDots value={pick.confidence} color={accentColor} />
+        {icScore != null && (
+          <div style={{
+            fontSize: '9px', fontWeight: 700, letterSpacing: '0.04em',
+            color: icColor, background: '#f4f4f5',
+            borderRadius: '4px', padding: '2px 5px', marginLeft: 'auto',
+          }}>
+            IC {icScore}
+          </div>
+        )}
+      </div>
 
       <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.45, fontStyle: 'italic', flex: 1 }}>
-        &quot;{pick.rationale}&quot;
+        &quot;{rationaleText}&quot;
       </div>
 
       {pick.catalyst && (
