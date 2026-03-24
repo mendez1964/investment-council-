@@ -23,11 +23,18 @@ function streamText(text: string): Response {
 
 export async function POST(request: Request) {
   try {
-    const { messages } = await request.json()
+    const { messages, locale } = await request.json()
 
     if (!messages || !Array.isArray(messages)) {
       return Response.json({ error: 'Invalid request' }, { status: 400 })
     }
+
+    const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
+      es: 'IMPORTANT: Respond entirely in Spanish (Español). Keep all ticker symbols (SPY, QQQ, AAPL, BTC, etc.), financial metric abbreviations (P/E, EPS, ROE, ATH, etc.), and numerical data in their standard form — do not translate tickers or metric labels. All prose, headings, analysis, and explanations must be in Spanish.',
+      pt: 'IMPORTANT: Respond entirely in Portuguese (Português). Keep all ticker symbols, financial metric abbreviations, and numerical data in their standard form — do not translate tickers or metric labels. All prose, headings, analysis, and explanations must be in Portuguese.',
+      fr: 'IMPORTANT: Respond entirely in French (Français). Keep all ticker symbols, financial metric abbreviations, and numerical data in their standard form — do not translate tickers or metric labels. All prose, headings, analysis, and explanations must be in French.',
+    }
+    const languageInstruction = LANGUAGE_INSTRUCTIONS[locale] ?? ''
 
     // ── Tier & query-count enforcement ────────────────────────────────────────
     try {
@@ -157,7 +164,7 @@ export async function POST(request: Request) {
     }
 
     // Block 3: live data + closing reminder — NOT cached (fresh every request)
-    const liveAndReminder = `REPORT DATE/TIME: ${reportDate}\n\n${liveData}\n\nRemember: Always include the report date (${reportDate}) at the top of any analysis or report. Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.`
+    const liveAndReminder = `REPORT DATE/TIME: ${reportDate}\n\n${liveData}\n\nRemember: Always include the report date (${reportDate}) at the top of any analysis or report. Use exact numbers from live data above. Include risk considerations on trade analysis. End substantive analyses with the disclaimer that this is for educational purposes only and is not financial advice. Do NOT invoke council member perspectives unless the user explicitly asked for them.${languageInstruction ? `\n\n${languageInstruction}` : ''}`
     systemBlocks.push({
       type: 'text',
       text: liveAndReminder,

@@ -652,7 +652,7 @@ Be direct and factual. Use numbers.`
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, locale: currentLocale }),
       })
       if (!response.ok) throw new Error('API error')
 
