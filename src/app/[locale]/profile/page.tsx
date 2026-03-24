@@ -597,6 +597,13 @@ export default function ProfilePage() {
         </button>
 
         <button
+          onClick={() => router.push('/contact')}
+          style={{ width: '100%', padding: '12px', fontSize: 13, fontWeight: 600, color: '#2563eb', background: 'none', border: '1px solid #bfdbfe', borderRadius: 10, cursor: 'pointer', marginBottom: 8 }}
+        >
+          Contact Support
+        </button>
+
+        <button
           onClick={handleSignOut}
           style={{ width: '100%', padding: '12px', fontSize: 13, fontWeight: 600, color: '#dc2626', background: 'none', border: '1px solid #fca5a5', borderRadius: 10, cursor: 'pointer' }}
         >

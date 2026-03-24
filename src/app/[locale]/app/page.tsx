@@ -944,6 +944,30 @@ Be direct and factual. Use numbers.`
           <LanguageSwitcher />
         </div>
 
+        {/* Support */}
+        <button
+          onClick={() => router.push('/contact')}
+          title="Contact Support"
+          style={{
+            marginLeft: '8px',
+            background: 'transparent',
+            border: '1px solid #1f1f1f',
+            borderRadius: '6px',
+            padding: '4px 10px',
+            color: '#444',
+            fontSize: '11px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            letterSpacing: '0.04em',
+            whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#60a5fa'; e.currentTarget.style.borderColor = '#1e3a5f' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
+        >
+          Support
+        </button>
+
         {/* Profile */}
         <button
           onClick={() => router.push('/profile')}
