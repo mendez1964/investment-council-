@@ -18,6 +18,7 @@ import EconomicCalendar from '@/components/EconomicCalendar'
 import PortfolioTab from '@/components/PortfolioTab'
 import Sidebar, { type SidebarItem as SidebarItemType } from '@/components/Sidebar'
 import UpgradeModal from '@/components/UpgradeModal'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { Menu } from 'lucide-react'
 
 interface Message {
@@ -923,6 +924,11 @@ Be direct and factual. Use numbers.`
             {userTier === 'pro' ? '★ Pro' : '★ Trader'}
           </button>
         )}
+
+        {/* Language switcher */}
+        <div style={{ marginLeft: '8px' }}>
+          <LanguageSwitcher />
+        </div>
 
         {/* Logout */}
         <button
