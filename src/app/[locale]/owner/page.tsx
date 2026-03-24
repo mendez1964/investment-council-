@@ -339,17 +339,19 @@ export default function OwnerPage() {
             </div>
 
             {/* Users */}
-            <div>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', marginBottom: '12px' }}>USERS</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
-                <StatCard label="TOTAL USERS" value={stats.users.total} color="#111" />
-                <StatCard label="FREE" value={stats.users.free} color="#6b7280" />
-                <StatCard label="TRADER" value={stats.users.trader} color="#d97706" />
-                <StatCard label="PRO" value={stats.users.pro} color="#7c3aed" />
-                <StatCard label="NEW THIS WEEK" value={stats.users.new_signups_week} color="#16a34a" sub="approx. from login events" />
-                <StatCard label="SESSIONS TODAY" value={stats.users.sessions_today} color="#2563eb" />
+            {stats.users && (
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', marginBottom: '12px' }}>USERS</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '12px' }}>
+                  <StatCard label="TOTAL USERS" value={stats.users.total ?? 0} color="#111" />
+                  <StatCard label="FREE" value={stats.users.free ?? 0} color="#6b7280" />
+                  <StatCard label="TRADER" value={stats.users.trader ?? 0} color="#d97706" />
+                  <StatCard label="PRO" value={stats.users.pro ?? 0} color="#7c3aed" />
+                  <StatCard label="NEW THIS WEEK" value={stats.users.new_signups_week ?? 0} color="#16a34a" sub="approx. from login events" />
+                  <StatCard label="SESSIONS TODAY" value={stats.users.sessions_today ?? 0} color="#2563eb" />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Manage Users */}
             <ManageUsers password={password} />
@@ -360,12 +362,12 @@ export default function OwnerPage() {
                 User Behavior — Top Features This Week
                 <span style={{ fontWeight: 400, color: '#9ca3af', fontSize: '10px', marginLeft: '8px' }}>what users are doing most</span>
               </div>
-              {stats.top_features_week.length === 0 ? (
+              {(stats.top_features_week ?? []).length === 0 ? (
                 <div style={{ fontSize: '11px', color: '#9ca3af' }}>No feature events this week</div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px 32px' }}>
-                  {stats.top_features_week.map((f, i) => {
-                    const max = stats.top_features_week[0]?.count ?? 1
+                  {(stats.top_features_week ?? []).map((f, i) => {
+                    const max = (stats.top_features_week ?? [])[0]?.count ?? 1
                     const pct = Math.round((f.count / max) * 100)
                     return (
                       <div key={f.feature} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
