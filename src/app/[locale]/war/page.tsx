@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
+
+const ADMIN_EMAIL = 'dagoberto.mendez@icloud.com'
 
 // ── AI branding ────────────────────────────────────────────────────────────────
 
@@ -442,6 +445,14 @@ export default function WarPage() {
   const [generating, setGenerating] = useState(false)
   const [genMsg, setGenMsg] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient()
+    supabase.auth.getUser().then(({ data }) => {
+      setIsAdmin(data.user?.email === ADMIN_EMAIL)
+    })
+  }, [])
 
   const loadData = () => {
     setLoading(true)
@@ -540,7 +551,7 @@ export default function WarPage() {
               </span>
             )}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-              {(data?.picks_today ?? []).length === 0 && !loading && (
+              {isAdmin && (data?.picks_today ?? []).length === 0 && !loading && (
                 <button
                   onClick={() => handleGenerate(false)}
                   disabled={generating}
@@ -554,7 +565,7 @@ export default function WarPage() {
                   {generating ? 'Generating…' : '⚔️ Generate Today\'s Picks'}
                 </button>
               )}
-              {(data?.picks_today ?? []).length > 0 && (
+              {isAdmin && (data?.picks_today ?? []).length > 0 && (
                 <button
                   onClick={() => handleGenerate(true)}
                   disabled={generating}
