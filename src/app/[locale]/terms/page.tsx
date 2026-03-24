@@ -12,7 +12,7 @@ export default function TermsPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 900, color: '#111', margin: 0, letterSpacing: '-0.02em' }}>Terms of Service</h1>
-            <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>Effective date: January 1, 2025</p>
+            <p style={{ fontSize: 13, color: '#9ca3af', margin: '4px 0 0' }}>Effective date: January 1, 2026</p>
           </div>
           <button
             onClick={() => router.back()}
