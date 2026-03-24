@@ -74,6 +74,12 @@ export default function ProfilePage() {
   const [grokKey, setGrokKey] = useState('')
   const [anthropicKey, setAnthropicKey] = useState('')
 
+  // Data feed keys
+  const [finnhubKey, setFinnhubKey] = useState('')
+  const [alphaVantageKey, setAlphaVantageKey] = useState('')
+  const [glassnodeKey, setGlassnodeKey] = useState('')
+  const [tradierKey, setTradierKey] = useState('')
+
   useEffect(() => {
     fetch('/api/user/profile')
       .then(r => r.json())
@@ -86,6 +92,10 @@ export default function ProfilePage() {
         setGeminiKey(data.gemini_key ?? '')
         setGrokKey(data.grok_key ?? '')
         setAnthropicKey(data.anthropic_key ?? '')
+        setFinnhubKey(data.finnhub_key ?? '')
+        setAlphaVantageKey(data.alpha_vantage_key ?? '')
+        setGlassnodeKey(data.glassnode_key ?? '')
+        setTradierKey(data.tradier_key ?? '')
         setLoading(false)
       })
       .catch(() => { setError('Failed to load profile'); setLoading(false) })
@@ -106,6 +116,10 @@ export default function ProfilePage() {
           gemini_key: geminiKey || null,
           grok_key: grokKey || null,
           anthropic_key: anthropicKey || null,
+          finnhub_key: finnhubKey || null,
+          alpha_vantage_key: alphaVantageKey || null,
+          glassnode_key: glassnodeKey || null,
+          tradier_key: tradierKey || null,
         }),
       })
       const json = await res.json()
@@ -295,6 +309,68 @@ export default function ProfilePage() {
           <div style={{ marginTop: 14, padding: '10px 12px', background: '#f9fafb', borderRadius: 8, fontSize: 12, color: '#6b7280', lineHeight: 1.6 }}>
             🔒 Keys are encrypted and stored securely. They never leave your account.<br />
             Get your key: <b>Claude</b> — console.anthropic.com &nbsp;·&nbsp; <b>ChatGPT</b> — platform.openai.com/api-keys &nbsp;·&nbsp; <b>Gemini</b> — aistudio.google.com/apikey &nbsp;·&nbsp; <b>Grok</b> — console.x.ai
+          </div>
+        </div>
+
+        {/* Data Feeds */}
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '24px', marginBottom: 24 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Data Feed Keys</h2>
+          <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 6px' }}>
+            Add your own keys for faster, real-time data. Shared keys are free tier and may be rate limited or delayed.
+          </p>
+          <div style={{ marginBottom: 16, padding: '8px 12px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: 8, fontSize: 11, color: '#92400e' }}>
+            ⚠️ Free tier data feeds may have 15-minute delays and rate limits during peak hours. Your own key removes these restrictions.
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {[
+              {
+                label: 'Finnhub', key: 'finnhub', value: finnhubKey, setter: setFinnhubKey,
+                placeholder: 'your-finnhub-key', color: '#0ea5e9',
+                used: 'Stock quotes, company profiles, earnings calendar',
+                free: '60 calls/min · Real-time',
+                url: 'finnhub.io',
+              },
+              {
+                label: 'Alpha Vantage', key: 'alpha_vantage', value: alphaVantageKey, setter: setAlphaVantageKey,
+                placeholder: 'your-alphavantage-key', color: '#16a34a',
+                used: 'Market movers, sector rotation data',
+                free: '25 calls/day · 15-min delay on free tier',
+                url: 'alphavantage.co',
+              },
+              {
+                label: 'Glassnode', key: 'glassnode', value: glassnodeKey, setter: setGlassnodeKey,
+                placeholder: 'your-glassnode-key', color: '#f97316',
+                used: 'Bitcoin & crypto on-chain metrics',
+                free: 'Free: limited metrics · Standard $39/mo for full data',
+                url: 'glassnode.com',
+              },
+              {
+                label: 'Tradier', key: 'tradier', value: tradierKey, setter: setTradierKey,
+                placeholder: 'your-tradier-token', color: '#8b5cf6',
+                used: 'Options chains, greeks, real-time options data',
+                free: 'Requires approved brokerage account',
+                url: 'tradier.com',
+              },
+            ].map(field => (
+              <div key={field.key}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: field.color, letterSpacing: '0.04em' }}>
+                    {field.label}
+                  </label>
+                  <span style={{ fontSize: 10, color: '#9ca3af' }}>Get key: {field.url}</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>
+                  <span style={{ fontWeight: 500 }}>{field.used}</span>
+                  <span style={{ color: '#d97706', marginLeft: 8 }}>· {field.free}</span>
+                </div>
+                <MaskedInput value={field.value} onChange={field.setter} placeholder={field.placeholder} />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 14, padding: '10px 12px', background: '#f9fafb', borderRadius: 8, fontSize: 11, color: '#6b7280', lineHeight: 1.5 }}>
+            🔒 Keys are encrypted and stored securely. Leave blank to use Investment Council's shared keys.
           </div>
         </div>
 
