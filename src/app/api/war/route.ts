@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   const supabase = createServerSupabaseClient()
   const today = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
