@@ -21,6 +21,7 @@ export type SidebarItem = {
   isMovers?: boolean
   isFearGreed?: boolean
   isAIPicks?: boolean
+  isBattle?: boolean
   isIPO?: boolean
   isNews?: boolean
   isChart?: boolean
@@ -103,7 +104,7 @@ function getIcon(item: SidebarItem): LucideIcon {
 
 function isFeatureItem(item: SidebarItem) {
   return !!(
-    item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks ||
+    item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks || item.isBattle ||
     item.isIPO || item.isNews || item.isChart || item.isEconCalendar ||
     item.isAnalysis || item.isCalculators || item.isPatterns || item.isCryptoDashboard ||
     item.isAlerts
