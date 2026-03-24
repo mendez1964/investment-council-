@@ -345,16 +345,16 @@ export default function LandingPage() {
               color: '#fff', lineHeight: 1.1, marginBottom: '20px',
               letterSpacing: '-0.02em',
             }}>
-              Your Personal AI Analyst.<br />
-              <span style={{ color: GOLD }}>No Hype. No Bias.</span>
+              The AI Stock Analysis Tool<br />
+              <span style={{ color: GOLD }}>Built for Retail Traders.</span>
             </h1>
 
             <p style={{
               fontSize: '18px', color: 'rgba(255,255,255,0.7)',
-              lineHeight: 1.7, marginBottom: '36px', maxWidth: '600px', margin: '0 auto 36px',
+              lineHeight: 1.7, marginBottom: '36px', maxWidth: '620px', margin: '0 auto 36px',
             }}>
-              Free AI stock and crypto research dashboard with on-demand analysis, pre-market briefings,
-              AI daily picks, and 18 unbiased investment frameworks — all in one place.
+              Daily AI stock picks, AI trading signals, crypto market analysis, and options picks with entry, stop &amp; target —
+              plus pre-market briefings and 18 investment frameworks. Free to start, no credit card required.
             </p>
 
             <div className="landing-hero-buttons" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
