@@ -250,6 +250,29 @@ function SidebarContent({
         )}
       </div>
 
+      {/* Pinned: Email Alerts */}
+      {collapsed && !isMobile ? (
+        <button
+          onClick={() => onItemClick({ itemId: 'Email Alerts', label: 'Email Alerts', prompt: '', isAlerts: true })}
+          title="Email Alerts"
+          style={{ width: '100%', background: 'transparent', border: 'none', borderTop: '1px solid #1e2130', padding: '8px 0', display: 'flex', justifyContent: 'center', color: '#d97706', cursor: 'pointer', flexShrink: 0 }}
+          onMouseEnter={e => e.currentTarget.style.color = '#fbbf24'}
+          onMouseLeave={e => e.currentTarget.style.color = '#d97706'}
+        >
+          <Bell size={14} />
+        </button>
+      ) : (
+        <button
+          onClick={() => onItemClick({ itemId: 'Email Alerts', label: 'Email Alerts', prompt: '', isAlerts: true })}
+          style={{ width: '100%', background: 'transparent', border: 'none', borderTop: '1px solid #1e2130', borderBottom: '1px solid #1e2130', padding: '9px 14px', display: 'flex', alignItems: 'center', gap: '8px', color: '#d97706', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', flexShrink: 0 }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.background = '#451a0322' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#d97706'; e.currentTarget.style.background = 'transparent' }}
+        >
+          <Bell size={13} style={{ flexShrink: 0 }} />
+          <span>Email Alerts</span>
+        </button>
+      )}
+
       {/* Collapsed icon-only view */}
       {collapsed && !isMobile && (
         <div style={{ flex: 1, overflowY: 'auto', paddingTop: '4px' }}>

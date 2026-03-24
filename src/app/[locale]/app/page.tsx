@@ -173,7 +173,6 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
         { itemId: 'IPO Calendar', label: t('items.ipoCalendar'), prompt: '', isIPO: true },
         { itemId: 'Market Movers', label: t('items.marketMovers'), prompt: '', isMovers: true },
         { itemId: 'Chart a Ticker', label: t('items.chartATicker'), prompt: '', isChart: true },
-        { itemId: 'Email Alerts', label: t('items.emailAlerts'), prompt: '', isAlerts: true, tier: 'trader' as const },
       ],
     },
     {
@@ -260,7 +259,6 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
         { itemId: 'Crypto Prices', label: t('items.cryptoPrices'), prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
         { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
         { itemId: 'Crypto News', label: t('items.cryptoNews'), prompt: '', isNews: true },
-        { itemId: 'Email Alerts', label: t('items.emailAlerts'), prompt: '', isAlerts: true, tier: 'trader' as const },
       ],
     },
   ]

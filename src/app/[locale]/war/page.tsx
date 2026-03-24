@@ -441,8 +441,11 @@ export default function WarPage() {
       `}</style>
 
       {/* Header */}
-      <div style={{ background: DARK_BG, padding: '40px 24px 0', textAlign: 'center' }}>
+      <div style={{ background: DARK_BG, padding: '14px 24px 0', textAlign: 'center' }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{ textAlign: 'left', marginBottom: 20 }}>
+            <a href="/app" style={{ fontSize: 12, color: '#94a3b8', textDecoration: 'none', border: '1px solid #2d3748', borderRadius: 6, padding: '5px 12px', fontWeight: 600 }}>← Back</a>
+          </div>
           <div style={{ fontSize: 12, color: GOLD, fontWeight: 700, letterSpacing: '0.15em', marginBottom: 10 }}>⚔️ WAR OF THE AIs</div>
           <h1 style={{ fontSize: 'clamp(24px, 4vw, 42px)', fontWeight: 900, color: '#fff', margin: '0 0 8px', lineHeight: 1.1, letterSpacing: '-0.03em' }}>
             Claude vs ChatGPT vs Gemini vs Grok
