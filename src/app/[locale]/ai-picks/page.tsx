@@ -358,30 +358,49 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
 
       {/* Trade levels */}
       <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
+        display: 'grid', gridTemplateColumns: pick.entry_premium != null ? '1fr 1fr 1fr' : '1fr 1fr',
         gap: '4px', marginTop: '4px',
         background: '#f9fafb', borderRadius: '6px', padding: '6px 8px',
       }}>
+        {pick.entry_premium != null && (
+          <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
+            <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>MID PRICE</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
+              ${pick.entry_premium.toFixed(2)}
+            </div>
+            <div style={{ fontSize: '8px', color: '#9ca3af' }}>live est.</div>
+          </div>
+        )}
         <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
           <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>STOP LOSS</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>-{pick.stop_loss_pct}%</div>
-          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium paid</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium</div>
         </div>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TAKE PROFIT</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>+{pick.take_profit_pct}%</div>
-          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium paid</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium</div>
         </div>
       </div>
 
-      {/* Broker note */}
-      <div style={{
-        fontSize: '9px', color: '#9ca3af', lineHeight: 1.4, marginTop: 2,
-        padding: '4px 6px', background: '#fffbeb', borderRadius: 4,
-        border: '1px solid #fde68a',
-      }}>
-        ⚠ Verify strike ${pick.strike} exp {expiryLabel} is available in your broker before entering.
-      </div>
+      {/* Status note — live data vs verify */}
+      {pick.entry_premium != null ? (
+        <div style={{
+          fontSize: '9px', color: '#16a34a', lineHeight: 1.4, marginTop: 2,
+          padding: '4px 6px', background: '#f0fdf4', borderRadius: 4,
+          border: '1px solid #bbf7d0',
+        }}>
+          ✓ Real chain data — strike ${pick.strike} exp {expiryLabel} verified available.
+        </div>
+      ) : (
+        <div style={{
+          fontSize: '9px', color: '#92400e', lineHeight: 1.4, marginTop: 2,
+          padding: '4px 6px', background: '#fffbeb', borderRadius: 4,
+          border: '1px solid #fde68a',
+        }}>
+          ⚠ Verify strike ${pick.strike} exp {expiryLabel} is available in your broker before entering.
+        </div>
+      )}
     </div>
   )
 }

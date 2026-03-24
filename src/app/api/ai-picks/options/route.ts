@@ -3,6 +3,9 @@ import { fetchLiveData } from '@/lib/live-data'
 import { getQuote } from '@/lib/finnhub'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
+import { getBestContract } from '@/lib/tradier'
+
+const TRADIER_ENABLED = !!process.env.TRADIER_API_KEY
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -306,28 +309,66 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
   const trades: any[] = (parsed.trades ?? []).slice(0, count)
   const prices = await Promise.allSettled(trades.map(t => getQuote(t.underlying).catch(() => null)))
 
+  // If Tradier is enabled, fetch real chain data for each trade in parallel
+  const chainResults = TRADIER_ENABLED
+    ? await Promise.allSettled(
+        trades.map((trade, i) => {
+          const q = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
+          const livePrice: number | null = q?.c ?? null
+          const optType: 'call' | 'put' = trade.option_type === 'put' ? 'put' : 'call'
+          const confidence = Math.min(10, Math.max(1, parseInt(trade.confidence) || 5))
+          if (!livePrice) return Promise.resolve(null)
+          return getBestContract(
+            trade.underlying?.toUpperCase() ?? '',
+            optType,
+            confidence,
+            type,
+            livePrice,
+            pickDate
+          )
+        })
+      )
+    : null
+
   const rows = trades.map((trade, i) => {
     const q = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
     const livePrice: number | null = q?.c ?? null
     const optType: 'call' | 'put' = trade.option_type === 'put' ? 'put' : 'call'
     const confidence = Math.min(10, Math.max(1, parseInt(trade.confidence) || 5))
 
-    // Compute strike from live price — do not trust Claude's guess
-    const strike = livePrice != null
-      ? computeStrike(livePrice, confidence, optType, type)
+    // Use real chain data if Tradier returned a result
+    const chainResult = chainResults?.[i]?.status === 'fulfilled'
+      ? (chainResults[i] as any).value
       : null
+
+    const strike = chainResult?.strike
+      ?? (livePrice != null ? computeStrike(livePrice, confidence, optType, type) : null)
+    const expiry = chainResult?.expiry ?? expiryStr
+    const entry_premium = chainResult?.mid ?? null
+    const iv = chainResult?.iv ?? null
+    const open_interest = chainResult?.openInterest ?? null
+    const delta = chainResult?.delta ?? null
+
+    const rationale = trade.ic_score
+      ? `[IC:${parseInt(trade.ic_score) || '?'}] ${trade.rationale ?? ''}`
+      : (trade.rationale ?? '')
+
+    // Append IV and OI to rationale when available
+    const chainNote = iv != null
+      ? ` | IV: ${(iv * 100).toFixed(1)}%${open_interest ? ` | OI: ${open_interest.toLocaleString()}` : ''}`
+      : ''
 
     return {
       pick_date: pickDate,
       underlying: trade.underlying?.toUpperCase() ?? '',
       option_type: optType,
       strike,
-      expiry: expiryStr, // always use our computed expiry, not Claude's
-      entry_premium: null, // don't store Claude's hallucinated premium
+      expiry,
+      entry_premium,
       stop_loss_pct: parseInt(trade.stop_loss_pct) || 40,
       take_profit_pct: parseInt(trade.take_profit_pct) || 80,
       confidence,
-      rationale: trade.ic_score ? `[IC:${parseInt(trade.ic_score) || '?'}] ${trade.rationale ?? ''}` : (trade.rationale ?? ''),
+      rationale: rationale + chainNote,
       catalyst: trade.catalyst ?? '',
       sector: trade.sector ?? '',
       underlying_entry_price: livePrice,
