@@ -19,8 +19,17 @@ export default function LanguageSwitcher() {
   const current = LANGUAGES.find(l => l.code === locale) ?? LANGUAGES[0]
 
   function switchLocale(code: string) {
+    // Set NEXT_LOCALE cookie so next-intl uses it on refresh/navigation
+    document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=31536000; SameSite=Lax`
+    // Change URL locale
     router.replace(pathname, { locale: code })
     setOpen(false)
+    // Save to profile if logged in (fire and forget)
+    fetch('/api/user/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locale: code }),
+    }).catch(() => {}) // silently ignore if not logged in
   }
 
   return (

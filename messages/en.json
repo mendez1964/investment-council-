@@ -109,7 +109,43 @@
     "warOfAIs": "War of the AIs",
     "stocks": "STOCKS",
     "crypto": "CRYPTO",
-    "signOut": "Sign Out"
+    "signOut": "Sign Out",
+    "subtitle": "18 frameworks · Live market data",
+    "newChat": "+ New Chat",
+    "logOut": "Log out",
+    "session": "Session",
+    "allTime": "All-time",
+    "tabs": {
+      "chat": "Council Chat",
+      "pine": "Pine Script",
+      "watchlist": "Watchlist",
+      "portfolio": "Portfolio",
+      "training": "Training"
+    },
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "welcome": "Your Investment Council is ready. Eighteen frameworks. No agenda.",
+    "tryOne": "Try one to see the council in action — or ask anything below",
+    "inputPlaceholder": "Ask the Council anything...",
+    "analyze": "Analyze",
+    "councilChimeIn": "Have Council chime in after the analysis",
+    "chips": {
+      "preMarket": "Pre-Market Briefing",
+      "fullCouncilScan": "Full Council Scan",
+      "marketHealthCheck": "Market Health Check",
+      "sectorRotation": "Sector Rotation",
+      "fearGreedVolatility": "Fear & Greed + Volatility",
+      "bestSetup": "Best Setup Right Now",
+      "morningCrypto": "Morning Crypto Briefing",
+      "isAltSeason": "Is It Alt Season?",
+      "btcDominance": "BTC Dominance Check",
+      "fullCryptoCouncil": "Full Crypto Council",
+      "onChainHealth": "On-Chain Health",
+      "cyclePosition": "Cycle Position"
+    }
   },
   "aiPicks": {
     "title": "AI Daily Picks",

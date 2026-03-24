@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { useTranslations } from 'next-intl'
-import { useRouter } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
+import { useRouter, usePathname } from '@/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 import { PRICES } from '@/lib/stripe-prices'
 import MarkdownRenderer from '@/components/MarkdownRenderer'
@@ -35,6 +35,8 @@ type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 // Sidebar sections are defined inside the Home component (uses useTranslations hook)
 export default function Home() {
   const router = useRouter()
+  const pathname = usePathname()
+  const currentLocale = useLocale()
   const t = useTranslations('sidebar')
 
   // ── Sidebar data (translated labels, English itemId for icon lookup) ─────
@@ -312,10 +314,16 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
         if (res.ok) {
           const profile = await res.json()
           setUserTier(profile.tier ?? 'free')
+          // Restore saved language preference
+          const savedLocale = profile.locale
+          if (savedLocale && savedLocale !== currentLocale) {
+            document.cookie = `NEXT_LOCALE=${savedLocale}; path=/; max-age=31536000; SameSite=Lax`
+            router.replace(pathname, { locale: savedLocale })
+          }
         }
       }
     })
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleLogout() {
     await supabase.auth.signOut()
