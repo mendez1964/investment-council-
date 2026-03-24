@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     if (!subs?.length) return Response.json({ sent: 0 })
 
     // Fetch today's picks
-    const picksRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'}/api/ai-picks`)
+    const picksRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'}/api/ai-picks`)
     const picksData = await picksRes.json()
     const stocks = (picksData.picks ?? []).filter((p: any) => p.type === 'stock')
     const crypto = (picksData.picks ?? []).filter((p: any) => p.type === 'crypto')
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
         ${stocks.length ? `<h3 style="margin:0 0 12px;font-size:12px;font-weight:700;color:#9ca3af;letter-spacing:0.08em;">📈 STOCKS</h3>${picksToHTML(stocks)}` : ''}
         ${crypto.length ? `<h3 style="margin:0 0 12px;font-size:12px;font-weight:700;color:#9ca3af;letter-spacing:0.08em;margin-top:20px;">₿ CRYPTO</h3>${picksToHTML(crypto)}` : ''}
         <div style="margin-top:20px;text-align:center;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'}/ai-picks" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;">View Full Report →</a>
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'}/ai-picks" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;">View Full Report →</a>
         </div>`
 
       try {

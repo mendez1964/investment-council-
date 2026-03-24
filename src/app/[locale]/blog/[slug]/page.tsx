@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: { slug: string; loc
     description: post.description,
     keywords: post.keyword,
     alternates: {
-      canonical: `https://investmentcouncil.io${params.locale === 'en' ? '' : `/${params.locale}`}/blog/${post.slug}`,
+      canonical: `https://www.investmentcouncil.io${params.locale === 'en' ? '' : `/${params.locale}`}/blog/${post.slug}`,
     },
   }
 }

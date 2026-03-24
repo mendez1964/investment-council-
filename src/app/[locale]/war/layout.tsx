@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     title: 'War of the AIs — Claude vs ChatGPT vs Gemini | Investment Council',
     description: 'Daily AI stock picks competition. Claude vs ChatGPT vs Gemini — same market, same rules, one winner. Live leaderboard and track record.',
     type: 'website',
-    url: 'https://investmentcouncil.io/war',
+    url: 'https://www.investmentcouncil.io/war',
   },
 }
 

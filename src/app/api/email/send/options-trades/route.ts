@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     if (!subs?.length) return Response.json({ sent: 0 })
 
-    const optRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'}/api/ai-picks/options`)
+    const optRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'}/api/ai-picks/options`)
     const optData = await optRes.json()
     const picks = optData.picks ?? []
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
         <p style="margin:0 0 24px;font-size:12px;color:#9ca3af;">${dateStr} · ${picks.length} trades · Entry / Stop / Target</p>
         ${optionsToHTML(picks)}
         <div style="margin-top:20px;text-align:center;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'}/ai-picks" style="display:inline-block;background:#1e3a5f;color:#fff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;">View Full Options Report →</a>
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'}/ai-picks" style="display:inline-block;background:#1e3a5f;color:#fff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;">View Full Options Report →</a>
         </div>`
 
       try {

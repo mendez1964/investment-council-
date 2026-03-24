@@ -9,7 +9,7 @@ const jsonLd = [
     applicationCategory: 'FinanceApplication',
     operatingSystem: 'Web',
     description: 'AI stock analysis tool and crypto market analysis platform. Daily AI stock picks, AI trading signals, options picks with entry/stop/target, and pre-market briefings for retail traders.',
-    url: 'https://investmentcouncil.io',
+    url: 'https://www.investmentcouncil.io',
     offers: [
       { '@type': 'Offer', price: '0', priceCurrency: 'USD', name: 'Free — 5 queries/day' },
       { '@type': 'Offer', price: '29.99', priceCurrency: 'USD', name: 'Trader — Full stock & crypto access' },
@@ -84,12 +84,12 @@ export async function generateMetadata({ params: { locale } }: { params: { local
     title: titles[locale] ?? titles.en,
     description: descriptions[locale] ?? descriptions.en,
     alternates: {
-      canonical: locale === 'en' ? 'https://investmentcouncil.io' : `https://investmentcouncil.io/${locale}`,
+      canonical: locale === 'en' ? 'https://www.investmentcouncil.io' : `https://www.investmentcouncil.io/${locale}`,
       languages: {
-        'en': 'https://investmentcouncil.io',
-        'es': 'https://investmentcouncil.io/es',
-        'pt': 'https://investmentcouncil.io/pt',
-        'fr': 'https://investmentcouncil.io/fr',
+        'en': 'https://www.investmentcouncil.io',
+        'es': 'https://www.investmentcouncil.io/es',
+        'pt': 'https://www.investmentcouncil.io/pt',
+        'fr': 'https://www.investmentcouncil.io/fr',
       },
     },
   }

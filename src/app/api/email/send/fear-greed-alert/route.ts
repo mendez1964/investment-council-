@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     const supabase = createServerSupabaseClient()
 
     // Fetch current fear & greed
-    const fgRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'}/api/fear-greed`)
+    const fgRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'}/api/fear-greed`)
     const fgData = await fgRes.json()
     const current = fgData?.[0]
     if (!current) return Response.json({ sent: 0, reason: 'No data' })
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
           ${signal}
         </p>
         <div style="margin-top:20px;text-align:center;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'}/fear-greed" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;">View Full Gauge →</a>
+          <a href="${process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'}/fear-greed" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 24px;border-radius:6px;font-size:12px;font-weight:600;">View Full Gauge →</a>
         </div>`
 
       try {

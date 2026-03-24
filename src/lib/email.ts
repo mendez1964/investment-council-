@@ -6,7 +6,7 @@ export function getResend() {
 }
 
 export const FROM = 'Investment Council <alerts@investmentcouncil.io>'
-export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://investmentcouncil.io'
+export const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'
 
 // Base HTML email template
 export function emailTemplate(opts: {

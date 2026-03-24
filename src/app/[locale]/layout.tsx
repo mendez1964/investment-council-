@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: '%s | Investment Council',
   },
   description: 'The AI stock analysis tool built for retail traders. Daily AI stock picks, AI trading signals, crypto market analysis, and options picks. Free tier available.',
-  metadataBase: new URL('https://investmentcouncil.io'),
+  metadataBase: new URL('https://www.investmentcouncil.io'),
   robots: { index: true, follow: true },
 }
 

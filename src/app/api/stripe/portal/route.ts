@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'No billing account found' }, { status: 404 })
     }
 
-    const origin = request.headers.get('origin') || 'https://investmentcouncil.io'
+    const origin = request.headers.get('origin') || 'https://www.investmentcouncil.io'
 
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
