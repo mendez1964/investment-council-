@@ -109,7 +109,43 @@
     "warOfAIs": "Guerre des IA",
     "stocks": "ACTIONS",
     "crypto": "CRYPTO",
-    "signOut": "Se Déconnecter"
+    "signOut": "Se Déconnecter",
+    "subtitle": "18 cadres · Données en direct",
+    "newChat": "+ Nouveau Chat",
+    "logOut": "Se Déconnecter",
+    "session": "Session",
+    "allTime": "Total",
+    "tabs": {
+      "chat": "Chat du Conseil",
+      "pine": "Pine Script",
+      "watchlist": "Liste de Suivi",
+      "portfolio": "Portefeuille",
+      "training": "Formation"
+    },
+    "greeting": {
+      "morning": "Bonjour",
+      "afternoon": "Bon après-midi",
+      "evening": "Bonsoir"
+    },
+    "welcome": "Votre Conseil d'Investissement est prêt. Dix-huit cadres. Sans agenda.",
+    "tryOne": "Essayez-en un pour voir le conseil en action — ou posez n'importe quelle question ci-dessous",
+    "inputPlaceholder": "Posez n'importe quelle question au Conseil...",
+    "analyze": "Analyser",
+    "councilChimeIn": "Que le Conseil intervienne après l'analyse",
+    "chips": {
+      "preMarket": "Briefing Pré-Marché",
+      "fullCouncilScan": "Scan Complet du Conseil",
+      "marketHealthCheck": "Bilan de Santé du Marché",
+      "sectorRotation": "Rotation Sectorielle",
+      "fearGreedVolatility": "Peur et Avidité + Volatilité",
+      "bestSetup": "Meilleure Configuration Maintenant",
+      "morningCrypto": "Briefing Matinal Crypto",
+      "isAltSeason": "Est-ce la Saison des Altcoins ?",
+      "btcDominance": "Vérification Dominance BTC",
+      "fullCryptoCouncil": "Conseil Crypto Complet",
+      "onChainHealth": "Santé On-Chain",
+      "cyclePosition": "Position dans le Cycle"
+    }
   },
   "aiPicks": {
     "title": "Sélections Quotidiennes IA",

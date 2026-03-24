@@ -109,7 +109,43 @@
     "warOfAIs": "Guerra das IAs",
     "stocks": "AÇÕES",
     "crypto": "CRIPTO",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "subtitle": "18 estruturas · Dados ao vivo",
+    "newChat": "+ Novo Chat",
+    "logOut": "Sair",
+    "session": "Sessão",
+    "allTime": "Total",
+    "tabs": {
+      "chat": "Chat do Conselho",
+      "pine": "Pine Script",
+      "watchlist": "Lista de Atenção",
+      "portfolio": "Carteira",
+      "training": "Treinamento"
+    },
+    "greeting": {
+      "morning": "Bom dia",
+      "afternoon": "Boa tarde",
+      "evening": "Boa noite"
+    },
+    "welcome": "Seu Conselho de Investimentos está pronto. Dezoito estruturas. Sem agenda.",
+    "tryOne": "Experimente uma para ver o conselho em ação — ou pergunte qualquer coisa abaixo",
+    "inputPlaceholder": "Pergunte ao Conselho qualquer coisa...",
+    "analyze": "Analisar",
+    "councilChimeIn": "Que o Conselho opine após a análise",
+    "chips": {
+      "preMarket": "Relatório Pré-Mercado",
+      "fullCouncilScan": "Varredura Completa do Conselho",
+      "marketHealthCheck": "Verificação de Saúde do Mercado",
+      "sectorRotation": "Rotação Setorial",
+      "fearGreedVolatility": "Medo e Ganância + Volatilidade",
+      "bestSetup": "Melhor Configuração Agora",
+      "morningCrypto": "Relatório Matinal de Cripto",
+      "isAltSeason": "É Temporada de Altcoins?",
+      "btcDominance": "Verificação Dominância BTC",
+      "fullCryptoCouncil": "Conselho Cripto Completo",
+      "onChainHealth": "Saúde On-Chain",
+      "cyclePosition": "Posição no Ciclo"
+    }
   },
   "aiPicks": {
     "title": "Picks Diários com IA",

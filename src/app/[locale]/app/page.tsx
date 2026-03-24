@@ -38,6 +38,7 @@ export default function Home() {
   const pathname = usePathname()
   const currentLocale = useLocale()
   const t = useTranslations('sidebar')
+  const ta = useTranslations('app')
 
   // ── Sidebar data (translated labels, English itemId for icon lookup) ─────
 
@@ -811,7 +812,7 @@ Be direct and factual. Use numbers.`
             Investment Council
           </div>
           <div style={{ fontSize: '10px', color: '#444', marginTop: '1px' }}>
-            18 frameworks · Live market data
+            {ta('subtitle')}
           </div>
         </div>
 
@@ -836,7 +837,7 @@ Be direct and factual. Use numbers.`
             onMouseEnter={e => { e.currentTarget.style.color = '#888'; e.currentTarget.style.borderColor = '#333' }}
             onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
           >
-            + New Chat
+            {ta('newChat')}
           </button>
         )}
 
@@ -857,7 +858,7 @@ Be direct and factual. Use numbers.`
               whiteSpace: 'nowrap',
             }}
           >
-            Session:{' '}
+            {ta('session')}:{' '}
             <span style={{ color: sessionCost > 0.50 ? '#f87171' : sessionCost > 0.10 ? '#fbbf24' : '#7ec8a0', fontWeight: 600 }}>
               ${sessionCost.toFixed(4)}
             </span>
@@ -884,7 +885,7 @@ Be direct and factual. Use numbers.`
               whiteSpace: 'nowrap',
             }}
           >
-            All-time:{' '}
+            {ta('allTime')}:{' '}
             <span style={{ color: totalCost > 20 ? '#f87171' : totalCost > 5 ? '#fbbf24' : '#6b7280', fontWeight: 600 }}>
               ${totalCost.toFixed(4)}
             </span>
@@ -966,17 +967,17 @@ Be direct and factual. Use numbers.`
           onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.borderColor = '#3a1010' }}
           onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
         >
-          Log out
+          {ta('logOut')}
         </button>
 
         {/* Tab buttons */}
         <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
           {([
-            { id: 'chat', label: '💬 Council Chat' },
-            { id: 'pine', label: '📈 Pine Script' },
-            { id: 'watchlist', label: '👁 Watchlist' },
-            { id: 'portfolio', label: '💼 Portfolio' },
-            { id: 'training', label: '📚 Training' },
+            { id: 'chat', label: `💬 ${ta('tabs.chat')}` },
+            { id: 'pine', label: `📈 ${ta('tabs.pine')}` },
+            { id: 'watchlist', label: `👁 ${ta('tabs.watchlist')}` },
+            { id: 'portfolio', label: `💼 ${ta('tabs.portfolio')}` },
+            { id: 'training', label: `📚 ${ta('tabs.training')}` },
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -1085,38 +1086,38 @@ Be direct and factual. Use numbers.`
                   <div style={{ fontSize: '28px', fontWeight: 700, color: '#e5e5e5', letterSpacing: '-0.02em', marginBottom: '8px' }}>
                     {(() => {
                       const h = new Date().getHours()
-                      const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'
+                      const greeting = h < 12 ? ta('greeting.morning') : h < 17 ? ta('greeting.afternoon') : ta('greeting.evening')
                       const name = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'there'
                       return `${greeting}, ${name}.`
                     })()}
                   </div>
                   <div style={{ fontSize: '14px', color: '#555', lineHeight: 1.6 }}>
-                    Your Investment Council is ready. Eighteen frameworks. No agenda.
+                    {ta('welcome')}
                   </div>
                 </div>
 
                 <div style={{ textAlign: 'center', marginTop: '-16px' }}>
                   <div style={{ fontSize: '11px', color: '#333', marginBottom: '12px', letterSpacing: '0.04em' }}>
-                    Try one to see the council in action — or ask anything below
+                    {ta('tryOne')}
                   </div>
                   <div style={{
                     display: 'flex', flexWrap: 'wrap', gap: '8px',
                     justifyContent: 'center', maxWidth: '600px',
                   }}>
                     {(sidebarMode === 'stocks' ? [
-                      { label: 'Pre-Market Briefing', prompt: `Give me today's pre-market briefing. Include market snapshot, overnight futures, key levels to watch, and top risks for the session.` },
-                      { label: 'Full Council Scan', prompt: 'Run a full investment council scan of the current market. I want every advisor framework applied — macro, technical, sentiment, risk, and opportunity.' },
-                      { label: 'Market Health Check', prompt: 'Give me a full market health check right now. Cover breadth, momentum, credit spreads, volatility, and whether this is a healthy or deteriorating market.' },
-                      { label: 'Sector Rotation', prompt: 'Where is money rotating right now? Which sectors are leading, which are lagging, and where should I be positioned?' },
-                      { label: 'Fear & Greed + Volatility', prompt: 'What is the current fear and greed reading and what does volatility tell us? Is this a buy-the-dip moment or time to reduce risk?' },
-                      { label: 'Best Setup Right Now', prompt: 'What is the single best trade setup in the market right now? Give me ticker, direction, entry, stop, and target with full reasoning.' },
+                      { label: ta('chips.preMarket'), prompt: `Give me today's pre-market briefing. Include market snapshot, overnight futures, key levels to watch, and top risks for the session.` },
+                      { label: ta('chips.fullCouncilScan'), prompt: 'Run a full investment council scan of the current market. I want every advisor framework applied — macro, technical, sentiment, risk, and opportunity.' },
+                      { label: ta('chips.marketHealthCheck'), prompt: 'Give me a full market health check right now. Cover breadth, momentum, credit spreads, volatility, and whether this is a healthy or deteriorating market.' },
+                      { label: ta('chips.sectorRotation'), prompt: 'Where is money rotating right now? Which sectors are leading, which are lagging, and where should I be positioned?' },
+                      { label: ta('chips.fearGreedVolatility'), prompt: 'What is the current fear and greed reading and what does volatility tell us? Is this a buy-the-dip moment or time to reduce risk?' },
+                      { label: ta('chips.bestSetup'), prompt: 'What is the single best trade setup in the market right now? Give me ticker, direction, entry, stop, and target with full reasoning.' },
                     ] : [
-                      { label: 'Morning Crypto Briefing', prompt: 'Give me a full morning crypto briefing. Cover BTC price and dominance, ETH, altcoin season status, fear and greed, key levels, and what to watch today.' },
-                      { label: 'Is It Alt Season?', prompt: 'Is it alt season right now? Give me BTC dominance trend, ETH/BTC ratio, altcoin season index, and which sectors of crypto are leading.' },
-                      { label: 'BTC Dominance Check', prompt: 'Give me a deep dive on Bitcoin dominance right now. Where are we in the cycle, what does dominance tell us about capital rotation, and what should I do with my portfolio?' },
-                      { label: 'Full Crypto Council', prompt: 'Run the full crypto investment council right now. Every advisor framework applied to the current crypto market — on-chain, macro, sentiment, technical, and cycle analysis.' },
-                      { label: 'On-Chain Health', prompt: 'What is the current on-chain health of Bitcoin and Ethereum? Cover MVRV, realized price, active addresses, exchange flows, and what it all means.' },
-                      { label: 'Cycle Position', prompt: 'Where are we in the crypto market cycle right now? Give me the full picture — on-chain signals, historical patterns, institutional flows, and what typically happens next.' },
+                      { label: ta('chips.morningCrypto'), prompt: 'Give me a full morning crypto briefing. Cover BTC price and dominance, ETH, altcoin season status, fear and greed, key levels, and what to watch today.' },
+                      { label: ta('chips.isAltSeason'), prompt: 'Is it alt season right now? Give me BTC dominance trend, ETH/BTC ratio, altcoin season index, and which sectors of crypto are leading.' },
+                      { label: ta('chips.btcDominance'), prompt: 'Give me a deep dive on Bitcoin dominance right now. Where are we in the cycle, what does dominance tell us about capital rotation, and what should I do with my portfolio?' },
+                      { label: ta('chips.fullCryptoCouncil'), prompt: 'Run the full crypto investment council right now. Every advisor framework applied to the current crypto market — on-chain, macro, sentiment, technical, and cycle analysis.' },
+                      { label: ta('chips.onChainHealth'), prompt: 'What is the current on-chain health of Bitcoin and Ethereum? Cover MVRV, realized price, active addresses, exchange flows, and what it all means.' },
+                      { label: ta('chips.cyclePosition'), prompt: 'Where are we in the crypto market cycle right now? Give me the full picture — on-chain signals, historical patterns, institutional flows, and what typically happens next.' },
                     ]).map(({ label, prompt }) => (
                       <button
                         key={label}
@@ -1261,7 +1262,7 @@ Be direct and factual. Use numbers.`
                     onClick={submitAnalysisPopup}
                     style={{ background: '#2d6a4f', border: 'none', borderRadius: '6px', padding: '7px 14px', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    Analyze
+                    {ta('analyze')}
                   </button>
                   <button
                     onClick={() => setAnalysisPopup(null)}
@@ -1329,7 +1330,7 @@ Be direct and factual. Use numbers.`
                 value={input}
                 onChange={handleInput}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask the Council anything..."
+                placeholder={ta('inputPlaceholder')}
                 rows={1}
                 style={{
                   flex: 1, background: 'transparent', border: 'none', outline: 'none',
