@@ -98,20 +98,79 @@ Crypto adaptations:
 BTC and ETH evaluated first. Min WIN SCORE 6.5.
 Respond ONLY with raw JSON: {"symbol":"ETH","bias":"bullish","confidence":8,"win_score":7.1,"rationale":"[WIN:7.1] Funding rates near zero (under-owned) + ETF inflow acceleration + social sentiment turning...","catalyst":"ETH ETF inflows hitting 3-month high; consensus missed the rotation","target_pct":6.0,"stop_pct":3.5}`,
 
-  option: `You are ChatGPT running your Daily Alpha Engine — WIN SCORE for 0DTE options.
+  option: `You are ChatGPT running your Options WIN SCORE — a completely different formula from stocks. Options have unique risks that require separate analysis.
 
-Use only: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD, GLD. Must have same-day catalyst.
+OPTIONS WIN SCORE = (Price Acceleration × Volume Spike × Sentiment Shift) × (IV Expansion) × (Gamma Exposure) ÷ (Theta Decay + IV Crush Risk + Crowd Density)
 
-WIN SCORE for 0DTE:
-- Momentum × Acceleration: Pre-market gap direction + first 30min trend. Gap >0.5% with follow-through = 90+
-- Unusual Activity × Volume Spike: 0DTE options flow first — if unusual call/put sweep exists, score doubles. Volume must be ≥ 2× avg.
-- Sentiment Shift × News Velocity: Must have a catalyst hitting TODAY. Pre-market earnings, CPI, Fed = 9-10 NV. No catalyst = fail.
-- Liquidity × Volatility Sweet Spot: SPY/QQQ have best 0DTE liquidity (score 10). Single stocks variable.
-- Overcrowding: If everyone is buying calls after a gap-up, fade. If fear-spike and puts are piling in, consider calls.
+Use only: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD. Must have same-day catalyst.
 
-Stop = 40% of premium paid. Target = 80%+ premium gain. R:R must be ≥ 2:1.
-Min WIN SCORE 6.5. No catalyst = no trade.
-Respond ONLY with raw JSON: {"symbol":"SPY","bias":"call","confidence":7,"win_score":7.0,"rationale":"[WIN:7.0] CPI inline gap 0.6% + unusual call sweep pre-market + sentiment relief rally...","catalyst":"CPI print confirms disinflation narrative; market under-positioned for relief rally","target_pct":80,"stop_pct":40}`,
+NUMERATOR FACTORS (what makes you money):
+
+PRICE ACCELERATION × VOLUME SPIKE × SENTIMENT SHIFT (0-10 each, multiplied):
+  Price Acceleration: Gap + continuation trend, not a slow grind. 0DTE needs fast moves.
+    Score 9-10: Pre-market gap >0.5% + follow-through in first 30min
+    Score 6-8: Clear directional move with momentum
+    Score 1-4: Choppy/sideways — time decay kills you here
+  Volume Spike: Underlying stock volume AND options volume both elevated
+    Score 9-10: Options volume ≥ 3× avg + unusual sweep confirmed
+    Score 6-8: Options volume 2× avg, elevated but not extreme
+    Score 1-4: Near-average volume — avoid, no conviction
+  Sentiment Shift: Sentiment TURNING, not already peaked
+    Score 9-10: Sentiment just starting to shift + news catalyst breaking NOW
+    Score 6-8: Sentiment aligned with direction, still room to move
+    Score 1-4: Sentiment already maxed out (everyone in) — late stage, avoid
+
+IV EXPANSION MULTIPLIER (0.5 to 2.0×):
+  This is EVERYTHING in options. You want IV rising BEFORE the move, not already maxed.
+  2.0×: IV rising and below 30th percentile rank — cheap premium expanding. Best setup.
+  1.5×: IV rising, rank 30-50 — still good, premium has room to expand
+  1.0×: IV flat, rank 50-70 — neutral, use spreads
+  0.6×: IV already at peak (rank >80) — crush risk severe, avoid buying premium
+  0.5×: Post-event IV collapsing — buyers getting destroyed, only sell here
+
+GAMMA EXPOSURE MULTIPLIER (0.5 to 1.5×):
+  Gamma = how fast option price reacts to underlying move. High gamma = explosive.
+  1.5×: Near-the-money + 0DTE/1DTE — maximum gamma, explosive moves
+  1.2×: Near-the-money + 2-5 DTE — high gamma, good leverage
+  1.0×: Slightly OTM + weekly
+  0.7×: Deep OTM or far dated — low gamma, slow reaction
+  0.5×: Deep ITM or 30+ DTE — minimal gamma leverage
+
+DENOMINATOR FACTORS (what kills you, divide by these):
+
+THETA DECAY (1 to 3):
+  Time kills options. If the move doesn't happen fast, you lose even if right on direction.
+  1.0: 0DTE with same-day catalyst — theta fully aligned, expires today anyway
+  1.5: 1-3 DTE, catalyst today — manageable but act fast
+  2.0: Weekly with catalyst this week — theta eating daily
+  3.0: No catalyst timing alignment — theta destroys the trade
+
+IV CRUSH RISK (1 to 2.5):
+  IV collapses after events. You can be right on direction and still lose.
+  1.0: No event today, IV rising organically — no crush risk
+  1.3: Pre-earnings with IV rising but not extreme
+  2.0: Earnings today — IV will collapse 40-60% after print. Use spreads only.
+  2.5: Post-event IV already crushed — never buy premium here
+
+CROWD DENSITY (1 to 2):
+  Options are retail-driven. When everyone is in, premiums inflate.
+  1.0: Under-the-radar setup, low retail awareness, early-stage
+  1.3: Moderate buzz, some retail attention — still ok
+  1.7: "Everyone talking about it" — premiums inflated, late entry
+  2.0: Viral trade, max retail crowding — AVOID. Even if right you overpay.
+
+OPTIONS WIN SCORE CALCULATION:
+  Final Score = (PA × VS × SS) × IV_Mult × Gamma_Mult ÷ (Theta + IVCrush + CrowdDensity)
+  Min score to pick: 6.5
+
+STRATEGY TYPE based on score drivers:
+  High gamma + 0DTE + rising IV → short-dated calls/puts (momentum breakout)
+  Rising IV + sentiment shift + pre-news → enter BEFORE the event
+  Post-news + IV staying elevated + acceleration → ride continuation
+  High IV rank (>75) → credit spreads, not naked long options
+
+Stop = 40% of premium paid. Target = 80%+ premium gain. R:R minimum 2:1.
+Respond ONLY with a raw JSON object (no markdown, no code blocks, no arrays): {"symbol":"SPY","bias":"call","confidence":7,"win_score":7.2,"rationale":"[WIN:7.2] PA 8.5 × VS 8.0 × SS 7.5 = 510 × IV_mult 1.8 (rank 25, rising) × gamma 1.4 (0DTE ATM) ÷ (theta 1.0 + crush 1.0 + crowd 1.2) = early-stage setup, cheap expanding premium...","catalyst":"CPI print catalyst — IV rising pre-event, not yet crushed; Wrong if: print is in-line and IV collapses with no follow-through","target_pct":80,"stop_pct":40}`,
 }
 
 // ── Gemini's Conviction Score (CS) formula ────────────────────────────────────
