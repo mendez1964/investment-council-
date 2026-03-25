@@ -59,8 +59,101 @@ function formatNewsTime(iso: string | null, fallback: string) {
   return { label: timeAgo(src), stale: diffHours > 24 }
 }
 
+function ArticleModal({ alert, onClose }: { alert: GuardianAlert; onClose: () => void }) {
+  const [iframeBlocked, setIframeBlocked] = useState(false)
+  const url = alert.article_url || `https://news.google.com/search?q=${encodeURIComponent(alert.headline)}`
+  const c = IMPACT_COLOR[alert.impact_level]
+  const dirColor = DIRECTION_COLOR[alert.impact_direction]
+  const dirIcon = DIRECTION_ICON[alert.impact_direction]
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 2000,
+        background: 'rgba(0,0,0,0.85)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        padding: '0',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: '680px',
+          height: '82vh',
+          background: '#0d0d0d',
+          borderTop: `3px solid ${c.badge}`,
+          borderRadius: '16px 16px 0 0',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 -8px 48px rgba(0,0,0,0.9)',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Modal header */}
+        <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid #1a1a1a', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '14px', fontWeight: 800, color: '#e5e5e5' }}>{alert.ticker}</span>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: c.badge, background: `${c.badge}20`, borderRadius: '3px', padding: '1px 5px' }}>
+                {alert.impact_level.toUpperCase()}
+              </span>
+              <span style={{ fontSize: '11px', color: dirColor, fontWeight: 700 }}>{dirIcon} {alert.impact_direction}</span>
+            </div>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>✕</button>
+          </div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: '#e5e5e5', lineHeight: 1.5, marginBottom: '4px' }}>{alert.summary}</div>
+          <div style={{ fontSize: '10px', color: '#555', fontStyle: 'italic' }}>
+            "{alert.headline}"{alert.source && <span style={{ fontStyle: 'normal', fontWeight: 600, color: '#444', marginLeft: '4px' }}>— {alert.source}</span>}
+          </div>
+        </div>
+
+        {/* Article content */}
+        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+          {!iframeBlocked ? (
+            <iframe
+              src={url}
+              style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
+              onError={() => setIframeBlocked(true)}
+              sandbox="allow-scripts allow-same-origin allow-popups"
+              title={alert.headline}
+            />
+          ) : (
+            // Fallback when iframe is blocked by the news site
+            <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '28px' }}>📰</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#e5e5e5' }}>This site doesn't allow in-app reading</div>
+              <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, maxWidth: '320px' }}>
+                The article is available on the source site. Click below to read it — opens in a new tab.
+              </div>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  background: '#C9A34E', color: '#000', fontWeight: 700,
+                  fontSize: '13px', padding: '10px 24px', borderRadius: '8px',
+                  textDecoration: 'none', letterSpacing: '0.03em',
+                }}
+              >
+                Read on {alert.source || 'source site'} ↗
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '8px 18px', borderTop: '1px solid #111', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '9px', color: '#2a2a2a' }}>AI estimate at time of news: {alert.price_impact_est || '—'} · Not financial advice</div>
+          <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', color: '#444', textDecoration: 'none' }}>Open in browser ↗</a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: string) => void }) {
   const [hovered, setHovered] = useState(false)
+  const [showArticle, setShowArticle] = useState(false)
   const c = IMPACT_COLOR[alert.impact_level]
   const dirColor = DIRECTION_COLOR[alert.impact_direction]
   const dirIcon = DIRECTION_ICON[alert.impact_direction]
@@ -121,23 +214,23 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
         {alert.source && <span style={{ color: hovered ? '#555' : '#333', marginLeft: '4px', fontStyle: 'normal', fontWeight: 600 }}>— {alert.source}</span>}
       </div>
 
-      {/* Read full article link — direct URL if available, Google News search as fallback */}
+      {/* Read article button — opens in-app reader modal */}
       <div style={{ marginBottom: '6px' }}>
-        <a
-          href={alert.article_url || `https://news.google.com/search?q=${encodeURIComponent(alert.headline)}`}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={e => { e.stopPropagation(); setShowArticle(true) }}
           style={{
+            background: 'none', border: 'none', padding: 0,
             fontSize: '10px', fontWeight: 600,
             color: hovered ? '#C9A34E' : '#555',
-            textDecoration: 'none',
-            display: 'inline-flex', alignItems: 'center', gap: '3px',
+            cursor: 'pointer', fontFamily: 'inherit',
             transition: 'color 0.2s',
           }}
         >
-          Read full article →
-        </a>
+          📰 Read full article
+        </button>
       </div>
+
+      {showArticle && <ArticleModal alert={alert} onClose={() => setShowArticle(false)} />}
 
       {/* Price impact estimate — with strong disclaimer */}
       {alert.price_impact_est && (
