@@ -130,7 +130,7 @@ STOCK HARD RULES:
 - Every rationale must mention the 2 strongest factors (e.g. "Above all MAs, RSI 58, tech sector leading")
 - Mix: at least 3 bullish AND at least 2 bearish picks (markets always have both directions)
 - No picks purely on name recognition — AAPL, TSLA, NVDA only if they score 70+
-- Preferred universe: SPY, QQQ, IWM components — liquid, real price action`
+- Preferred universe: SPY, QQQ, IWM components — liquid, real price action` : ''
 
   const cryptoSection = `
 ═══════════════════════════════════════════

@@ -135,7 +135,7 @@ export async function POST(request: Request) {
   }
 
   // Load guardian settings for all users
-  const userIds = [...new Set(holdings.map(h => h.user_id).filter(Boolean))]
+  const userIds = Array.from(new Set(holdings.map(h => h.user_id).filter(Boolean)))
   const { data: settingsRows } = await supabase
     .from('guardian_settings').select('user_id, ticker, mode').in('user_id', userIds)
 

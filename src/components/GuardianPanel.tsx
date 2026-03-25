@@ -157,7 +157,7 @@ export default function GuardianPanel() {
   }
 
   // Get unique tickers that have alerts
-  const tickers = [...new Set(alerts.map(a => a.ticker))]
+  const tickers = Array.from(new Set(alerts.map(a => a.ticker)))
 
   return (
     <>
