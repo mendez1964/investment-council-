@@ -482,7 +482,8 @@ export default function LandingPage() {
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🎯', title: 'Options Picks with Entry/Stop/Target', desc: 'Daily options trade ideas with full risk management — entry premium, stop loss %, take profit %, and complete rationale.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
-                { icon: '🔔', title: 'Email Alerts', desc: 'Morning briefings, EOD recaps, AI picks, options trades, and fear & greed extremes delivered to your inbox automatically.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
+                { icon: '🛡️', title: 'Market Guardian', desc: 'AI scans all market news daily and alerts you only when something price-moving hits your holdings. In-app, email, and SMS delivery.', tag: 'Trader & Pro', tagBg: '#fef9ee', tagColor: '#92680a' },
+                { icon: '🔔', title: 'Email & SMS Alerts', desc: 'Morning briefings, EOD recaps, AI picks, options trades, fear & greed extremes, and Guardian news alerts delivered to your inbox or phone.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🌍', title: 'Macro & Sector Intelligence', desc: 'Yield curve analysis, sector rotation signals, market health checks, volatility readings, and macro environment breakdowns.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '📈', title: 'Charts, Screeners & Calendars', desc: 'Interactive charts, candlestick pattern scanner, earnings calendar, IPO calendar, economic events, and market movers.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🧮', title: 'Trade Tools & Calculators', desc: 'Position sizing, risk assessment, entry/stop/target calculator, hold-or-cut analysis, and portfolio & watchlist tracking.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
@@ -498,6 +499,90 @@ export default function LandingPage() {
                   <span style={{ fontSize: '11px', fontWeight: 700, color: tagColor, background: tagBg, borderRadius: '4px', padding: '3px 8px' }}>{tag}</span>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── MARKET GUARDIAN SPOTLIGHT ── */}
+        <section style={{ padding: '80px 32px', background: NAVY, overflow: 'hidden', position: 'relative' }}>
+          {/* Background pulse rings */}
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', opacity: 0.04 }}>
+            {[200,340,480].map(r => (
+              <div key={r} style={{ position: 'absolute', width: r, height: r, borderRadius: '50%', border: '1px solid #C9A34E', transform: 'translate(-50%,-50%)', top: '50%', left: '50%' }} />
+            ))}
+          </div>
+
+          <div style={{ maxWidth: '960px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '64px', alignItems: 'center' }}>
+
+            {/* Logo */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+              <svg width="140" height="160" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <style>{`
+                  @keyframes guardianSweep {
+                    from { transform: rotate(0deg); transform-origin: 50px 68px; }
+                    to   { transform: rotate(360deg); transform-origin: 50px 68px; }
+                  }
+                  @keyframes guardianPulse {
+                    0%, 100% { opacity: 0.15; }
+                    50% { opacity: 0.4; }
+                  }
+                  .g-sweep { animation: guardianSweep 4s linear infinite; transform-origin: 50px 68px; }
+                  .g-ring1 { animation: guardianPulse 4s ease-in-out infinite 0s; }
+                  .g-ring2 { animation: guardianPulse 4s ease-in-out infinite 0.8s; }
+                  .g-ring3 { animation: guardianPulse 4s ease-in-out infinite 1.6s; }
+                `}</style>
+                {/* Shield */}
+                <path d="M50 4 L92 18 L92 58 Q92 88 50 108 Q8 88 8 58 L8 18 Z"
+                  fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinejoin="round"/>
+                <path d="M50 14 L84 26 L84 56 Q84 80 50 98 Q16 80 16 56 L16 26 Z"
+                  fill="#C9A34E" fillOpacity="0.04"/>
+                {/* Radar rings */}
+                <circle className="g-ring1" cx="50" cy="58" r="12" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
+                <circle className="g-ring2" cx="50" cy="58" r="22" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
+                <circle className="g-ring3" cx="50" cy="58" r="32" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
+                {/* Radar sweep */}
+                <g className="g-sweep">
+                  <line x1="50" y1="58" x2="50" y2="26" stroke="#C9A34E" strokeWidth="1.5" strokeLinecap="round"/>
+                  <path d="M50 58 L50 26 A32 32 0 0 1 82 58 Z" fill="#C9A34E" fillOpacity="0.08"/>
+                </g>
+                {/* Center dot */}
+                <circle cx="50" cy="58" r="3.5" fill="#C9A34E"/>
+                {/* Cross hairs */}
+                <line x1="50" y1="50" x2="50" y2="54" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                <line x1="50" y1="62" x2="50" y2="66" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                <line x1="42" y1="58" x2="46" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                <line x1="54" y1="58" x2="58" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+              </svg>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.2em', textAlign: 'center' }}>MARKET GUARDIAN</div>
+            </div>
+
+            {/* Copy */}
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#C9A34E', letterSpacing: '0.15em', marginBottom: '12px' }}>NEW FEATURE</div>
+              <h2 style={{ fontSize: '36px', fontWeight: 800, color: '#fff', margin: '0 0 16px', lineHeight: 1.2 }}>
+                Watches your portfolio<br />while you live your life.
+              </h2>
+              <p style={{ fontSize: '16px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 32px' }}>
+                Every morning, Market Guardian scans thousands of headlines and uses AI to find only the ones that could move <em>your specific holdings</em> — not generic market noise. You get a plain-English impact summary, estimated price move, and severity level. Nothing irrelevant ever reaches you.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '36px' }}>
+                {[
+                  { icon: '🎯', title: 'Pinpoint Accuracy', desc: 'Only alerts that directly or indirectly affect your holdings. Smart mode filters out noise automatically.' },
+                  { icon: '📱', title: 'Any Device', desc: 'In-app bell icon, email digest, SMS to your phone. Same intelligence, right format for each screen.' },
+                  { icon: '⚙️', title: 'Per-Holding Control', desc: 'Set Smart mode (price-moving only) or Everything mode per ticker. Mix and match to your preference.' },
+                ].map(f => (
+                  <div key={f.title} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(201,163,78,0.2)', borderRadius: '10px', padding: '18px' }}>
+                    <div style={{ fontSize: '20px', marginBottom: '8px' }}>{f.icon}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e5e5', marginBottom: '6px' }}>{f.title}</div>
+                    <div style={{ fontSize: '12px', color: '#6b7280', lineHeight: 1.6 }}>{f.desc}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '11px', color: '#4b5563', fontStyle: 'italic' }}>
+                  "If I had $10,000 in the market and was on vacation — would I trust this to tell me if something important happened?"
+                </div>
+              </div>
             </div>
           </div>
         </section>
