@@ -145,6 +145,7 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const [guardianTickers, setGuardianTickers] = useState<Set<string>>(new Set())
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
   const [editState, setEditState] = useState<EditState | null>(null)
   const [editSaving, setEditSaving] = useState(false)
@@ -182,6 +183,11 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
 
   useEffect(() => {
     loadPortfolio()
+    // Fetch active Guardian alerts to badge affected holdings
+    fetch('/api/guardian').then(r => r.json()).then(d => {
+      const tickers = new Set<string>((d.alerts ?? []).map((a: any) => a.ticker as string))
+      setGuardianTickers(tickers)
+    }).catch(() => {})
   }, [loadPortfolio])
 
   // Auto-fetch company name, sector, and current price when ticker is typed
@@ -511,6 +517,24 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
                         <span style={{ fontSize: '17px', fontWeight: 700, color: '#e5e5e5', letterSpacing: '-0.01em' }}>
                           {h.ticker}
                         </span>
+                        {guardianTickers.has(h.ticker) && (
+                          <span
+                            title="IC Market Guardian: active alert on this holding"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: '3px',
+                              fontSize: '9px', fontWeight: 700,
+                              color: '#C9A34E', background: '#1a1200',
+                              border: '1px solid #C9A34E44',
+                              borderRadius: '4px', padding: '1px 5px',
+                              letterSpacing: '0.04em', cursor: 'default',
+                            }}
+                          >
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                            ALERT
+                          </span>
+                        )}
                         <span style={{
                           fontSize: '9px',
                           fontWeight: 700,
