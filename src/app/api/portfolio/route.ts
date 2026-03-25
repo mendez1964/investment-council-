@@ -28,8 +28,11 @@ const CRYPTO_MAP: Record<string, string> = {
 }
 
 async function getStockQuote(ticker: string) {
+  if (!FINNHUB_KEY) return null
   try {
-    const res = await fetch(`${FINNHUB_BASE}/quote?symbol=${ticker}&token=${FINNHUB_KEY}`)
+    const res = await fetch(`${FINNHUB_BASE}/quote?symbol=${ticker}&token=${FINNHUB_KEY}`, {
+      signal: AbortSignal.timeout(5000),
+    })
     if (!res.ok) return null
     const q = await res.json()
     if (!q.c) return null
@@ -83,16 +86,15 @@ async function fetchAllQuotes(tickers: string[]): Promise<Record<string, any>> {
   const stockTickers = tickers.filter(t => !CRYPTO_MAP[t])
   const results: Record<string, any> = {}
 
-  if (cryptoTickers.length > 0) {
-    const cryptoData = await getCryptoQuotes(cryptoTickers)
-    Object.assign(results, cryptoData)
-  }
+  const [cryptoData, ...stockQuotes] = await Promise.all([
+    cryptoTickers.length > 0 ? getCryptoQuotes(cryptoTickers) : Promise.resolve({}),
+    ...stockTickers.map(ticker => getStockQuote(ticker)),
+  ])
 
-  for (const ticker of stockTickers) {
-    const quote = await getStockQuote(ticker)
-    if (quote) results[ticker] = quote
-    if (stockTickers.length > 1) await new Promise(r => setTimeout(r, 500))
-  }
+  Object.assign(results, cryptoData)
+  stockTickers.forEach((ticker, i) => {
+    if (stockQuotes[i]) results[ticker] = stockQuotes[i]
+  })
 
   return results
 }
@@ -105,12 +107,12 @@ export async function GET() {
     const { data: { user } } = await authClient.auth.getUser()
 
     const supabase = createServerSupabaseClient()
-    const query = supabase
+    let query = supabase
       .from('portfolio_holdings')
       .select('*')
       .order('added_at', { ascending: false })
 
-    if (user) query.eq('user_id', user.id)
+    if (user) query = query.eq('user_id', user.id)
 
     const { data: holdings, error } = await query
 
