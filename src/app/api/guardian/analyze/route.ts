@@ -115,7 +115,6 @@ export async function POST(request: Request) {
 
   const supabase = createServerSupabaseClient()
   const today = new Date().toISOString().split('T')[0]
-  const cutoff = Date.now() / 1000 - 24 * 60 * 60 // 24h ago (unix)
 
   // Get all users with portfolio holdings
   const { data: holdings } = await supabase
@@ -134,18 +133,67 @@ export async function POST(request: Request) {
     if (!tickerMap[t].users.includes(h.user_id)) tickerMap[t].users.push(h.user_id)
   }
 
-  // Load guardian settings for all users
   const userIds = Array.from(new Set(holdings.map(h => h.user_id).filter(Boolean)))
   const { data: settingsRows } = await supabase
     .from('guardian_settings').select('user_id, ticker, mode').in('user_id', userIds)
 
-  const settings: Record<string, Record<string, string>> = {} // userId → ticker → mode
+  const settings: Record<string, Record<string, string>> = {}
   for (const s of settingsRows ?? []) {
     if (!settings[s.user_id]) settings[s.user_id] = {}
     settings[s.user_id][s.ticker.toUpperCase()] = s.mode
   }
 
+  // Try to use pre-analyzed market_news pipeline first (more accurate — sees indirect impacts)
+  const { data: pipelineNews } = await supabase
+    .from('market_news')
+    .select('*')
+    .eq('news_date', today)
+    .eq('is_price_moving', true)
+    .neq('impact_level', 'low')
+
   let totalAlerts = 0
+
+  if (pipelineNews && pipelineNews.length > 0) {
+    // ── Fast path: use centralized market_news pipeline ──
+    console.log(`[guardian/analyze] using pipeline: ${pipelineNews.length} pre-analyzed items`)
+
+    for (const newsItem of pipelineNews) {
+      const affectedTickers: string[] = newsItem.affected_tickers ?? []
+
+      for (const ticker of affectedTickers) {
+        const entry = tickerMap[ticker.toUpperCase()]
+        if (!entry) continue
+
+        for (const userId of entry.users) {
+          const mode = settings[userId]?.[ticker.toUpperCase()] ?? 'smart'
+          if (mode === 'smart' && !newsItem.is_price_moving) continue
+
+          try {
+            await supabase.from('guardian_alerts').upsert({
+              alert_date: today,
+              user_id: userId,
+              ticker: ticker.toUpperCase(),
+              asset_type: entry.asset_type,
+              headline: newsItem.headline,
+              source: newsItem.source,
+              published_at: newsItem.published_at,
+              impact_level: newsItem.impact_level,
+              impact_direction: newsItem.impact_direction,
+              summary: newsItem.summary,
+              price_impact_est: newsItem.price_impact_est,
+            }, { onConflict: 'user_id,ticker,headline', ignoreDuplicates: true })
+            totalAlerts++
+          } catch {}
+        }
+      }
+    }
+
+    return Response.json({ ok: true, alerts: totalAlerts, source: 'pipeline', date: today })
+  }
+
+  // ── Fallback: per-ticker fetch (pipeline hasn't run yet) ──
+  console.log('[guardian/analyze] pipeline empty — falling back to per-ticker fetch')
+  const cutoff = Date.now() / 1000 - 24 * 60 * 60
 
   for (const [ticker, { asset_type, users }] of Object.entries(tickerMap)) {
     let newsItems: NewsItem[] = []
@@ -175,25 +223,17 @@ export async function POST(request: Request) {
 
     for (const userId of users) {
       const mode = settings[userId]?.[ticker] ?? 'smart'
-
       for (const item of analyzed) {
         const original = newsItems[item.index] ?? newsItems[0]
         if (!original?.headline) continue
         if (mode === 'smart' && (!item.is_price_moving || item.impact_level === 'low')) continue
-
         try {
           await supabase.from('guardian_alerts').upsert({
-            alert_date: today,
-            user_id: userId,
-            ticker,
-            asset_type,
-            headline: original.headline,
-            source: original.source,
+            alert_date: today, user_id: userId, ticker, asset_type,
+            headline: original.headline, source: original.source,
             published_at: original.datetime ? new Date(original.datetime * 1000).toISOString() : null,
-            impact_level: item.impact_level,
-            impact_direction: item.impact_direction,
-            summary: item.summary,
-            price_impact_est: item.price_impact_est,
+            impact_level: item.impact_level, impact_direction: item.impact_direction,
+            summary: item.summary, price_impact_est: item.price_impact_est,
           }, { onConflict: 'user_id,ticker,headline', ignoreDuplicates: true })
           totalAlerts++
         } catch {}
@@ -201,5 +241,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return Response.json({ ok: true, alerts: totalAlerts, date: today, tickers: Object.keys(tickerMap).length })
+  return Response.json({ ok: true, alerts: totalAlerts, source: 'fallback', date: today, tickers: Object.keys(tickerMap).length })
 }

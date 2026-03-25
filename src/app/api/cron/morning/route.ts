@@ -20,6 +20,14 @@ async function callInternal(path: string, method: string, secret: string) {
 async function runJobs(secret: string) {
   console.log('[cron/morning] starting jobs...')
 
+  // Step 1 — run news ingest first so all downstream jobs have fresh news context
+  try {
+    const res = await callInternal('/api/news/ingest', 'POST', secret)
+    console.log('[cron/morning] news_ingest:', JSON.stringify(res))
+    // Give ingest a moment to finish writing to market_news before picks read from it
+    await new Promise(r => setTimeout(r, 8000))
+  } catch (e) { console.error('[cron/morning] news_ingest error:', e) }
+
   try {
     const res = await fetch(`${INTERNAL}/api/ai-picks/options?refresh=true`, { headers: { 'x-cron-secret': secret } })
     console.log('[cron/morning] options_refresh:', res.status)

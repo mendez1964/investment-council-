@@ -80,6 +80,26 @@ async function generatePicks(supabase: any, today: string, mode: 'all' | 'stocks
     liveData = await Promise.race([fetchLiveData(dataMsg), timeout])
   } catch {}
 
+  // Fetch today's high-impact news from the centralized pipeline
+  let newsContext = ''
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'
+    const newsRes = await fetch(`${baseUrl}/api/news/context?hours=24&limit=12&min_level=medium`)
+    if (newsRes.ok) {
+      const newsData = await newsRes.json()
+      const items: any[] = newsData.news ?? []
+      if (items.length > 0) {
+        const lines = items.map(n => {
+          const dir = n.impact_direction === 'positive' ? '▲' : n.impact_direction === 'negative' ? '▼' : '●'
+          const tickers = (n.affected_tickers ?? []).join(', ')
+          const est = n.price_impact_est ? ` · Est: ${n.price_impact_est}` : ''
+          return `• [${n.impact_level.toUpperCase()}] ${dir} ${tickers}: ${n.summary}${est}`
+        })
+        newsContext = `\nBREAKING NEWS CONTEXT — last 24h (use to sharpen picks and rationale):\n${lines.join('\n')}\n`
+      }
+    }
+  } catch {}
+
   const stocksSection = doStocks ? `
 ═══════════════════════════════════════════
 IC STOCK FORMULA — 5 FACTORS (each 0-20 pts)
@@ -190,7 +210,7 @@ CRYPTO HARD RULES:
   const prompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily picks. Score every candidate rigorously. Reject anything under 70.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
-
+${newsContext}
 ${doStocks ? stocksSection : ''}
 ${doCrypto ? cryptoSection : ''}
 
