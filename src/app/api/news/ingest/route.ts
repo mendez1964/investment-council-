@@ -42,7 +42,7 @@ function verifyCron(request: Request): boolean {
   return secret === (process.env.CRON_SECRET ?? 'ic-cron-2024')
 }
 
-interface RawItem { headline: string; source: string; datetime: number }
+interface RawItem { headline: string; source: string; datetime: number; url: string }
 
 async function scanAndAnalyze(items: RawItem[], tickers: string[]): Promise<any[]> {
   if (!items.length || !tickers.length) return []
@@ -112,7 +112,7 @@ async function run() {
     const general = await getMarketNews('general')
     for (const n of (general ?? []).slice(0, 50)) {
       if (n.headline && n.datetime > cutoff) {
-        newsMap.set(n.headline, { headline: n.headline, source: n.source ?? '', datetime: n.datetime })
+        newsMap.set(n.headline, { headline: n.headline, source: n.source ?? '', datetime: n.datetime, url: n.url ?? '' })
       }
     }
   } catch (e) { console.error('[news/ingest] general news error:', e) }
@@ -123,7 +123,7 @@ async function run() {
       const crypto = await getMarketNews('crypto')
       for (const n of (crypto ?? []).slice(0, 30)) {
         if (n.headline && n.datetime > cutoff) {
-          newsMap.set(n.headline, { headline: n.headline, source: n.source ?? '', datetime: n.datetime })
+          newsMap.set(n.headline, { headline: n.headline, source: n.source ?? '', datetime: n.datetime, url: n.url ?? '' })
         }
       }
     } catch (e) { console.error('[news/ingest] crypto news error:', e) }
@@ -135,7 +135,7 @@ async function run() {
       const news = await getCompanyNews(ticker)
       for (const n of (news ?? []).slice(0, 5)) {
         if (n.headline && n.datetime > cutoff) {
-          newsMap.set(n.headline, { headline: n.headline, source: n.source ?? '', datetime: n.datetime })
+          newsMap.set(n.headline, { headline: n.headline, source: n.source ?? '', datetime: n.datetime, url: n.url ?? '' })
         }
       }
     } catch {}
@@ -162,6 +162,7 @@ async function run() {
         news_date: today,
         headline: original.headline,
         source: original.source,
+        article_url: original.url || null,
         published_at: original.datetime ? new Date(original.datetime * 1000).toISOString() : null,
         affected_tickers: item.tickers,
         impact_level: item.impact_level ?? 'low',

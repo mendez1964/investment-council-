@@ -57,6 +57,7 @@ interface NewsItem {
   headline: string
   source: string
   datetime: number
+  url: string
 }
 
 interface AnalyzedItem {
@@ -176,6 +177,7 @@ export async function POST(request: Request) {
               asset_type: entry.asset_type,
               headline: newsItem.headline,
               source: newsItem.source,
+              article_url: newsItem.article_url || null,
               published_at: newsItem.published_at,
               impact_level: newsItem.impact_level,
               impact_direction: newsItem.impact_direction,
@@ -206,13 +208,13 @@ export async function POST(request: Request) {
           .filter((n: any) => n.headline?.toLowerCase().includes(q) || n.summary?.toLowerCase().includes(q))
           .filter((n: any) => n.datetime && n.datetime > cutoff)
           .slice(0, 5)
-          .map((n: any) => ({ ticker, headline: n.headline ?? '', source: n.source ?? '', datetime: n.datetime ?? 0 }))
+          .map((n: any) => ({ ticker, headline: n.headline ?? '', source: n.source ?? '', datetime: n.datetime ?? 0, url: n.url ?? '' }))
       } else {
         const raw = await getCompanyNews(ticker)
         newsItems = (raw ?? [])
           .filter((n: any) => n.datetime && n.datetime > cutoff)
           .slice(0, 5)
-          .map((n: any) => ({ ticker, headline: n.headline ?? '', source: n.source ?? '', datetime: n.datetime ?? 0 }))
+          .map((n: any) => ({ ticker, headline: n.headline ?? '', source: n.source ?? '', datetime: n.datetime ?? 0, url: n.url ?? '' }))
       }
     } catch { continue }
 
@@ -231,6 +233,7 @@ export async function POST(request: Request) {
           await supabase.from('guardian_alerts').upsert({
             alert_date: today, user_id: userId, ticker, asset_type,
             headline: original.headline, source: original.source,
+            article_url: original.url || null,
             published_at: original.datetime ? new Date(original.datetime * 1000).toISOString() : null,
             impact_level: item.impact_level, impact_direction: item.impact_direction,
             summary: item.summary, price_impact_est: item.price_impact_est,
