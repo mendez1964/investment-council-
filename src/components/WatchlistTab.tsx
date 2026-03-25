@@ -124,6 +124,7 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
   const [loading, setLoading] = useState(true)
   const [loadingQuotes, setLoadingQuotes] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const [guardianTickers, setGuardianTickers] = useState<Set<string>>(new Set())
 
   function showStatus(msg: string) {
     setStatusMsg(msg)
@@ -165,10 +166,19 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
       .finally(() => loadData())
     loadQuotes([]) // load market overview + crypto immediately
 
+    // Fetch Guardian alerts to badge affected watchlist stocks
+    fetch('/api/guardian', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      const tickers = new Set<string>((d.alerts ?? []).map((a: any) => a.ticker as string))
+      setGuardianTickers(tickers)
+    }).catch(() => {})
+
     // Reload data whenever the user comes back to this browser tab
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
         loadData()
+        fetch('/api/guardian', { cache: 'no-store' }).then(r => r.json()).then(d => {
+          setGuardianTickers(new Set((d.alerts ?? []).map((a: any) => a.ticker as string)))
+        }).catch(() => {})
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
@@ -487,8 +497,26 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
                   }}
                 >
                   {/* Ticker + Price */}
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '16px', fontWeight: 700, color: CRYPTO_TICKERS.has(stock.ticker) ? '#f7931a' : '#e5e5e5', letterSpacing: '-0.01em' }}>{stock.ticker}</span>
+                    {guardianTickers.has(stock.ticker) && (
+                      <span
+                        title="IC Market Guardian: active alert on this holding"
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '3px',
+                          fontSize: '9px', fontWeight: 700,
+                          color: '#C9A34E', background: '#1a1200',
+                          border: '1px solid #C9A34E44',
+                          borderRadius: '4px', padding: '1px 5px',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        ALERT
+                      </span>
+                    )}
                     {CRYPTO_TICKERS.has(stock.ticker) && (
                       <span style={{ fontSize: '10px', color: '#f7931a', background: '#1a1000', border: '1px solid #f7931a33', borderRadius: '4px', padding: '1px 5px', fontWeight: 700 }}>CRYPTO</span>
                     )}
