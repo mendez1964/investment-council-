@@ -26,8 +26,8 @@ async function runJobs(secret: string) {
   } catch (e) { console.error('[cron/morning] options_refresh error:', e) }
 
   try {
-    const res = await fetch(`${INTERNAL}/api/ai-picks?refresh=true`, { headers: { 'x-cron-secret': secret } })
-    console.log('[cron/morning] picks_refresh:', res.status)
+    const res = await fetch(`${INTERNAL}/api/ai-picks?refresh=true&type=stocks`, { headers: { 'x-cron-secret': secret } })
+    console.log('[cron/morning] picks_refresh (stocks only):', res.status)
   } catch (e) { console.error('[cron/morning] picks_refresh error:', e) }
 
   try {

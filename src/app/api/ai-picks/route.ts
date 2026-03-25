@@ -69,8 +69,10 @@ function isWeekend(dateStr: string): boolean {
   return day === 0 || day === 6
 }
 
-async function generatePicks(supabase: any, today: string) {
+async function generatePicks(supabase: any, today: string, mode: 'all' | 'stocks' | 'crypto' = 'all') {
   const weekend = isWeekend(today)
+  const doStocks = (mode === 'all' || mode === 'stocks') && !weekend
+  const doCrypto = mode === 'all' || mode === 'crypto'
   const dataMsg = 'pre-market briefing sector rotation VIX fear greed bitcoin dominance funding rates ethereum solana market movers gainers losers economic macro'
   let liveData = ''
   try {
@@ -78,7 +80,7 @@ async function generatePicks(supabase: any, today: string) {
     liveData = await Promise.race([fetchLiveData(dataMsg), timeout])
   } catch {}
 
-  const stocksSection = weekend ? '' : `
+  const stocksSection = doStocks ? `
 ═══════════════════════════════════════════
 IC STOCK FORMULA — 5 FACTORS (each 0-20 pts)
 ═══════════════════════════════════════════
@@ -189,13 +191,13 @@ CRYPTO HARD RULES:
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
 
-${weekend ? '' : stocksSection}
-${cryptoSection}
+${doStocks ? stocksSection : ''}
+${doCrypto ? cryptoSection : ''}
 
 Required JSON format:
 {
   "market_context": "one sentence on current conditions + VIX level + BTC dominance direction",
-  "stocks": [
+  "stocks": ${doStocks ? `[
     {
       "symbol": "NVDA",
       "bias": "bullish",
@@ -205,8 +207,8 @@ Required JSON format:
       "catalyst": "AI infrastructure demand + XLK sector rotation inflow",
       "sector": "Technology"
     }
-  ],
-  "crypto": [
+  ]` : '[]'},
+  "crypto": ${doCrypto ? `[
     {
       "symbol": "BTC",
       "coingecko_id": "bitcoin",
@@ -216,10 +218,10 @@ Required JSON format:
       "rationale": "BTC dominance rising, funding rates near zero, above 20+50-day MA",
       "catalyst": "ETF inflow acceleration + institutional accumulation signal"
     }
-  ]
+  ]` : '[]'}
 }
 
-${weekend ? 'TODAY IS WEEKEND — stocks array must be empty []. Crypto runs 24/7, include 5-8 crypto picks.' : 'Include 5-8 stocks AND 5-8 crypto picks — quality only, no filler.'}`
+${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only, no filler.' : doStocks ? 'Include 10 stock picks — quality only. Return empty array [] for crypto.' : 'Crypto runs 24/7. Include 8 crypto picks — quality only. Return empty array [] for stocks.'}`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -244,8 +246,8 @@ ${weekend ? 'TODAY IS WEEKEND — stocks array must be empty []. Crypto runs 24/
 
   const parsed = extractJSON(rawText)
 
-  const stocks: any[] = weekend ? [] : (parsed.stocks ?? []).slice(0, 10)
-  const crypto: any[] = (parsed.crypto ?? []).slice(0, 10)
+  const stocks: any[] = doStocks ? (parsed.stocks ?? []).slice(0, 10) : []
+  const crypto: any[] = doCrypto ? (parsed.crypto ?? []).slice(0, 10) : []
   const marketContext: string = parsed.market_context ?? ''
 
   const stockPrices = await Promise.allSettled(stocks.map(p => getQuote(p.symbol).catch(() => null)))
@@ -322,6 +324,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const refresh = searchParams.get('refresh') === 'true'
+    const mode = (searchParams.get('type') ?? 'all') as 'all' | 'stocks' | 'crypto'
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
@@ -330,10 +333,11 @@ export async function GET(request: Request) {
     // Evaluate pending picks older than 24h
     await evaluatePending(supabase)
 
-    // Check for today's picks
-    const { data: todayPicks, error: fetchErr } = await supabase
-      .from('ai_picks').select('*').eq('pick_date', today)
+    // Check for today's picks (filter by type if requested)
+    let query = supabase.from('ai_picks').select('*').eq('pick_date', today)
       .order('type').order('confidence', { ascending: false })
+    if (mode !== 'all') query = query.eq('type', mode === 'stocks' ? 'stock' : 'crypto')
+    const { data: todayPicks, error: fetchErr } = await query
 
     if (fetchErr) throw new Error(`DB error: ${fetchErr.message}`)
 
@@ -341,22 +345,35 @@ export async function GET(request: Request) {
     let isCached = false
     let generatedAt = ''
 
-    const expectedCount = isWeekend(today) ? 3 : 5
+    const expectedCount = mode === 'crypto' ? 4 : mode === 'stocks' ? 4 : (isWeekend(today) ? 3 : 5)
     if (picks.length >= expectedCount && !refresh) {
       isCached = true
       generatedAt = picks[0]?.created_at ?? ''
     } else {
-      if (refresh) await supabase.from('ai_picks').delete().eq('pick_date', today)
-      picks = await generatePicks(supabase, today)
+      if (refresh) {
+        // Only delete picks of the requested type
+        let del = supabase.from('ai_picks').delete().eq('pick_date', today)
+        if (mode !== 'all') del = del.eq('type', mode === 'stocks' ? 'stock' : 'crypto')
+        await del
+      }
+      picks = await generatePicks(supabase, today, mode)
       generatedAt = new Date().toISOString()
     }
 
     // Re-fetch to get DB-assigned ids and created_at
     if (!isCached) {
-      const { data: fresh } = await supabase
-        .from('ai_picks').select('*').eq('pick_date', today)
+      let freshQuery = supabase.from('ai_picks').select('*').eq('pick_date', today)
         .order('type').order('confidence', { ascending: false })
+      if (mode !== 'all') freshQuery = freshQuery.eq('type', mode === 'stocks' ? 'stock' : 'crypto')
+      const { data: fresh } = await freshQuery
       if (fresh?.length) picks = fresh
+    }
+
+    // For 'all' mode fetch, get both types from DB regardless of what was just generated
+    if (mode === 'all') {
+      const { data: allToday } = await supabase.from('ai_picks').select('*').eq('pick_date', today)
+        .order('type').order('confidence', { ascending: false })
+      if (allToday?.length) picks = allToday
     }
 
     const { data: allPicks } = await supabase.from('ai_picks').select('*').order('created_at', { ascending: false }).limit(500)
