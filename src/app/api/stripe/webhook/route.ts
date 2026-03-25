@@ -92,6 +92,9 @@ export async function POST(request: Request) {
       let tier: 'free' | 'trader' | 'pro' = PRICE_TO_TIER[priceId] ?? 'free'
       if (status === 'canceled' || status === 'unpaid' || status === 'past_due') {
         tier = 'free'
+      } else if (status === 'active' || status === 'trialing') {
+        // Always trust the price ID mapping for active/trialing subscriptions
+        tier = PRICE_TO_TIER[priceId] ?? tier
       }
       await supabase.from('profiles').update({ tier }).eq('id', userId)
       console.log(`[webhook] subscription.updated user:${userId} price:${priceId} status:${status} → tier:${tier}`)
@@ -101,8 +104,34 @@ export async function POST(request: Request) {
   if (event.type === 'customer.subscription.deleted') {
     const subscription = event.data.object as Stripe.Subscription
     const userId = subscription.metadata?.user_id
-    if (userId) {
-      await supabase.from('profiles').update({ tier: 'free' }).eq('id', userId)
+    const customerId = subscription.customer as string
+
+    if (userId && customerId) {
+      // Check if the user has any other active subscriptions before reverting to free
+      // (handles Trader → Pro upgrades where the old sub is deleted after the new one is created)
+      const activeSubs = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'active',
+        limit: 5,
+      })
+      const trialSubs = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'trialing',
+        limit: 5,
+      })
+      const allActive = [...activeSubs.data, ...trialSubs.data]
+
+      if (allActive.length > 0) {
+        // User has another active subscription — set tier from that instead
+        const activePriceId = allActive[0].items.data[0]?.price.id
+        const activeTier = PRICE_TO_TIER[activePriceId] ?? 'free'
+        await supabase.from('profiles').update({ tier: activeTier }).eq('id', userId)
+        console.log(`[webhook] subscription.deleted but user has active sub — keeping tier:${activeTier}`)
+      } else {
+        // No active subscriptions — genuinely downgrade to free
+        await supabase.from('profiles').update({ tier: 'free', stripe_customer_id: customerId }).eq('id', userId)
+        console.log(`[webhook] subscription.deleted user:${userId} → tier:free`)
+      }
     }
   }
 
