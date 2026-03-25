@@ -112,7 +112,11 @@ export async function GET() {
       .select('*')
       .order('added_at', { ascending: false })
 
-    if (user) query = query.or(`user_id.eq.${user.id},user_id.is.null`)
+    if (user) {
+      query = query.or(`user_id.eq.${user.id},user_id.is.null`)
+    } else {
+      return Response.json({ holdings: [], summary: { totalValue: 0, totalCost: 0, totalPnl: 0, totalPnlPct: 0, dayChange: 0, dayChangePct: 0 } })
+    }
 
     const { data: holdings, error } = await query
 
@@ -177,6 +181,8 @@ export async function POST(request: Request) {
   try {
     const authClient = createServerSupabaseClientAuth()
     const { data: { user } } = await authClient.auth.getUser()
+
+    if (!user) return Response.json({ error: 'Not authenticated' }, { status: 401 })
 
     const body = await request.json()
     const { ticker, company_name, asset_type, shares, avg_cost, sector, notes } = body
