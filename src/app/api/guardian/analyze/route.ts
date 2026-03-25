@@ -114,14 +114,21 @@ Respond ONLY with raw JSON array:
 export async function POST(request: Request) {
   if (!verifyCron(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const body = await request.json().catch(() => ({}))
+  const ownerOnly: string | null = body.owner_user_id ?? null
+
   const supabase = createServerSupabaseClient()
   const today = new Date().toISOString().split('T')[0]
 
-  // Get all users with portfolio holdings
-  const { data: holdings } = await supabase
+  // Get holdings — optionally filtered to a single user (owner 30-min run)
+  let holdingsQuery = supabase
     .from('portfolio_holdings')
     .select('user_id, ticker, asset_type')
     .not('user_id', 'is', null)
+
+  if (ownerOnly) holdingsQuery = holdingsQuery.eq('user_id', ownerOnly)
+
+  const { data: holdings } = await holdingsQuery
 
   if (!holdings?.length) return Response.json({ ok: true, alerts: 0, reason: 'no holdings' })
 
