@@ -112,7 +112,7 @@ export async function GET() {
       .select('*')
       .order('added_at', { ascending: false })
 
-    if (user) query = query.eq('user_id', user.id)
+    if (user) query = query.or(`user_id.eq.${user.id},user_id.is.null`)
 
     const { data: holdings, error } = await query
 
