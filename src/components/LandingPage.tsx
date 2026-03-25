@@ -482,7 +482,7 @@ export default function LandingPage() {
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🎯', title: 'Options Picks with Entry/Stop/Target', desc: 'Daily options trade ideas with full risk management — entry premium, stop loss %, take profit %, and complete rationale.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
-                { icon: '🛡️', title: 'IC Market Guardian', desc: 'AI scans all market news daily and alerts you only when something price-moving hits your holdings. In-app, email, and SMS delivery.', tag: 'Trader & Pro', tagBg: '#fef9ee', tagColor: '#92680a' },
+                { icon: '🛡️', title: 'IC Market Guardian', desc: 'AI scans all market news daily and alerts you only when something price-moving hits your holdings. In-app alerts + email delivery for Pro members.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
                 { icon: '🔔', title: 'Email & SMS Alerts', desc: 'Morning briefings, EOD recaps, AI picks, options trades, fear & greed extremes, and Guardian news alerts delivered to your inbox or phone.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🌍', title: 'Macro & Sector Intelligence', desc: 'Yield curve analysis, sector rotation signals, market health checks, volatility readings, and macro environment breakdowns.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '📈', title: 'Charts, Screeners & Calendars', desc: 'Interactive charts, candlestick pattern scanner, earnings calendar, IPO calendar, economic events, and market movers.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
@@ -675,7 +675,7 @@ export default function LandingPage() {
                 <button onClick={() => router.push('/login')} style={{ width: '100%', background: GOLD, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Start Free Trial
                 </button>
-                {['Everything in Trader', 'AI options picks daily', 'Entry premium, stop & target', 'Options email alerts', 'Priority report generation', 'Early access to new features'].map(f => (
+                {['Everything in Trader', 'AI options picks daily', 'Entry premium, stop & target', 'Options email alerts', '🛡️ IC Market Guardian alerts', 'Guardian email delivery', 'Priority report generation', 'Early access to new features'].map(f => (
                   <div key={f} style={{ display: 'flex', gap: '8px', fontSize: '14px', color: TEXT, marginBottom: '10px' }}>
                     <span style={{ color: GOLD, fontWeight: 700, flexShrink: 0 }}>✓</span>{f}
                   </div>

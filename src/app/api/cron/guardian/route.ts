@@ -20,6 +20,20 @@ async function runGuardian(secret: string) {
   } catch (e) {
     console.error('[cron/guardian] error:', e)
   }
+
+  // Send Guardian alert emails to Pro users (after a brief pause to ensure alerts are written)
+  await new Promise(r => setTimeout(r, 4000))
+  try {
+    const emailRes = await fetch(`${INTERNAL}/api/email/send/guardian-alerts`, {
+      method: 'POST',
+      headers: { 'x-cron-secret': secret, 'Content-Type': 'application/json' },
+    })
+    const emailData = await emailRes.json()
+    console.log('[cron/guardian] emails:', JSON.stringify(emailData))
+  } catch (e) {
+    console.error('[cron/guardian] email error:', e)
+  }
+
   console.log('[cron/guardian] done:', new Date().toISOString())
 }
 
