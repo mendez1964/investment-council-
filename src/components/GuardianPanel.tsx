@@ -60,91 +60,127 @@ function formatNewsTime(iso: string | null, fallback: string) {
 }
 
 function ArticleModal({ alert, onClose }: { alert: GuardianAlert; onClose: () => void }) {
-  const [iframeBlocked, setIframeBlocked] = useState(false)
-  const url = alert.article_url || `https://news.google.com/search?q=${encodeURIComponent(alert.headline)}`
+  const [status, setStatus] = useState<'loading' | 'ok' | 'paywall' | 'error'>('loading')
+  const [articleText, setArticleText] = useState('')
+  const [articleTitle, setArticleTitle] = useState('')
   const c = IMPACT_COLOR[alert.impact_level]
   const dirColor = DIRECTION_COLOR[alert.impact_direction]
   const dirIcon = DIRECTION_ICON[alert.impact_direction]
+
+  useEffect(() => {
+    if (!alert.article_url) {
+      setStatus('error')
+      return
+    }
+    fetch(`/api/news/fetch-article?url=${encodeURIComponent(alert.article_url)}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error && !d.text) { setStatus('error'); return }
+        if (d.paywall) { setStatus('paywall'); return }
+        setArticleTitle(d.title || alert.headline)
+        setArticleText(d.text || '')
+        setStatus('ok')
+      })
+      .catch(() => setStatus('error'))
+  }, [alert.article_url, alert.headline])
 
   return (
     <div
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 2000,
-        background: 'rgba(0,0,0,0.85)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-        padding: '0',
+        background: 'rgba(0,0,0,0.88)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '24px 16px',
       }}
     >
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          width: '100%', maxWidth: '680px',
-          height: '82vh',
+          width: '100%', maxWidth: '660px',
+          maxHeight: '88vh',
           background: '#0d0d0d',
+          border: `1px solid #1f1f1f`,
           borderTop: `3px solid ${c.badge}`,
-          borderRadius: '16px 16px 0 0',
+          borderRadius: '14px',
           display: 'flex', flexDirection: 'column',
-          boxShadow: '0 -8px 48px rgba(0,0,0,0.9)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.95)',
           overflow: 'hidden',
         }}
       >
-        {/* Modal header */}
-        <div style={{ padding: '14px 18px 12px', borderBottom: '1px solid #1a1a1a', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 800, color: '#e5e5e5' }}>{alert.ticker}</span>
-              <span style={{ fontSize: '9px', fontWeight: 700, color: c.badge, background: `${c.badge}20`, borderRadius: '3px', padding: '1px 5px' }}>
-                {alert.impact_level.toUpperCase()}
-              </span>
-              <span style={{ fontSize: '11px', color: dirColor, fontWeight: 700 }}>{dirIcon} {alert.impact_direction}</span>
+        {/* Header */}
+        <div style={{ padding: '16px 20px 14px', borderBottom: '1px solid #1a1a1a', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#e5e5e5' }}>{alert.ticker}</span>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: c.badge, background: `${c.badge}20`, borderRadius: '3px', padding: '1px 5px' }}>
+                  {alert.impact_level.toUpperCase()}
+                </span>
+                <span style={{ fontSize: '11px', color: dirColor, fontWeight: 700 }}>{dirIcon} {alert.impact_direction}</span>
+                {alert.source && <span style={{ fontSize: '10px', color: '#444', fontWeight: 600 }}>{alert.source}</span>}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e5e5', lineHeight: 1.5, marginBottom: '4px' }}>
+                {alert.summary}
+              </div>
+              <div style={{ fontSize: '10px', color: '#444', fontStyle: 'italic', lineHeight: 1.4 }}>
+                "{alert.headline}"
+              </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', fontSize: '20px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}>✕</button>
-          </div>
-          <div style={{ fontSize: '12px', fontWeight: 600, color: '#e5e5e5', lineHeight: 1.5, marginBottom: '4px' }}>{alert.summary}</div>
-          <div style={{ fontSize: '10px', color: '#555', fontStyle: 'italic' }}>
-            "{alert.headline}"{alert.source && <span style={{ fontStyle: 'normal', fontWeight: 600, color: '#444', marginLeft: '4px' }}>— {alert.source}</span>}
+            <button
+              onClick={onClose}
+              style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', color: '#888', fontSize: '16px', cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', lineHeight: 1, flexShrink: 0 }}
+            >✕</button>
           </div>
         </div>
 
-        {/* Article content */}
-        <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
-          {!iframeBlocked ? (
-            <iframe
-              src={url}
-              style={{ width: '100%', height: '100%', border: 'none', background: '#fff' }}
-              onError={() => setIframeBlocked(true)}
-              sandbox="allow-scripts allow-same-origin allow-popups"
-              title={alert.headline}
-            />
-          ) : (
-            // Fallback when iframe is blocked by the news site
-            <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', textAlign: 'center' }}>
-              <div style={{ fontSize: '28px' }}>📰</div>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#e5e5e5' }}>This site doesn't allow in-app reading</div>
-              <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, maxWidth: '320px' }}>
-                The article is available on the source site. Click below to read it — opens in a new tab.
+        {/* Article body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 22px' }}>
+          {status === 'loading' && (
+            <div style={{ textAlign: 'center', paddingTop: '40px', color: '#333', fontSize: '13px' }}>
+              Loading article…
+            </div>
+          )}
+
+          {status === 'ok' && (
+            <>
+              {articleTitle && articleTitle !== alert.headline && (
+                <div style={{ fontSize: '16px', fontWeight: 700, color: '#e5e5e5', lineHeight: 1.4, marginBottom: '16px' }}>
+                  {articleTitle}
+                </div>
+              )}
+              <div style={{ fontSize: '13px', color: '#aaa', lineHeight: 1.9, whiteSpace: 'pre-wrap' }}>
+                {articleText}
               </div>
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  background: '#C9A34E', color: '#000', fontWeight: 700,
-                  fontSize: '13px', padding: '10px 24px', borderRadius: '8px',
-                  textDecoration: 'none', letterSpacing: '0.03em',
-                }}
-              >
-                Read on {alert.source || 'source site'} ↗
-              </a>
+            </>
+          )}
+
+          {status === 'paywall' && (
+            <div style={{ textAlign: 'center', paddingTop: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '28px' }}>🔒</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#e5e5e5' }}>Paywall — subscription required</div>
+              <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, maxWidth: '300px' }}>
+                This article is behind a paywall on {alert.source || 'the source site'}. The AI summary above is based on the full article text.
+              </div>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div style={{ textAlign: 'center', paddingTop: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '28px' }}>📰</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#e5e5e5' }}>Article unavailable</div>
+              <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, maxWidth: '300px' }}>
+                Could not load the article content. The AI summary above captures the key impact on your holding.
+              </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '8px 18px', borderTop: '1px solid #111', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontSize: '9px', color: '#2a2a2a' }}>AI estimate at time of news: {alert.price_impact_est || '—'} · Not financial advice</div>
-          <a href={url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '10px', color: '#444', textDecoration: 'none' }}>Open in browser ↗</a>
+        <div style={{ padding: '10px 20px', borderTop: '1px solid #111', flexShrink: 0 }}>
+          <div style={{ fontSize: '9px', color: '#2a2a2a', lineHeight: 1.5 }}>
+            AI estimate at time of news: {alert.price_impact_est || '—'} · Verify current price before acting · Not financial advice
+          </div>
         </div>
       </div>
     </div>
