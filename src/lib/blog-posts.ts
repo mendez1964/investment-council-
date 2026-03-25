@@ -339,5 +339,164 @@ export const blogPosts: BlogPost[] = [
 <p>The paid Trader tier ($29.99/month) unlocks unlimited queries, all 18 research frameworks, daily stock and crypto picks with full IC Formula scores, sector rotation data, economic calendar, charts, email alerts, and portfolio tracking. The Pro tier adds AI options picks with specific entry premiums, stops, and targets.</p>
 <p>For a trader making even two or three well-framed trades per month based on IC picks, the subscription cost is easily justified. The 7-day free trial gives you full access to evaluate whether it fits your workflow — no credit card required.</p>
 `
-  }
+  },
+  {
+    slug: 'option-trading-explained-with-examples',
+    title: 'Option Trading Explained With Examples — A Complete Beginner Guide',
+    description: 'Option trading explained simply with real examples. Learn what options are, how calls and puts work, and how to use options to protect or grow your portfolio.',
+    keyword: 'option trading explained',
+    date: '2026-03-24',
+    readTime: '8 min read',
+    category: 'Options Education',
+    content: `
+<h2>What Is Option Trading?</h2>
+<p>An option is a contract that gives you the right — but not the obligation — to buy or sell a stock at a specific price before a specific date. You pay a premium for that right. If the stock moves in your favor, your option gains value. If it doesn't, the most you can lose is the premium you paid.</p>
+<p>This is fundamentally different from buying stock. When you buy 100 shares of Apple at $200, you're committing $20,000. When you buy a call option on Apple, you might pay $300 for the right to buy 100 shares at $200 before expiration — controlling the same position for a fraction of the capital.</p>
+
+<h2>Two Types of Options: Calls and Puts</h2>
+<p><strong>Call options</strong> give you the right to BUY a stock at the strike price. You buy calls when you believe the stock will go UP.</p>
+<p><strong>Put options</strong> give you the right to SELL a stock at the strike price. You buy puts when you believe the stock will go DOWN — or to protect a position you already own.</p>
+
+<h2>Option Trading Explained With a Real Example</h2>
+<p>Let's say NVIDIA (NVDA) is trading at $150. You believe it's going to $170 over the next 30 days after an earnings report.</p>
+<p><strong>Option A — Buy the stock:</strong> You buy 100 shares at $150 = $15,000 invested. If NVDA goes to $170, you make $2,000 (13% return).</p>
+<p><strong>Option B — Buy a call option:</strong> You buy 1 call contract (controls 100 shares) with a $155 strike price expiring in 30 days, paying a $3.00 premium = $300 total. If NVDA goes to $170, your option is now worth approximately $15.00, turning your $300 into $1,500 — a 400% return on the same move.</p>
+<p>That's the power of options leverage. But it cuts both ways — if NVDA stays flat or drops, your $300 premium expires worthless. The stock buyer still owns their shares; the option buyer loses their entire investment.</p>
+
+<h2>Key Options Terms You Need to Know</h2>
+<ul>
+  <li><strong>Strike price</strong> — the price at which you can buy (call) or sell (put) the stock</li>
+  <li><strong>Expiration date</strong> — the date the contract expires. After this, the option is worthless if not exercised</li>
+  <li><strong>Premium</strong> — the price you pay for the option contract</li>
+  <li><strong>In the money (ITM)</strong> — a call is ITM when the stock price is above the strike. A put is ITM when below</li>
+  <li><strong>Out of the money (OTM)</strong> — the option has no intrinsic value yet, only time value</li>
+  <li><strong>The Greeks</strong> — Delta (how much the option moves per $1 stock move), Theta (time decay per day), Vega (sensitivity to volatility)</li>
+</ul>
+
+<h2>Time Decay — The Option Trader's Enemy (and Friend)</h2>
+<p>Every day that passes, an option loses a small amount of value — this is called Theta decay. If you're buying options, time is working against you. The stock needs to move in your direction fast enough to overcome the daily erosion of time value.</p>
+<p>This is why experienced traders often sell options rather than buy them — they collect the premium and let time decay work in their favor. Strategies like covered calls, cash-secured puts, and the wheel strategy are built around this concept.</p>
+
+<h2>Option Trading Education — Where to Start</h2>
+<p>The most common mistake new options traders make is starting with short-dated, out-of-the-money calls on volatile stocks — essentially buying lottery tickets. The right approach is to start with longer-dated options on stocks you understand, use defined-risk strategies, and never risk more than 2-3% of your account on a single trade.</p>
+<p>The best way to learn is to paper trade (simulated trading with no real money) until you understand how your options respond to stock moves, time decay, and changes in implied volatility. Most platforms including ThinkorSwim offer paper trading accounts at no cost.</p>
+
+<h2>Using AI for Options Analysis</h2>
+<p>AI systems like Investment Council's can analyze options setups by evaluating implied volatility rank, upcoming catalysts, and directional bias simultaneously. Rather than manually scanning for setups, you can query the AI with the specific stock and get a full options framework — which strategy fits the current IV environment, what strike and expiration to consider, and what the risk/reward looks like.</p>
+<p>The goal of options education isn't to memorize every strategy — it's to understand why each strategy exists and when to use it. With that foundation, AI analysis becomes a powerful accelerator rather than a replacement for thinking.</p>
+`
+  },
+  {
+    slug: 'option-trading-education-complete-guide',
+    title: 'Option Trading Education — The Complete Guide to Learning Options',
+    description: 'A complete option trading education guide covering all major strategies, the Greeks, IV rank, income strategies, and how to build a systematic options trading approach.',
+    keyword: 'option trading education',
+    date: '2026-03-24',
+    readTime: '10 min read',
+    category: 'Options Education',
+    content: `
+<h2>Why Options Education Matters More Than Options Tips</h2>
+<p>The options market is one of the most powerful tools available to retail traders — and one of the most misused. Most people approach options looking for tips: "which options should I buy this week?" The traders who actually build lasting profitability approach it differently: they invest in understanding the mechanics first, then apply that knowledge systematically.</p>
+<p>This guide covers the complete options education path — from understanding why options exist, through the major strategies, to building a systematic approach that works across different market environments.</p>
+
+<h2>The Foundation: Why Options Exist</h2>
+<p>Options were originally created as insurance. A farmer growing corn could buy put options to lock in a minimum selling price, protecting against a price collapse. An investor holding a large stock position could buy puts to hedge against a market decline.</p>
+<p>Understanding this origin matters because it explains the two fundamental ways to use options: as a buyer (paying for protection or speculation) and as a seller (collecting premium income). Both approaches are valid. The key is knowing which role fits your current market view and risk tolerance.</p>
+
+<h2>The 14 Major Options Strategies</h2>
+<p><strong>Beginner strategies (defined risk, simple structure):</strong></p>
+<ul>
+  <li><strong>Long call</strong> — buy a call when bullish. Max loss = premium paid</li>
+  <li><strong>Long put</strong> — buy a put when bearish. Max loss = premium paid</li>
+  <li><strong>Covered call</strong> — own 100 shares, sell a call against them for income. Caps upside, reduces cost basis</li>
+  <li><strong>Cash-secured put</strong> — sell a put with cash to cover assignment. Get paid to wait to buy a stock you want</li>
+  <li><strong>Protective put</strong> — own shares, buy a put to protect against downside (portfolio insurance)</li>
+</ul>
+<p><strong>Intermediate strategies (multi-leg, income-focused):</strong></p>
+<ul>
+  <li><strong>Bull call spread</strong> — buy a lower strike call, sell a higher strike call. Reduces cost, caps profit</li>
+  <li><strong>Bear put spread</strong> — buy a higher strike put, sell a lower strike put. Bearish with defined risk</li>
+  <li><strong>Iron condor</strong> — sell a call spread and a put spread simultaneously. Profits when the stock stays in a range</li>
+  <li><strong>Iron butterfly</strong> — similar to iron condor but with overlapping short strikes. Higher premium, narrower profit zone</li>
+  <li><strong>Calendar spread</strong> — sell near-term option, buy longer-term option at same strike. Profits from time decay differential</li>
+  <li><strong>Straddle</strong> — buy a call and put at the same strike. Profits from a large move in either direction</li>
+  <li><strong>Strangle</strong> — buy OTM call and OTM put. Cheaper than straddle, needs bigger move to profit</li>
+  <li><strong>LEAPS</strong> — long-dated options (1-2+ years). Used as leveraged stock replacement</li>
+  <li><strong>The Wheel</strong> — sell cash-secured puts until assigned, then sell covered calls. Systematic income strategy</li>
+</ul>
+
+<h2>Understanding IV Rank — The Most Important Concept in Options</h2>
+<p>Implied volatility (IV) measures how much the market expects a stock to move. IV rank tells you how current IV compares to its historical range over the past 52 weeks — on a scale of 0 to 100.</p>
+<p>This single number should drive your strategy selection:</p>
+<ul>
+  <li><strong>IV Rank above 50</strong> — IV is elevated. Options are expensive. Favor selling strategies (iron condors, covered calls, cash-secured puts) to collect inflated premium</li>
+  <li><strong>IV Rank below 30</strong> — IV is low. Options are cheap. Favor buying strategies (long calls/puts, straddles before events) because you're paying less for the same potential move</li>
+</ul>
+<p>Most option trading losses come from buying options in high IV environments (paying too much) or selling options in low IV environments (collecting too little). IV Rank fixes this.</p>
+
+<h2>The Greeks in Plain English</h2>
+<ul>
+  <li><strong>Delta</strong> — how much your option moves for every $1 the stock moves. A 0.50 delta call gains $50 when the stock rises $1 (per contract of 100 shares)</li>
+  <li><strong>Theta</strong> — daily time decay. A theta of -0.05 means your option loses $5 per day from time decay alone</li>
+  <li><strong>Vega</strong> — sensitivity to IV changes. High vega options gain value when IV rises (good if you own them before an earnings announcement)</li>
+  <li><strong>Gamma</strong> — rate of change of delta. High gamma near expiration means delta changes rapidly as the stock moves</li>
+</ul>
+
+<h2>Building a Systematic Options Approach</h2>
+<p>The traders who succeed in options long-term share three habits: they select strategies based on IV environment, they size positions so no single trade risks more than 2-3% of their account, and they define their exit rules before entering — both the profit target and the stop loss.</p>
+<p>Using AI tools for options analysis accelerates this process. Rather than manually checking IV rank, upcoming catalysts, and support/resistance levels for each candidate, AI can synthesize all factors simultaneously and surface the highest-quality setups matching your criteria.</p>
+`
+  },
+  {
+    slug: 'learning-crypto-trading-beginners-guide',
+    title: 'Learning Crypto Trading — A Complete Beginner\'s Guide for 2026',
+    description: 'Learning crypto trading from scratch? This complete guide covers Bitcoin cycles, altcoin seasons, on-chain metrics, exchanges, risk management, and portfolio strategy.',
+    keyword: 'learning crypto trading',
+    date: '2026-03-24',
+    readTime: '9 min read',
+    category: 'Crypto Education',
+    content: `
+<h2>Why Crypto Trading Is Different From Stock Trading</h2>
+<p>Crypto markets operate 24 hours a day, 7 days a week, 365 days a year — there is no closing bell, no market halt, and no circuit breaker. Prices can move 20% in a single day on major coins and 80% in a single week on smaller ones. This is both the opportunity and the danger.</p>
+<p>The traders who succeed in crypto aren't necessarily the ones who find the next 100x coin. They're the ones who understand the macro cycle, manage their risk rigorously, and don't get wiped out by the volatility that eliminates most new participants.</p>
+
+<h2>The Bitcoin Cycle — The Foundation of Everything</h2>
+<p>Bitcoin operates on approximately four-year cycles driven by its halving events — pre-programmed dates when the reward for mining new Bitcoin is cut in half, reducing the new supply entering the market. Historically, this supply reduction has preceded significant price appreciation.</p>
+<p>The cycle has four distinct phases:</p>
+<ul>
+  <li><strong>Accumulation</strong> — after the bear market bottom, prices are low and sentiment is negative. Long-term holders accumulate. This is the best time to build positions but requires patience</li>
+  <li><strong>Bull market expansion</strong> — prices rise steadily, BTC leads, media coverage increases, new participants enter</li>
+  <li><strong>Altcoin season</strong> — as BTC stabilizes, capital rotates into altcoins seeking higher returns. Small caps can 10x-50x during peak altcoin season</li>
+  <li><strong>Bear market</strong> — peak euphoria gives way to selling, leverage gets wiped out, prices fall 70-85% from peak, cycle resets</li>
+</ul>
+<p>Understanding where you are in this cycle is the single most important skill in crypto trading. Buying aggressively in altcoin season near a cycle peak is how most retail traders get destroyed.</p>
+
+<h2>Bitcoin vs. Altcoins — How to Think About Allocation</h2>
+<p>Bitcoin is the anchor of any serious crypto portfolio. It has survived multiple 80%+ drawdowns, regulatory attacks, exchange collapses, and narrative shifts. No other crypto has demonstrated this level of resilience over 15+ years.</p>
+<p>Altcoins offer higher return potential but come with dramatically higher risk — most altcoins from previous cycles have lost 95%+ of their value and never recovered. The framework most experienced crypto investors use:</p>
+<ul>
+  <li>60-80% in Bitcoin and Ethereum — the core</li>
+  <li>15-25% in established large-cap altcoins (Solana, etc.) with active ecosystems</li>
+  <li>5-10% maximum in speculative small-cap positions</li>
+</ul>
+
+<h2>Key Metrics for Learning Crypto Markets</h2>
+<p><strong>BTC Dominance</strong> — the percentage of total crypto market cap that is Bitcoin. When dominance is falling, money is rotating into altcoins. When rising, capital is flowing back to Bitcoin — often a risk-off signal.</p>
+<p><strong>Fear & Greed Index</strong> — measures overall market sentiment on a 0-100 scale. Extreme fear (below 20) has historically been a buying opportunity. Extreme greed (above 80) suggests caution.</p>
+<p><strong>Funding rates</strong> — in perpetual futures markets, positive funding means longs are paying shorts. High positive funding indicates an overleveraged market vulnerable to a flush lower.</p>
+<p><strong>Exchange reserves</strong> — when Bitcoin flows off exchanges into private wallets, it signals holders intend to hold long-term, reducing sell pressure. When flows onto exchanges increase, selling pressure may be building.</p>
+
+<h2>Exchanges and Custody — Where to Trade Safely</h2>
+<p>The collapse of FTX, Celsius, and BlockFi taught the same lesson: counterparty risk is real in crypto. The safest approach is to trade on regulated, reputable exchanges and move assets you're not actively trading into self-custody (a hardware wallet) rather than leaving them on an exchange.</p>
+<p>For US traders, Coinbase and Kraken are the most regulated options. Binance offers the deepest liquidity and most trading pairs. For decentralized trading without counterparty risk, platforms like Jupiter (on Solana) allow you to trade directly from your own wallet.</p>
+
+<h2>Risk Management in Crypto</h2>
+<p>The leverage available in crypto perpetual futures can be 50x or higher — meaning a 2% adverse move wipes out your entire position. Most professional crypto traders use 2-5x maximum leverage, and many successful traders use spot only (no leverage at all) during uncertain market regimes.</p>
+<p>Position sizing rules that work in stocks are even more important in crypto: never risk more than 1-2% of your total portfolio on a single trade. Given crypto's volatility, a stop loss of 8-10% below your entry (common in stocks) could represent a much larger move in crypto — size accordingly.</p>
+
+<h2>Using AI to Learn and Analyze Crypto Markets</h2>
+<p>The depth of crypto analysis — combining on-chain data, macro cycle positioning, technical analysis, DeFi protocol health, and sentiment indicators — is genuinely difficult to master. AI systems trained on comprehensive crypto knowledge can compress months of learning into hours.</p>
+<p>The right way to use AI in crypto education is not to ask "what should I buy" but to ask "why is BTC dominance rising right now" or "what does negative funding rate mean for this altcoin setup." That approach builds your own understanding while giving you actionable context — which is exactly what separates successful crypto traders from those who chase prices without comprehension.</p>
+`
+  },
 ]
