@@ -284,7 +284,11 @@ export default function GuardianPanel() {
   }, [load, loadSettings])
 
   const clearAlert = async (id: string) => {
-    setAlerts(prev => prev.filter(a => a.id !== id))
+    setAlerts(prev => {
+      const remaining = prev.filter(a => a.id !== id)
+      window.dispatchEvent(new CustomEvent('guardian-alerts-changed', { detail: { tickers: remaining.map(a => a.ticker) } }))
+      return remaining
+    })
     setUnread(prev => Math.max(0, prev - 1))
     await fetch('/api/guardian', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
   }
@@ -292,6 +296,7 @@ export default function GuardianPanel() {
   const clearAll = async () => {
     setAlerts([])
     setUnread(0)
+    window.dispatchEvent(new CustomEvent('guardian-alerts-changed', { detail: { tickers: [] } }))
     await fetch('/api/guardian', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ clear_all: true }) })
   }
 

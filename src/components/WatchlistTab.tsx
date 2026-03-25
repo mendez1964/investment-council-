@@ -181,8 +181,17 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
         }).catch(() => {})
       }
     }
+    // Sync badge instantly when alerts are cleared in the Guardian panel
+    function handleGuardianChange(e: Event) {
+      const tickers = (e as CustomEvent).detail?.tickers ?? []
+      setGuardianTickers(new Set(tickers))
+    }
     document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('guardian-alerts-changed', handleGuardianChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('guardian-alerts-changed', handleGuardianChange)
+    }
   }, [loadData, loadQuotes])
 
   useEffect(() => {
@@ -505,13 +514,13 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
                         style={{
                           display: 'inline-flex', alignItems: 'center', gap: '3px',
                           fontSize: '9px', fontWeight: 700,
-                          color: '#C9A34E', background: '#1a1200',
-                          border: '1px solid #C9A34E44',
+                          color: '#fff', background: '#dc2626',
+                          border: '1px solid #ef444466',
                           borderRadius: '4px', padding: '1px 5px',
                           letterSpacing: '0.04em',
                         }}
                       >
-                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                         </svg>
                         ALERT
