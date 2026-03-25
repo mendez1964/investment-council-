@@ -116,30 +116,28 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
       </div>
 
       {/* Headline — always readable, bigger on hover */}
-      <div style={{ fontSize: hovered ? '11px' : '10px', color: hovered ? '#777' : '#555', lineHeight: 1.5, fontStyle: 'italic', marginBottom: alert.article_url ? '4px' : '6px', transition: 'all 0.2s' }}>
+      <div style={{ fontSize: hovered ? '11px' : '10px', color: hovered ? '#777' : '#555', lineHeight: 1.5, fontStyle: 'italic', marginBottom: '4px', transition: 'all 0.2s' }}>
         "{alert.headline}"
         {alert.source && <span style={{ color: hovered ? '#555' : '#333', marginLeft: '4px', fontStyle: 'normal', fontWeight: 600 }}>— {alert.source}</span>}
       </div>
 
-      {/* Read full article link */}
-      {alert.article_url && (
-        <div style={{ marginBottom: '6px' }}>
-          <a
-            href={alert.article_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: '10px', fontWeight: 600,
-              color: hovered ? '#C9A34E' : '#555',
-              textDecoration: 'none',
-              display: 'inline-flex', alignItems: 'center', gap: '3px',
-              transition: 'color 0.2s',
-            }}
-          >
-            Read full article →
-          </a>
-        </div>
-      )}
+      {/* Read full article link — direct URL if available, Google News search as fallback */}
+      <div style={{ marginBottom: '6px' }}>
+        <a
+          href={alert.article_url || `https://news.google.com/search?q=${encodeURIComponent(alert.headline)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            fontSize: '10px', fontWeight: 600,
+            color: hovered ? '#C9A34E' : '#555',
+            textDecoration: 'none',
+            display: 'inline-flex', alignItems: 'center', gap: '3px',
+            transition: 'color 0.2s',
+          }}
+        >
+          Read full article →
+        </a>
+      </div>
 
       {/* Price impact estimate — with strong disclaimer */}
       {alert.price_impact_est && (
