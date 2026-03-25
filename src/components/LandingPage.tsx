@@ -369,15 +369,6 @@ export default function LandingPage() {
               onMouseEnter={e => { e.currentTarget.style.background = '#b8913d'; e.currentTarget.style.transform = 'translateY(-1px)' }}
               onMouseLeave={e => { e.currentTarget.style.background = GOLD; e.currentTarget.style.transform = 'translateY(0)' }}
               >Start Free — 7 Days Full Access</button>
-              <button onClick={() => router.push('/login')} style={{
-                background: 'transparent', border: '1px solid rgba(255,255,255,0.25)',
-                borderRadius: '10px', padding: '14px 32px',
-                color: '#fff', fontSize: '16px', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'inherit',
-              }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.55)'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'}
-              >See Live Demo →</button>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '13px', marginTop: '16px' }}>
               No credit card required for free tier · Cancel anytime
