@@ -60,6 +60,7 @@ export default function TrainingPage() {
   // Setup state
   const [topic, setTopic] = useState('')
   const [level, setLevel] = useState('Intermediate')
+  const [autoStartTopic, setAutoStartTopic] = useState<string | null>(null)
   const [recentTopics, setRecentTopics] = useState<string[]>([])
   const [popularCourses, setPopularCourses] = useState<{ topic_display: string; level: string; use_count: number }[]>([])
   const [activeSessionPreview, setActiveSessionPreview] = useState<{ id: string; topic: string; level: string; progress: number } | null>(null)
@@ -122,9 +123,29 @@ export default function TrainingPage() {
   }, [])
 
   useEffect(() => {
-    const storedId = localStorage.getItem('ic_training_session_id')
-    if (storedId) restoreSession(storedId)
+    const params = new URLSearchParams(window.location.search)
+    const topicParam = params.get('topic')
+    const levelParam = params.get('level')
+    if (topicParam) {
+      // Deep-link from Council — skip any cached session and auto-start
+      const resolvedLevel = LEVELS.includes(levelParam ?? '') ? (levelParam as string) : 'Intermediate'
+      localStorage.removeItem('ic_training_session_id')
+      setTopic(topicParam)
+      setLevel(resolvedLevel)
+      setAutoStartTopic(topicParam)
+    } else {
+      const storedId = localStorage.getItem('ic_training_session_id')
+      if (storedId) restoreSession(storedId)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Auto-start when deep-linked from Council chat
+  useEffect(() => {
+    if (!autoStartTopic || !topic) return
+    startTraining()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoStartTopic, topic])
 
   // Progressive generation trigger
   useEffect(() => {

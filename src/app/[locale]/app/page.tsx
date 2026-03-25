@@ -28,6 +28,35 @@ interface Message {
   content: string
 }
 
+// ── Training link detection ────────────────────────────────────────────────────
+const FRAMEWORK_CHIPS: { pattern: RegExp; topic: string; label: string }[] = [
+  { pattern: /\b(dalio|economic machine|all.?weather|bridgewater|debt cycle|beautiful deleveraging)\b/i, topic: 'Ray Dalio Economic Machine', label: 'Ray Dalio Economic Machine' },
+  { pattern: /\b(livermore|jesse livermore|pivotal point)\b/i, topic: 'Jesse Livermore Trading Method', label: 'Jesse Livermore Trading Method' },
+  { pattern: /\b(warren buffett|buffett|moat|circle of competence|berkshire)\b/i, topic: 'Warren Buffett Value Investing', label: 'Warren Buffett Value Investing' },
+  { pattern: /\b(peter lynch|lynch|tenbagger|ten.?bagger|invest in what you know)\b/i, topic: 'Peter Lynch Investment Strategy', label: 'Peter Lynch Investment Strategy' },
+  { pattern: /\b(benjamin graham|graham|net.?net|margin of safety|intelligent investor)\b/i, topic: 'Benjamin Graham Value Investing', label: 'Benjamin Graham Value Investing' },
+  { pattern: /\b(grantham|gmo|mean reversion.*bubble|asset bubble)\b/i, topic: 'Jeremy Grantham Market Cycles', label: 'Jeremy Grantham Market Cycles' },
+  { pattern: /\b(michael burry|burry|deep value|big short)\b/i, topic: 'Michael Burry Deep Value Investing', label: 'Michael Burry Deep Value Investing' },
+  { pattern: /\b(tudor jones|paul tudor|macro trading)\b/i, topic: 'Paul Tudor Jones Macro Trading', label: 'Paul Tudor Jones Macro Trading' },
+  { pattern: /\b(options trading|call option|put option|0dte|implied volatility|iv crush|iron condor|covered call|credit spread|debit spread)\b/i, topic: 'Options Trading Fundamentals', label: 'Options Trading' },
+  { pattern: /\b(technical analysis|candlestick pattern|support.?resistance|moving average|rsi|macd|bollinger band|fibonacci retracement)\b/i, topic: 'Technical Analysis Fundamentals', label: 'Technical Analysis' },
+  { pattern: /\b(sector rotation|business cycle|early.?cycle|mid.?cycle|late.?cycle)\b/i, topic: 'Sector Rotation Strategy', label: 'Sector Rotation' },
+  { pattern: /\b(pine script|pinescript|tradingview indicator)\b/i, topic: 'Pine Script Trading Indicators', label: 'Pine Script' },
+  { pattern: /\b(on.?chain analysis|bitcoin halving|crypto market cycle|defi protocol)\b/i, topic: 'Cryptocurrency Investing', label: 'Crypto Market Cycles' },
+]
+
+function detectFrameworks(content: string): { topic: string; label: string }[] {
+  const seen = new Set<string>()
+  const results: { topic: string; label: string }[] = []
+  for (const chip of FRAMEWORK_CHIPS) {
+    if (chip.pattern.test(content) && !seen.has(chip.topic)) {
+      seen.add(chip.topic)
+      results.push({ topic: chip.topic, label: chip.label })
+    }
+  }
+  return results.slice(0, 3) // cap at 3 chips per message
+}
+
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
 type SidebarItem = { label: string; itemId?: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
@@ -1346,6 +1375,33 @@ Be direct and factual. Use numbers.`
                           content={msg.content}
                           isStreaming={isLoading && i === messages.length - 1 && msg.content === ''}
                         />
+                        {/* Training chips — only on completed assistant messages */}
+                        {!(isLoading && i === messages.length - 1) && msg.content && (() => {
+                          const chips = detectFrameworks(msg.content)
+                          if (!chips.length) return null
+                          return (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+                              {chips.map(chip => (
+                                <a
+                                  key={chip.topic}
+                                  href={`/${currentLocale}/training?topic=${encodeURIComponent(chip.topic)}&level=Intermediate`}
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                    background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.3)',
+                                    borderRadius: '20px', padding: '4px 12px',
+                                    fontSize: '11px', fontWeight: 600, color: '#a78bfa',
+                                    textDecoration: 'none', cursor: 'pointer',
+                                    transition: 'background 0.15s',
+                                  }}
+                                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.22)')}
+                                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(124,58,237,0.12)')}
+                                >
+                                  📚 Learn: {chip.label}
+                                </a>
+                              ))}
+                            </div>
+                          )
+                        })()}
                       </div>
                     )}
                   </div>
