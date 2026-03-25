@@ -11,6 +11,10 @@ interface Pick {
   type: 'stock' | 'crypto'
   bias: 'bullish' | 'bearish'
   entry_price: number | null
+  stop_price?: number | null
+  target_price?: number | null
+  stop_pct?: number | null
+  target_pct?: number | null
   confidence: number
   rationale: string
   catalyst: string
@@ -79,6 +83,9 @@ interface APIResponse {
   picks: Pick[]
   stats: Stats
   market_context: string
+  market_regime?: string
+  spy_change_pct?: number | null
+  btc_change_pct?: number | null
   generated_at: string
   is_cached: boolean
 }
@@ -139,11 +146,24 @@ function PickCard({ pick }: { pick: Pick }) {
     ? `${retPct >= 0 ? '+' : ''}${retPct.toFixed(2)}%`
     : ''
 
-  // Parse IC score from rationale prefix [IC:83]
-  const icMatch = pick.rationale?.match(/^\[IC:(\d+)\]/)
-  const icScore = icMatch ? parseInt(icMatch[1]) : null
-  const rationaleText = icMatch ? pick.rationale.replace(/^\[IC:\d+\]\s*/, '') : pick.rationale
+  // Parse IC score + factor scores from rationale prefix
+  const icFullMatch = pick.rationale?.match(/^\[IC:(\d+)\|T:(\d+)\|M:(\d+)\|S:(\d+)\|C:(\d+)\|R:(\d+)\]/)
+  const icLegacyMatch = !icFullMatch ? pick.rationale?.match(/^\[IC:(\d+)\]/) : null
+  const icScore = icFullMatch ? parseInt(icFullMatch[1]) : icLegacyMatch ? parseInt(icLegacyMatch[1]) : null
+  const factorScores = icFullMatch ? {
+    trend: parseInt(icFullMatch[2]), momentum: parseInt(icFullMatch[3]),
+    sector: parseInt(icFullMatch[4]), catalyst: parseInt(icFullMatch[5]), regime: parseInt(icFullMatch[6]),
+  } : null
+  const rationaleText = icFullMatch
+    ? pick.rationale.replace(/^\[IC:\d+\|\w+:\d+\|\w+:\d+\|\w+:\d+\|\w+:\d+\|\w+:\d+\]\s*/, '')
+    : icLegacyMatch ? pick.rationale.replace(/^\[IC:\d+\]\s*/, '') : pick.rationale
   const icColor = icScore == null ? '#9ca3af' : icScore >= 85 ? '#16a34a' : icScore >= 75 ? '#d97706' : '#6b7280'
+
+  function fmtPrice(p: number) {
+    return pick.type === 'crypto' && p > 1000
+      ? `$${p.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      : `$${p.toFixed(p < 1 ? 4 : 2)}`
+  }
 
   return (
     <div style={{
@@ -211,29 +231,59 @@ function PickCard({ pick }: { pick: Pick }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+      {/* Price levels row */}
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
         {pick.entry_price != null && (
-          <div style={{ fontSize: '10px', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: '10px' }}>
             <span style={{ color: '#9ca3af' }}>Entry </span>
-            <span style={{ color: '#374151', fontWeight: 600 }}>
-              {pick.type === 'crypto' && pick.entry_price > 1000
-                ? `$${pick.entry_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                : `$${pick.entry_price.toFixed(pick.entry_price < 1 ? 4 : 2)}`}
-            </span>
+            <span style={{ color: '#374151', fontWeight: 600 }}>{fmtPrice(pick.entry_price)}</span>
           </div>
         )}
         {pick.exit_price != null ? (
-          <div style={{ fontSize: '10px', color: '#9ca3af', fontVariantNumeric: 'tabular-nums' }}>
-            → <span style={{ color: outcomeColor, fontWeight: 600 }}>
-              {pick.type === 'crypto' && pick.exit_price > 1000
-                ? `$${pick.exit_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                : `$${pick.exit_price.toFixed(pick.exit_price < 1 ? 4 : 2)}`}
-            </span>
+          <div style={{ fontSize: '10px', color: '#9ca3af' }}>
+            → <span style={{ color: outcomeColor, fontWeight: 600 }}>{fmtPrice(pick.exit_price)}</span>
           </div>
-        ) : isPending && pick.entry_price != null ? (
-          <div style={{ fontSize: '9px', color: '#9ca3af', fontStyle: 'italic' }}>eval in 24h</div>
         ) : null}
       </div>
+
+      {/* Stop / Target levels (only for pending picks with entry price) */}
+      {isPending && pick.entry_price != null && pick.stop_price != null && pick.target_price != null && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '1px', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: '9px', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: '#9ca3af' }}>Stop </span>
+            <span style={{ color: '#dc2626', fontWeight: 700 }}>{fmtPrice(pick.stop_price)}</span>
+            <span style={{ color: '#d1d5db', fontSize: '8px' }}> ({pick.stop_pct != null ? `-${(pick.stop_pct * 100).toFixed(1)}%` : ''})</span>
+          </div>
+          <div style={{ fontSize: '9px', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ color: '#9ca3af' }}>Target </span>
+            <span style={{ color: '#16a34a', fontWeight: 700 }}>{fmtPrice(pick.target_price)}</span>
+            <span style={{ color: '#d1d5db', fontSize: '8px' }}> ({pick.target_pct != null ? `+${(pick.target_pct * 100).toFixed(1)}%` : ''})</span>
+          </div>
+        </div>
+      )}
+
+      {/* Factor scores breakdown */}
+      {factorScores && (
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '2px' }}>
+          {[
+            { label: 'TRD', value: factorScores.trend },
+            { label: 'MOM', value: factorScores.momentum },
+            { label: 'SEC', value: factorScores.sector },
+            { label: 'CAT', value: factorScores.catalyst },
+            { label: 'REG', value: factorScores.regime },
+          ].map(f => (
+            <div key={f.label} style={{
+              fontSize: '8px', fontWeight: 700,
+              color: f.value >= 16 ? '#15803d' : f.value >= 10 ? '#d97706' : '#dc2626',
+              background: f.value >= 16 ? '#dcfce7' : f.value >= 10 ? '#fef3c7' : '#fee2e2',
+              borderRadius: '3px', padding: '1px 4px',
+              letterSpacing: '0.04em',
+            }}>
+              {f.label} {f.value}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -838,10 +888,47 @@ export default function AIPicksPage() {
 
       {/* Content */}
       <div style={{ flex: 1, padding: '24px 32px', display: 'flex', flexDirection: 'column' }}>
-        {/* Market context */}
-        {data?.market_context && (
-          <div style={{ fontSize: '11px', color: '#6b7280', marginBottom: '12px', fontStyle: 'italic', lineHeight: 1.5, flexShrink: 0 }}>
-            📡 {data.market_context}
+        {/* Market regime + benchmark banner */}
+        {data && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap', flexShrink: 0 }}>
+            {/* Regime badge */}
+            {data.market_regime && (() => {
+              const r = data.market_regime
+              const cfg: Record<string, { label: string; color: string; bg: string; border: string }> = {
+                'risk-on':  { label: '▲ RISK-ON',  color: '#15803d', bg: '#dcfce7', border: '#bbf7d0' },
+                'neutral':  { label: '● NEUTRAL',  color: '#6b7280', bg: '#f4f4f5', border: '#e5e7eb' },
+                'caution':  { label: '⚠ CAUTION',  color: '#d97706', bg: '#fef3c7', border: '#fde68a' },
+                'risk-off': { label: '▼ RISK-OFF', color: '#dc2626', bg: '#fee2e2', border: '#fecaca' },
+              }
+              const c = cfg[r] ?? cfg['neutral']
+              return (
+                <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.07em', color: c.color, background: c.bg, border: `1px solid ${c.border}`, borderRadius: '6px', padding: '4px 10px' }}>
+                  {c.label}
+                </div>
+              )
+            })()}
+            {/* SPY/BTC benchmark */}
+            {(data.spy_change_pct != null || data.btc_change_pct != null) && (
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                {data.spy_change_pct != null && (
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: data.spy_change_pct >= 0 ? '#15803d' : '#dc2626', background: data.spy_change_pct >= 0 ? '#dcfce7' : '#fee2e2', border: `1px solid ${data.spy_change_pct >= 0 ? '#bbf7d0' : '#fecaca'}`, borderRadius: '6px', padding: '4px 10px' }}>
+                    SPY {data.spy_change_pct >= 0 ? '+' : ''}{data.spy_change_pct.toFixed(2)}%
+                  </div>
+                )}
+                {data.btc_change_pct != null && (
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: data.btc_change_pct >= 0 ? '#d97706' : '#dc2626', background: data.btc_change_pct >= 0 ? '#fef3c7' : '#fee2e2', border: `1px solid ${data.btc_change_pct >= 0 ? '#fde68a' : '#fecaca'}`, borderRadius: '6px', padding: '4px 10px' }}>
+                    BTC {data.btc_change_pct >= 0 ? '+' : ''}{data.btc_change_pct.toFixed(2)}%
+                  </div>
+                )}
+                <div style={{ fontSize: '9px', color: '#9ca3af', fontStyle: 'italic' }}>today's market</div>
+              </div>
+            )}
+            {/* Market context */}
+            {data.market_context && (
+              <div style={{ fontSize: '10px', color: '#6b7280', fontStyle: 'italic', lineHeight: 1.5, flex: 1, minWidth: '200px' }}>
+                {data.market_context}
+              </div>
+            )}
           </div>
         )}
 

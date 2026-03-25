@@ -1,9 +1,33 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote } from '@/lib/finnhub'
+import { getQuote, getTechnicalSnapshot } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
+// getCryptoPrice used for BTC benchmark in GET handler
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
+
+// Key stocks the AI picks from — pre-fetch real RSI + MAs so Factor 1 & 2 are scored from real data
+const PICKS_UNIVERSE = [
+  'SPY','QQQ','IWM',
+  'AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX',
+  'JPM','GS','BAC','XOM','GLD','TLT',
+  'COIN','PLTR','CRWD','PANW','UBER','SMCI','MSTR',
+]
+
+async function fetchTechnicalContext(): Promise<string> {
+  const results = await Promise.allSettled(
+    PICKS_UNIVERSE.map(ticker => getTechnicalSnapshot(ticker))
+  )
+  const lines: string[] = []
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled' && r.value) {
+      const s = r.value
+      lines.push(`${s.ticker}: $${s.price} | ${s.trendSignal}`)
+    }
+  })
+  if (!lines.length) return ''
+  return `\nTECHNICAL INDICATORS — computed from real candle data (use EXACTLY these values to score Factor 1 + Factor 2):\n${lines.join('\n')}\nFor any ticker NOT listed above, estimate from price action in the live data.\n`
+}
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -75,9 +99,14 @@ async function generatePicks(supabase: any, today: string, mode: 'all' | 'stocks
   const doCrypto = mode === 'all' || mode === 'crypto'
   const dataMsg = 'pre-market briefing sector rotation VIX fear greed bitcoin dominance funding rates ethereum solana market movers gainers losers economic macro'
   let liveData = ''
+  let technicalContext = ''
   try {
-    const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))
-    liveData = await Promise.race([fetchLiveData(dataMsg), timeout])
+    const [liveResult, techResult] = await Promise.allSettled([
+      Promise.race([fetchLiveData(dataMsg), new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))]),
+      fetchTechnicalContext(),
+    ])
+    if (liveResult.status === 'fulfilled') liveData = liveResult.value
+    if (techResult.status === 'fulfilled') technicalContext = techResult.value
   } catch {}
 
   // Fetch today's high-impact news from the centralized pipeline
@@ -217,12 +246,14 @@ ${doCrypto ? cryptoSection : ''}
 Required JSON format:
 {
   "market_context": "one sentence on current conditions + VIX level + BTC dominance direction",
+  "market_regime": "risk-on",
   "stocks": ${doStocks ? `[
     {
       "symbol": "NVDA",
       "bias": "bullish",
       "confidence": 8,
       "ic_score": 84,
+      "scores": { "f1_trend": 18, "f2_momentum": 16, "f3_sector": 16, "f4_catalyst": 18, "f5_regime": 16 },
       "rationale": "Above all 3 MAs, RSI 61, tech sector leading with strong volume",
       "catalyst": "AI infrastructure demand + XLK sector rotation inflow",
       "sector": "Technology"
@@ -235,18 +266,22 @@ Required JSON format:
       "bias": "bullish",
       "confidence": 9,
       "ic_score": 88,
+      "scores": { "f1_trend": 20, "f2_momentum": 20, "f3_funding": 20, "f4_narrative": 16, "f5_regime": 12 },
       "rationale": "BTC dominance rising, funding rates near zero, above 20+50-day MA",
       "catalyst": "ETF inflow acceleration + institutional accumulation signal"
     }
   ]` : '[]'}
 }
 
+market_regime must be one of: "risk-on" | "neutral" | "caution" | "risk-off"
+scores: output the actual factor scores you assigned — these are shown to users so be accurate.
+
 ${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only, no filler.' : doStocks ? 'Include 10 stock picks — quality only. Return empty array [] for crypto.' : 'Crypto runs 24/7. Include 8 crypto picks — quality only. Return empty array [] for stocks.'}`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 3000,
-    system: `You are an expert trader applying the IC Formula rigorously. Score every pick against all 5 factors. Reject anything under 70. Output only valid JSON.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
+    max_tokens: 3500,
+    system: `You are an expert trader applying the IC Formula rigorously. Score every pick against all 5 factors using the REAL technical indicator data provided. Reject anything under 70. Output only valid JSON.${technicalContext ? `\n\n${technicalContext}` : ''}${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
     messages: [{ role: 'user', content: prompt }],
   })
 
@@ -278,6 +313,26 @@ ${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only,
     })
   )
 
+  // Encode IC score + factor scores into rationale prefix so they persist without a DB migration
+  // Format: [IC:84|T:18|M:16|S:16|C:18|R:16] rationale text
+  function encodeRationale(pick: any): string {
+    const ic = pick.ic_score ?? ''
+    const s = pick.scores
+    if (s && ic) {
+      const parts = [
+        ic,
+        s.f1_trend ?? 0,
+        s.f2_momentum ?? 0,
+        s.f3_sector ?? s.f3_funding ?? 0,
+        s.f4_catalyst ?? s.f4_narrative ?? 0,
+        s.f5_regime ?? 0,
+      ]
+      return `[IC:${parts.join('|')}] ${pick.rationale ?? ''}`
+    }
+    if (ic) return `[IC:${ic}] ${pick.rationale ?? ''}`
+    return pick.rationale ?? ''
+  }
+
   const rows: any[] = []
   stocks.forEach((pick, i) => {
     const q = stockPrices[i].status === 'fulfilled' ? (stockPrices[i] as any).value : null
@@ -286,7 +341,7 @@ ${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only,
       bias: pick.bias === 'bearish' ? 'bearish' : 'bullish',
       entry_price: q?.c ?? null,
       confidence: Math.min(10, Math.max(1, parseInt(pick.confidence) || 5)),
-      rationale: pick.rationale ?? '', catalyst: pick.catalyst ?? '',
+      rationale: encodeRationale(pick), catalyst: pick.catalyst ?? '',
       sector: pick.sector ?? '', coingecko_id: null,
       market_context: marketContext, outcome: 'pending',
     })
@@ -298,7 +353,7 @@ ${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only,
       bias: pick.bias === 'bearish' ? 'bearish' : 'bullish',
       entry_price: (p as any)?.price ?? null,
       confidence: Math.min(10, Math.max(1, parseInt(pick.confidence) || 5)),
-      rationale: pick.rationale ?? '', catalyst: pick.catalyst ?? '',
+      rationale: encodeRationale(pick), catalyst: pick.catalyst ?? '',
       sector: null,
       coingecko_id: pick.coingecko_id || CRYPTO_ID_MAP[pick.symbol?.toUpperCase()] || pick.symbol?.toLowerCase(),
       market_context: marketContext, outcome: 'pending',
@@ -310,6 +365,14 @@ ${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only,
     if (error) console.error('[ai-picks] insert error:', error)
   }
   return rows
+}
+
+function parseRegimeFromContext(ctx: string): string {
+  const lower = (ctx ?? '').toLowerCase()
+  if (/risk.off|vix\s*[>≥]\s*2[89]|vix\s*3\d|crash|panic/i.test(lower)) return 'risk-off'
+  if (/vix\s*[>≥]\s*2[2-7]|caution|elevated.fear|choppy/i.test(lower)) return 'caution'
+  if (/risk.on|vix\s*[<≤]\s*18|low.vix|bull.*trend|strong.uptrend/i.test(lower)) return 'risk-on'
+  return 'neutral'
 }
 
 function calcStats(picks: any[]) {
@@ -429,7 +492,40 @@ export async function GET(request: Request) {
       }
     })
 
-    return Response.json({ picks, stats, market_context: marketContext, generated_at: generatedAt, is_cached: isCached, history })
+    // Compute stop/target for each pick on the fly (no DB migration needed)
+    const picksWithLevels = picks.map((p: any) => {
+      if (!p.entry_price) return p
+      const conf = p.confidence ?? 5
+      const isCrypto = p.type === 'crypto'
+      let stopPct: number, targetPct: number
+      if (isCrypto) {
+        stopPct  = conf >= 9 ? 0.06 : conf >= 7 ? 0.08 : conf >= 5 ? 0.10 : 0.12
+        targetPct = conf >= 9 ? 0.12 : conf >= 7 ? 0.16 : conf >= 5 ? 0.20 : 0.24
+      } else {
+        stopPct  = conf >= 9 ? 0.035 : conf >= 7 ? 0.05 : conf >= 5 ? 0.065 : 0.08
+        targetPct = conf >= 9 ? 0.08  : conf >= 7 ? 0.12 : conf >= 5 ? 0.16  : 0.20
+      }
+      const stop_price  = p.bias === 'bullish' ? p.entry_price * (1 - stopPct)  : p.entry_price * (1 + stopPct)
+      const target_price = p.bias === 'bullish' ? p.entry_price * (1 + targetPct) : p.entry_price * (1 - targetPct)
+      return { ...p, stop_price: parseFloat(stop_price.toFixed(2)), target_price: parseFloat(target_price.toFixed(2)), stop_pct: stopPct, target_pct: targetPct }
+    })
+
+    // Fetch SPY + BTC daily change for benchmark
+    let spy_change_pct: number | null = null
+    let btc_change_pct: number | null = null
+    try {
+      const [spyQ, btcQ] = await Promise.allSettled([
+        getQuote('SPY'),
+        getCryptoPrice('bitcoin'),
+      ])
+      if (spyQ.status === 'fulfilled' && spyQ.value?.dp != null) spy_change_pct = parseFloat(spyQ.value.dp.toFixed(2))
+      if (btcQ.status === 'fulfilled' && (btcQ.value as any)?.change_pct_24h != null) btc_change_pct = parseFloat(((btcQ.value as any).change_pct_24h).toFixed(2))
+    } catch {}
+
+    // Parse market regime from first pick's market_context or AI-generated market_regime
+    const market_regime = picks[0]?.market_regime ?? parseRegimeFromContext(marketContext)
+
+    return Response.json({ picks: picksWithLevels, stats, market_context: marketContext, market_regime, spy_change_pct, btc_change_pct, generated_at: generatedAt, is_cached: isCached, history })
   } catch (err) {
     console.error('[ai-picks] error:', err)
     return Response.json({ error: String(err) }, { status: 500 })

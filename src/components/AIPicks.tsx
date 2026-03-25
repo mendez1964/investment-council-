@@ -9,6 +9,10 @@ interface Pick {
   type: 'stock' | 'crypto'
   bias: 'bullish' | 'bearish'
   entry_price: number | null
+  stop_price?: number | null
+  target_price?: number | null
+  stop_pct?: number | null
+  target_pct?: number | null
   confidence: number
   rationale: string
   catalyst: string
@@ -91,6 +95,25 @@ function PickCard({ pick }: { pick: Pick }) {
     ? `${retPct >= 0 ? '+' : ''}${retPct.toFixed(2)}%`
     : ''
 
+  // Parse IC score + factor scores from rationale prefix
+  const icFullMatch = pick.rationale?.match(/^\[IC:(\d+)\|T:(\d+)\|M:(\d+)\|S:(\d+)\|C:(\d+)\|R:(\d+)\]/)
+  const icLegacyMatch = !icFullMatch ? pick.rationale?.match(/^\[IC:(\d+)\]/) : null
+  const icScore = icFullMatch ? parseInt(icFullMatch[1]) : icLegacyMatch ? parseInt(icLegacyMatch[1]) : null
+  const factorScores = icFullMatch ? {
+    trend: parseInt(icFullMatch[2]), momentum: parseInt(icFullMatch[3]),
+    sector: parseInt(icFullMatch[4]), catalyst: parseInt(icFullMatch[5]), regime: parseInt(icFullMatch[6]),
+  } : null
+  const rationaleClean = icFullMatch
+    ? pick.rationale.replace(/^\[IC:\d+\|\w+:\d+\|\w+:\d+\|\w+:\d+\|\w+:\d+\|\w+:\d+\]\s*/, '')
+    : icLegacyMatch ? pick.rationale.replace(/^\[IC:\d+\]\s*/, '') : pick.rationale
+  const icColor = icScore == null ? '#555' : icScore >= 85 ? '#4ade80' : icScore >= 75 ? '#fbbf24' : '#888'
+
+  function fmtPrice(p: number) {
+    return pick.type === 'crypto' && p > 1000
+      ? `$${p.toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      : `$${p.toFixed(p < 1 ? 4 : 2)}`
+  }
+
   return (
     <div style={{
       background: '#0a0a0a',
@@ -136,12 +159,19 @@ function PickCard({ pick }: { pick: Pick }) {
         )}
       </div>
 
-      {/* Confidence dots */}
-      <ConfidenceDots value={pick.confidence} color={accentColor} />
+      {/* Confidence dots + IC score */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <ConfidenceDots value={pick.confidence} color={accentColor} />
+        {icScore != null && (
+          <div style={{ fontSize: '9px', fontWeight: 700, color: icColor, background: '#111', borderRadius: '4px', padding: '2px 5px', marginLeft: 'auto' }}>
+            IC {icScore}
+          </div>
+        )}
+      </div>
 
       {/* Rationale */}
       <div style={{ fontSize: '10px', color: '#888', lineHeight: 1.45, fontStyle: 'italic', flex: 1 }}>
-        "{pick.rationale}"
+        "{rationaleClean}"
       </div>
 
       {/* Catalyst */}
@@ -151,30 +181,55 @@ function PickCard({ pick }: { pick: Pick }) {
         </div>
       )}
 
+      {/* Factor scores */}
+      {factorScores && (
+        <div style={{ display: 'flex', gap: '3px', flexWrap: 'wrap' }}>
+          {[
+            { label: 'TRD', value: factorScores.trend },
+            { label: 'MOM', value: factorScores.momentum },
+            { label: 'SEC', value: factorScores.sector },
+            { label: 'CAT', value: factorScores.catalyst },
+            { label: 'REG', value: factorScores.regime },
+          ].map(f => (
+            <div key={f.label} style={{
+              fontSize: '8px', fontWeight: 700,
+              color: f.value >= 16 ? '#4ade80' : f.value >= 10 ? '#fbbf24' : '#f87171',
+              background: '#111', borderRadius: '3px', padding: '1px 4px',
+            }}>
+              {f.label} {f.value}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Price info */}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
         {pick.entry_price != null && (
-          <div style={{ fontSize: '10px', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: '10px' }}>
             <span style={{ color: '#333' }}>Entry </span>
-            <span style={{ color: '#666', fontWeight: 600 }}>
-              {pick.type === 'crypto' && pick.entry_price > 1000
-                ? `$${pick.entry_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                : `$${pick.entry_price.toFixed(pick.entry_price < 1 ? 4 : 2)}`}
-            </span>
+            <span style={{ color: '#666', fontWeight: 600 }}>{fmtPrice(pick.entry_price)}</span>
           </div>
         )}
         {pick.exit_price != null ? (
-          <div style={{ fontSize: '10px', color: '#333', fontVariantNumeric: 'tabular-nums' }}>
-            → <span style={{ color: outcomeColor, fontWeight: 600 }}>
-              {pick.type === 'crypto' && pick.exit_price > 1000
-                ? `$${pick.exit_price.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-                : `$${pick.exit_price.toFixed(pick.exit_price < 1 ? 4 : 2)}`}
-            </span>
+          <div style={{ fontSize: '10px', color: '#333' }}>
+            → <span style={{ color: outcomeColor, fontWeight: 600 }}>{fmtPrice(pick.exit_price)}</span>
           </div>
-        ) : isPending && pick.entry_price != null ? (
-          <div style={{ fontSize: '9px', color: '#2a2a2a', fontStyle: 'italic' }}>eval in 24h</div>
         ) : null}
       </div>
+
+      {/* Stop / Target */}
+      {isPending && pick.entry_price != null && pick.stop_price != null && pick.target_price != null && (
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: '9px' }}>
+            <span style={{ color: '#444' }}>Stop </span>
+            <span style={{ color: '#f87171', fontWeight: 700 }}>{fmtPrice(pick.stop_price)}</span>
+          </div>
+          <div style={{ fontSize: '9px' }}>
+            <span style={{ color: '#444' }}>Target </span>
+            <span style={{ color: '#4ade80', fontWeight: 700 }}>{fmtPrice(pick.target_price)}</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

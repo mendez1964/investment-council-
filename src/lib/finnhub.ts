@@ -148,3 +148,121 @@ export function formatEarningsCalendar(events: EarningsEvent[]): string {
 
   return `EARNINGS CALENDAR — Next ${Object.keys(byDate).length} days (Finnhub):\nBMO=Before Market Open  AMC=After Market Close  DMH=During Market Hours\n${lines.join('\n')}`
 }
+
+// ─── Technical Indicators ─────────────────────────────────────────────────────
+
+// Fetch daily OHLCV candles — one call returns up to 250 days of history
+export async function getCandles(ticker: string, daysBack = 260) {
+  const to = Math.floor(Date.now() / 1000)
+  const from = to - daysBack * 24 * 60 * 60
+  const res = await fetch(
+    `${BASE}/stock/candle?symbol=${ticker.toUpperCase()}&resolution=D&from=${from}&to=${to}&token=${getKey()}`,
+    NO_CACHE
+  )
+  if (!res.ok) throw new Error(`Finnhub candles failed for ${ticker}: ${res.status}`)
+  return res.json() as Promise<{ c: number[]; h: number[]; l: number[]; o: number[]; s: string; t: number[]; v: number[] }>
+}
+
+function sma(closes: number[], period: number): number | null {
+  if (closes.length < period) return null
+  const slice = closes.slice(-period)
+  return slice.reduce((a, b) => a + b, 0) / period
+}
+
+function rsi(closes: number[], period = 14): number | null {
+  if (closes.length < period + 1) return null
+  let gains = 0, losses = 0
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const diff = closes[i] - closes[i - 1]
+    if (diff > 0) gains += diff
+    else losses -= diff
+  }
+  if (losses === 0) return 100
+  const rs = gains / losses
+  return parseFloat((100 - 100 / (1 + rs)).toFixed(1))
+}
+
+function avgVolume(volumes: number[], period = 20): number | null {
+  if (volumes.length < period) return null
+  const slice = volumes.slice(-period)
+  return slice.reduce((a, b) => a + b, 0) / period
+}
+
+export interface TechnicalSnapshot {
+  ticker: string
+  price: number
+  rsi14: number | null
+  sma20: number | null
+  sma50: number | null
+  sma200: number | null
+  aboveSma20: boolean | null
+  aboveSma50: boolean | null
+  aboveSma200: boolean | null
+  volVsAvg: number | null  // today's vol / 20-day avg vol ratio
+  trendSignal: string      // plain-english summary for the AI
+}
+
+export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSnapshot | null> {
+  try {
+    const data = await getCandles(ticker)
+    if (data.s !== 'ok' || !data.c?.length) return null
+
+    const closes = data.c
+    const volumes = data.v
+    const price = closes[closes.length - 1]
+
+    const rsi14 = rsi(closes)
+    const sma20 = sma(closes, 20)
+    const sma50 = sma(closes, 50)
+    const sma200 = sma(closes, 200)
+
+    const aboveSma20 = sma20 != null ? price > sma20 : null
+    const aboveSma50 = sma50 != null ? price > sma50 : null
+    const aboveSma200 = sma200 != null ? price > sma200 : null
+
+    const todayVol = volumes[volumes.length - 1]
+    const avgVol = avgVolume(volumes.slice(0, -1), 20) // exclude today
+    const volVsAvg = avgVol && avgVol > 0 ? parseFloat((todayVol / avgVol).toFixed(2)) : null
+
+    // Build a plain-english trend signal so the AI can score Factor 1 + Factor 2 directly
+    const maCount = [aboveSma20, aboveSma50, aboveSma200].filter(v => v === true).length
+    const belowCount = [aboveSma20, aboveSma50, aboveSma200].filter(v => v === false).length
+    let trendSignal = ''
+    if (maCount === 3) trendSignal = 'above all 3 MAs (bullish trend — Factor1=20)'
+    else if (maCount === 2) trendSignal = 'above 20+50-day MA, below 200 (moderate trend — Factor1=15)'
+    else if (maCount === 1 && aboveSma20) trendSignal = 'above 20-day MA only (weak trend — Factor1=10)'
+    else if (belowCount === 3) trendSignal = 'below all 3 MAs (bearish trend — Factor1=20 for short)'
+    else if (belowCount === 2) trendSignal = 'below 20+50-day MA (moderate bearish — Factor1=15 for short)'
+    else trendSignal = 'mixed MA signals (choppy — Factor1=5)'
+
+    const rsiSignal = rsi14 != null
+      ? rsi14 >= 50 && rsi14 <= 65 ? `RSI ${rsi14} (momentum sweet spot — Factor2 bullish=20)`
+      : rsi14 > 65 && rsi14 <= 72 ? `RSI ${rsi14} (extended — Factor2 bullish=14)`
+      : rsi14 > 72 ? `RSI ${rsi14} (overbought — Factor2 bullish=5)`
+      : rsi14 >= 35 && rsi14 < 50 ? `RSI ${rsi14} (weak — Factor2 bullish=6, bearish=20)`
+      : rsi14 >= 28 ? `RSI ${rsi14} (oversold range — Factor2 bearish=14)`
+      : `RSI ${rsi14} (deeply oversold — Factor2 bearish=5)`
+      : 'RSI unavailable'
+
+    const volSignal = volVsAvg != null
+      ? volVsAvg >= 1.3 ? `vol ${(volVsAvg * 100).toFixed(0)}% of avg (+3 bonus pts)`
+      : `vol ${(volVsAvg * 100).toFixed(0)}% of avg`
+      : ''
+
+    return {
+      ticker: ticker.toUpperCase(),
+      price,
+      rsi14,
+      sma20: sma20 ? parseFloat(sma20.toFixed(2)) : null,
+      sma50: sma50 ? parseFloat(sma50.toFixed(2)) : null,
+      sma200: sma200 ? parseFloat(sma200.toFixed(2)) : null,
+      aboveSma20,
+      aboveSma50,
+      aboveSma200,
+      volVsAvg,
+      trendSignal: `${trendSignal} | ${rsiSignal}${volSignal ? ' | ' + volSignal : ''}`,
+    }
+  } catch {
+    return null
+  }
+}

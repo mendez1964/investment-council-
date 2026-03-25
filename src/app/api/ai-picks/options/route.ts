@@ -90,16 +90,19 @@ async function evaluatePending(supabase: any) {
   if (!pending?.length) return
 
   await Promise.allSettled(pending.map(async (pick: any) => {
-    let currentPrice: number | null = null
+    let exitPrice: number | null = null
     try {
       const q = await getQuote(pick.underlying)
-      currentPrice = q?.c ?? null
+      // For 0DTE (daily) picks: expiry === pick_date, so when we evaluate the next morning
+      // q.c is pre-market and unreliable. Use q.pc (previous close) = the closing price on expiry day.
+      const isZeroDTE = pick.expiry === pick.pick_date
+      exitPrice = isZeroDTE ? (q?.pc ?? q?.c ?? null) : (q?.c ?? null)
     } catch {}
-    if (currentPrice == null) return
-    const isWin = pick.option_type === 'call' ? currentPrice > pick.strike : currentPrice < pick.strike
+    if (exitPrice == null) return
+    const isWin = pick.option_type === 'call' ? exitPrice > pick.strike : exitPrice < pick.strike
     await supabase.from('ai_options_picks').update({
       outcome: isWin ? 'win' : 'loss',
-      exit_underlying_price: currentPrice,
+      exit_underlying_price: exitPrice,
       evaluated_at: new Date().toISOString(),
     }).eq('id', pick.id)
   }))
