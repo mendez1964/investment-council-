@@ -20,6 +20,7 @@ import PortfolioTab from '@/components/PortfolioTab'
 import Sidebar, { type SidebarItem as SidebarItemType } from '@/components/Sidebar'
 import UpgradeModal from '@/components/UpgradeModal'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import GuardianPanel from '@/components/GuardianPanel'
 import { Menu } from 'lucide-react'
 
 interface Message {
@@ -939,8 +940,13 @@ Be direct and factual. Use numbers.`
           </button>
         )}
 
+        {/* Market Guardian bell */}
+        <div style={{ marginLeft: '4px' }}>
+          <GuardianPanel />
+        </div>
+
         {/* Language switcher */}
-        <div style={{ marginLeft: '8px' }}>
+        <div style={{ marginLeft: '4px' }}>
           <LanguageSwitcher />
         </div>
 
