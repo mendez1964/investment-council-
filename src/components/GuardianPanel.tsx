@@ -34,10 +34,35 @@ const DIRECTION_COLOR = {
   neutral:  '#6b7280',
 }
 
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
+function formatNewsTime(iso: string | null, fallback: string) {
+  const src = iso ?? fallback
+  const date = new Date(src)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffHours = diffMs / (1000 * 60 * 60)
+
+  if (diffHours > 48) {
+    return { label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), stale: true }
+  }
+  return { label: timeAgo(src), stale: diffHours > 24 }
+}
+
 function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: string) => void }) {
   const c = IMPACT_COLOR[alert.impact_level]
   const dirColor = DIRECTION_COLOR[alert.impact_direction]
   const dirIcon = DIRECTION_ICON[alert.impact_direction]
+  const newsTime = formatNewsTime(alert.published_at, alert.created_at)
 
   return (
     <div style={{
@@ -45,14 +70,12 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
       borderLeft: `3px solid ${c.badge}`,
       borderRadius: '8px', padding: '12px 14px',
       marginBottom: '8px',
+      opacity: newsTime.stale ? 0.7 : 1,
     }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{
-            fontSize: '12px', fontWeight: 800, color: '#e5e5e5',
-            letterSpacing: '0.05em',
-          }}>{alert.ticker}</span>
+          <span style={{ fontSize: '12px', fontWeight: 800, color: '#e5e5e5', letterSpacing: '0.05em' }}>{alert.ticker}</span>
           <span style={{
             fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
             color: c.badge, background: `${c.badge}20`,
@@ -62,13 +85,19 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
             {dirIcon} {alert.impact_direction}
           </span>
         </div>
-        <button
-          onClick={() => onClear(alert.id)}
-          style={{
-            background: 'none', border: 'none', color: '#333',
-            fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1,
-          }}
-        >✕</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* News timestamp — most important context */}
+          <span style={{
+            fontSize: '9px', color: newsTime.stale ? '#ef4444' : '#555',
+            fontWeight: newsTime.stale ? 700 : 400,
+          }}>
+            {newsTime.stale ? '⚠ ' : ''}News: {newsTime.label}
+          </span>
+          <button
+            onClick={() => onClear(alert.id)}
+            style={{ background: 'none', border: 'none', color: '#333', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
+          >✕</button>
+        </div>
       </div>
 
       {/* AI Summary */}
@@ -76,21 +105,21 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
         {alert.summary}
       </div>
 
-      {/* Price impact estimate */}
-      {alert.price_impact_est && (
-        <div style={{ fontSize: '11px', color: dirColor, fontWeight: 700, marginBottom: '4px' }}>
-          Est. move: {alert.price_impact_est}
-        </div>
-      )}
-
-      {/* Headline (smaller) */}
-      <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.4, fontStyle: 'italic' }}>
-        {alert.headline}
+      {/* Headline */}
+      <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.4, fontStyle: 'italic', marginBottom: '6px' }}>
+        "{alert.headline}"
+        {alert.source && <span style={{ color: '#2a2a2a', marginLeft: '4px' }}>— {alert.source}</span>}
       </div>
 
-      {alert.source && (
-        <div style={{ fontSize: '9px', color: '#2a2a2a', marginTop: '3px' }}>
-          {alert.source}
+      {/* Price impact estimate — with strong disclaimer */}
+      {alert.price_impact_est && (
+        <div style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '4px', padding: '5px 8px' }}>
+          <div style={{ fontSize: '10px', color: dirColor, fontWeight: 700 }}>
+            AI estimate at time of news: {alert.price_impact_est}
+          </div>
+          <div style={{ fontSize: '9px', color: '#2a2a2a', marginTop: '2px' }}>
+            Verify current price before acting · Not financial advice
+          </div>
         </div>
       )}
     </div>
