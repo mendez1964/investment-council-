@@ -228,6 +228,12 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
     setAlerts(prev => prev.map(a => ({ ...a, read_at: new Date().toISOString() })))
   }
 
+  async function clearAllAlerts() {
+    await fetch('/api/alerts', { method: 'PATCH' })
+    setAlerts([])
+    setShowAlerts(false)
+  }
+
   function analyzeStock(ticker: string) {
     onSendMessage(`Give me a full council analysis of ${ticker} right now. Use all ten frameworks. Include current price data, technical levels, and what each specialist recommends.`)
     onSwitchToChat()
@@ -336,8 +342,15 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
       {/* ── Alert Panel ── */}
       {showAlerts && (
         <div style={{ padding: '12px 16px', borderBottom: '1px solid #1a1a1a', background: '#080808', maxHeight: '280px', overflowY: 'auto' }}>
-          <div style={{ fontSize: '11px', color: '#555', marginBottom: '10px', fontWeight: 700, letterSpacing: '0.06em' }}>
-            RECENT ALERTS — {alerts.length === 0 ? 'none yet' : `${alerts.length} alerts`}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+            <div style={{ fontSize: '11px', color: '#555', fontWeight: 700, letterSpacing: '0.06em' }}>
+              RECENT ALERTS — {alerts.length === 0 ? 'none yet' : `${alerts.length} alerts`}
+            </div>
+            {alerts.length > 0 && (
+              <button onClick={clearAllAlerts} style={{ ...btn('#1a0a0a', '#555'), fontSize: '10px', border: '1px solid #2a1a1a' }}>
+                Clear All
+              </button>
+            )}
           </div>
           {alerts.length === 0 ? (
             <div style={{ color: '#333', fontSize: '12px' }}>No alerts yet. The watcher will fire alerts here when setups are detected on your watchlist.</div>
@@ -427,6 +440,13 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
             </button>
           )
         })}
+      </div>
+
+      {/* ── Guardian Badge ── */}
+      <div style={{ padding: '6px 16px', background: '#070707', borderBottom: '1px solid #111', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <span style={{ fontSize: '11px' }}>🛡️</span>
+        <span style={{ fontSize: '10px', color: '#2a2a2a', fontWeight: 600, letterSpacing: '0.04em' }}>PROTECTED BY MARKET GUARDIAN</span>
+        <span style={{ fontSize: '10px', color: '#1a1a1a' }}>· AI monitors your holdings 24/7 for price-moving news</span>
       </div>
 
       {/* ── Stock Grid ── */}
