@@ -52,7 +52,7 @@ async function scanAndAnalyze(items: RawItem[], tickers: string[]): Promise<any[
   const res = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 3000,
-    system: 'You are Market Guardian — a financial news scanner. Identify which assets from a watchlist are affected by news, including indirect impacts (macro, sector, regulatory).',
+    system: 'You are IC Guardian — a financial news scanner. Identify which assets from a watchlist are affected by news, including indirect impacts (macro, sector, regulatory).',
     messages: [{
       role: 'user',
       content: `Tracked assets: ${tickers.join(', ')}

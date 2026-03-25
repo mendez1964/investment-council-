@@ -208,7 +208,7 @@ export default function GuardianPanel() {
           cursor: 'pointer', padding: '4px 6px',
           display: 'flex', alignItems: 'center',
         }}
-        title="Market Guardian"
+        title="IC Guardian"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={unread > 0 ? '#C9A34E' : '#555'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
@@ -254,7 +254,7 @@ export default function GuardianPanel() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#C9A34E', letterSpacing: '0.05em' }}>
-                    🛡️ MARKET GUARDIAN
+                    🛡️ IC GUARDIAN
                   </span>
                   {unread > 0 && (
                     <span style={{ fontSize: '9px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: '3px', padding: '1px 5px', fontWeight: 700 }}>

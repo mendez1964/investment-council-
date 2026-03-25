@@ -1,5 +1,5 @@
 // Guardian cron — runs at 9:00 AM ET daily via cron-job.org
-// Triggers the Market Guardian news analysis engine
+// Triggers the IC Guardian news analysis engine
 
 function verifyCron(request: Request): boolean {
   const secret = request.headers.get('x-cron-secret')

@@ -19,7 +19,7 @@ const DEFAULT_CHANNELS: AlertChannels = { email: false, sms: false, push: false 
 const ALERTS = [
   {
     key: 'guardian',
-    label: 'Market Guardian',
+    label: 'IC Guardian',
     desc: 'AI monitors your holdings and alerts you to price-moving news',
     time: 'Triggered · As needed',
     emoji: '🛡️',

@@ -1,4 +1,4 @@
-// Market Guardian — daily news analysis engine
+// IC Guardian — daily news analysis engine
 // Runs at 9 AM ET via /api/cron/guardian
 //
 // Run this SQL in Supabase SQL editor first:
@@ -76,7 +76,7 @@ async function analyzeNews(ticker: string, items: NewsItem[]): Promise<AnalyzedI
   const res = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 1200,
-    system: 'You are Market Guardian — an AI that analyzes financial news for retail investors. Be precise, concise, and honest about impact.',
+    system: 'You are IC Guardian — an AI that analyzes financial news for retail investors. Be precise, concise, and honest about impact.',
     messages: [{
       role: 'user',
       content: `Analyze these ${ticker} news headlines. For each:
