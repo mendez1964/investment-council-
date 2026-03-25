@@ -55,6 +55,9 @@ const mobileCSS = `
   .landing-section .pricing-grid {
     grid-template-columns: 1fr !important;
   }
+  .guardian-layout {
+    grid-template-columns: 1fr !important;
+  }
   .landing-section .howitworks-grid {
     grid-template-columns: 1fr !important;
   }
@@ -503,48 +506,86 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <div style={{ maxWidth: '960px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '64px', alignItems: 'center' }}>
+          <div className="guardian-layout" style={{ maxWidth: '1040px', margin: '0 auto', display: 'grid', gridTemplateColumns: '300px 1fr', gap: '64px', alignItems: 'center' }}>
 
-            {/* Logo */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-              <svg width="140" height="160" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <style>{`
-                  @keyframes guardianSweep {
-                    from { transform: rotate(0deg); transform-origin: 50px 68px; }
-                    to   { transform: rotate(360deg); transform-origin: 50px 68px; }
-                  }
-                  @keyframes guardianPulse {
-                    0%, 100% { opacity: 0.15; }
-                    50% { opacity: 0.4; }
-                  }
-                  .g-sweep { animation: guardianSweep 4s linear infinite; transform-origin: 50px 68px; }
-                  .g-ring1 { animation: guardianPulse 4s ease-in-out infinite 0s; }
-                  .g-ring2 { animation: guardianPulse 4s ease-in-out infinite 0.8s; }
-                  .g-ring3 { animation: guardianPulse 4s ease-in-out infinite 1.6s; }
-                `}</style>
-                {/* Shield */}
-                <path d="M50 4 L92 18 L92 58 Q92 88 50 108 Q8 88 8 58 L8 18 Z"
-                  fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinejoin="round"/>
-                <path d="M50 14 L84 26 L84 56 Q84 80 50 98 Q16 80 16 56 L16 26 Z"
-                  fill="#C9A34E" fillOpacity="0.04"/>
-                {/* Radar rings */}
-                <circle className="g-ring1" cx="50" cy="58" r="12" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
-                <circle className="g-ring2" cx="50" cy="58" r="22" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
-                <circle className="g-ring3" cx="50" cy="58" r="32" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
-                {/* Radar sweep */}
-                <g className="g-sweep">
-                  <line x1="50" y1="58" x2="50" y2="26" stroke="#C9A34E" strokeWidth="1.5" strokeLinecap="round"/>
-                  <path d="M50 58 L50 26 A32 32 0 0 1 82 58 Z" fill="#C9A34E" fillOpacity="0.08"/>
-                </g>
-                {/* Center dot */}
-                <circle cx="50" cy="58" r="3.5" fill="#C9A34E"/>
-                {/* Cross hairs */}
-                <line x1="50" y1="50" x2="50" y2="54" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                <line x1="50" y1="62" x2="50" y2="66" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                <line x1="42" y1="58" x2="46" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                <line x1="54" y1="58" x2="58" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-              </svg>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.2em', textAlign: 'center' }}>IC MARKET GUARDIAN</div>
+            {/* Left — logo + sample alert card */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', flexShrink: 0 }}>
+
+              {/* Logo + label */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <svg width="110" height="126" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <style>{`
+                    @keyframes guardianSweep {
+                      from { transform: rotate(0deg); transform-origin: 50px 68px; }
+                      to   { transform: rotate(360deg); transform-origin: 50px 68px; }
+                    }
+                    @keyframes guardianPulse {
+                      0%, 100% { opacity: 0.15; }
+                      50% { opacity: 0.4; }
+                    }
+                    .g-sweep { animation: guardianSweep 4s linear infinite; transform-origin: 50px 68px; }
+                    .g-ring1 { animation: guardianPulse 4s ease-in-out infinite 0s; }
+                    .g-ring2 { animation: guardianPulse 4s ease-in-out infinite 0.8s; }
+                    .g-ring3 { animation: guardianPulse 4s ease-in-out infinite 1.6s; }
+                  `}</style>
+                  <path d="M50 4 L92 18 L92 58 Q92 88 50 108 Q8 88 8 58 L8 18 Z"
+                    fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinejoin="round"/>
+                  <path d="M50 14 L84 26 L84 56 Q84 80 50 98 Q16 80 16 56 L16 26 Z"
+                    fill="#C9A34E" fillOpacity="0.04"/>
+                  <circle className="g-ring1" cx="50" cy="58" r="12" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
+                  <circle className="g-ring2" cx="50" cy="58" r="22" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
+                  <circle className="g-ring3" cx="50" cy="58" r="32" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
+                  <g className="g-sweep">
+                    <line x1="50" y1="58" x2="50" y2="26" stroke="#C9A34E" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M50 58 L50 26 A32 32 0 0 1 82 58 Z" fill="#C9A34E" fillOpacity="0.08"/>
+                  </g>
+                  <circle cx="50" cy="58" r="3.5" fill="#C9A34E"/>
+                  <line x1="50" y1="50" x2="50" y2="54" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                  <line x1="50" y1="62" x2="50" y2="66" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                  <line x1="42" y1="58" x2="46" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                  <line x1="54" y1="58" x2="58" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
+                </svg>
+                <div style={{ fontSize: '9px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.22em', textAlign: 'center', opacity: 0.7 }}>POWERED BY IC MARKET GUARDIAN</div>
+              </div>
+
+              {/* Sample alert card — realistic mockup */}
+              <div style={{
+                width: '100%',
+                background: '#1a0505',
+                border: '1px solid #7f1d1d',
+                borderLeft: '3px solid #ef4444',
+                borderRadius: '10px',
+                padding: '14px 15px',
+                boxShadow: '0 8px 32px rgba(239,68,68,0.15)',
+              }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#e5e5e5', letterSpacing: '0.04em' }}>NVDA</span>
+                    <span style={{ fontSize: '8px', fontWeight: 700, color: '#ef4444', background: '#ef444420', borderRadius: '3px', padding: '1px 5px', letterSpacing: '0.08em' }}>HIGH</span>
+                    <span style={{ fontSize: '10px', color: '#f87171', fontWeight: 700 }}>▼ negative</span>
+                  </div>
+                  <span style={{ fontSize: '8px', color: '#555' }}>2h ago</span>
+                </div>
+                {/* Summary */}
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#e5e5e5', lineHeight: 1.5, marginBottom: '6px' }}>
+                  Fed signals higher-for-longer; chip stocks face margin compression.
+                </div>
+                {/* Headline */}
+                <div style={{ fontSize: '10px', color: '#555', fontStyle: 'italic', lineHeight: 1.4, marginBottom: '8px' }}>
+                  "Fed minutes reveal hawkish stance, markets reprice rate cuts"
+                  <span style={{ fontStyle: 'normal', fontWeight: 600, color: '#444', marginLeft: '4px' }}>— Reuters</span>
+                </div>
+                {/* Price estimate box */}
+                <div style={{ background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: '4px', padding: '6px 9px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#f87171' }}>AI estimate at time of news: -3 to -5%</div>
+                  <div style={{ fontSize: '8px', color: '#333', marginTop: '2px' }}>Verify current price before acting · Not financial advice</div>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '10px', color: '#374151', textAlign: 'center', fontStyle: 'italic', opacity: 0.5 }}>
+                Sample alert — Pro members only
+              </div>
             </div>
 
             {/* Copy */}
