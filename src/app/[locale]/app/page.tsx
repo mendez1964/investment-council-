@@ -81,7 +81,10 @@ Use the LIVE SECTOR SCORECARD data provided. One table: Sector | ETF | Price | C
 **3. MOVERS & WHAT THEY SIGNAL**
 Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. One sentence per bullet: what does this name signal about market conditions today? If movers data is missing, skip this section entirely.
 
-**4. KEY LEVELS & GAME PLAN**
+**4. BREAKING NEWS & CATALYSTS**
+Use the BREAKING MARKET NEWS data provided. List the top 3-5 high/medium impact stories. Format each as: [TICKER] — [one sentence: what happened and what it means for price]. If no news data is provided, skip this section entirely — do not invent news.
+
+**5. KEY LEVELS & GAME PLAN**
 - 4-5 key price levels to watch today, one line each
 - Bias: Bullish / Neutral / Cautious / Bearish + one sentence of factual reasoning (data-based, not opinion)
 - First 30 minutes: one thing to confirm before committing capital` },
@@ -102,7 +105,10 @@ Use the LIVE SECTOR SCORECARD data provided. One table: Sector | ETF | Change % 
 **3. WHAT TODAY'S MOVERS TELL US**
 Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and micro-caps. One sentence per bullet: what does each name signal about what the market was focused on today? If movers data is missing, skip entirely.
 
-**4. WHAT CHANGED & SETUP FOR TOMORROW**
+**4. KEY NEWS & CATALYSTS TODAY**
+Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved the market today. Format each as: [TICKER] — [what happened and what it meant for price]. If no news data is provided, skip this section entirely.
+
+**5. WHAT CHANGED & SETUP FOR TOMORROW**
 - 3-5 things that actually shifted today — levels broken, narratives confirmed, risks rising/falling
 - Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish + one factual sentence (data-based)
 - One specific thing that could turn it bullish tomorrow, one that could turn it bearish` },

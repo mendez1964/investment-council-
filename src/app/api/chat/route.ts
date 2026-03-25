@@ -144,6 +144,33 @@ export async function POST(request: Request) {
       console.error('[live-data] failed:', (err as Error).message)
     }
 
+    // Inject market news context for briefings and market-related queries
+    const isBriefing = /briefing|pre.?market|end.?of.?day|eod|recap|what.*happen|news|catalyst|mover/i.test(latestUserMessage)
+    if (isBriefing) {
+      try {
+        const { createServerSupabaseClient: getDB } = await import('@/lib/supabase')
+        const db = getDB()
+        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { data: newsItems } = await db
+          .from('market_news')
+          .select('headline, summary, impact_level, impact_direction, affected_tickers, source, price_impact_est')
+          .gte('created_at', cutoff)
+          .eq('is_price_moving', true)
+          .in('impact_level', ['high', 'medium'])
+          .order('created_at', { ascending: false })
+          .limit(12)
+        if (newsItems && newsItems.length > 0) {
+          const newsBlock = newsItems.map(n =>
+            `[${n.impact_level?.toUpperCase()} / ${n.impact_direction}] ${n.affected_tickers?.join(', ') ?? ''}: ${n.headline} — ${n.summary}${n.price_impact_est ? ` (est. ${n.price_impact_est})` : ''}`
+          ).join('\n')
+          liveData += `\n\n## BREAKING MARKET NEWS (last 24h — high/medium impact only)\n${newsBlock}`
+          console.log(`[news-context] injected ${newsItems.length} items`)
+        }
+      } catch (err) {
+        console.error('[news-context] failed:', (err as Error).message)
+      }
+    }
+
     if (needsLiveData && !liveData.trim()) {
       return streamText(
         `**Report blocked — no live market data available**\n\nThe live market data feed returned nothing for this query. To avoid running a report on stale data, this request was not sent to the AI.\n\n**What to try:**\n- Wait a moment and try again\n- Check that the market data feed is connected\n- Try a different ticker or rephrase the query`
