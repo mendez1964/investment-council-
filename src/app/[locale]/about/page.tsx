@@ -221,12 +221,52 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Founder */}
+      <section style={{ background: '#fff', padding: '80px 32px' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px' }}>
+            <div style={{ width: '4px', height: '28px', background: GOLD, borderRadius: '2px' }} />
+            <h2 style={{ fontSize: '28px', fontWeight: 800, color: NAVY, margin: 0 }}>Built by a Trader, Not a Tech Company</h2>
+          </div>
+          <div style={{ background: GREY_BG, borderRadius: '16px', padding: '40px 40px 36px', borderLeft: `5px solid ${GOLD}` }}>
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.85, marginBottom: '20px' }}>
+              I'm Dagoberto Mendez — entrepreneur, auctioneer, real estate investor, and trader. I've been building businesses for over 30 years and trading the markets for 15.
+            </p>
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.85, marginBottom: '20px' }}>
+              I didn't build Investment Council to get rich off a SaaS product. I built it because I needed it.
+            </p>
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.85, marginBottom: '20px' }}>
+              After a decade and a half of trading with average results, I got tired of platforms that gave me signals without explanations, picks without reasoning, and tools built for Wall Street professionals that left retail traders guessing. I wanted something that treated me like an intelligent adult — something that showed me the <em>why</em> behind every analysis, not just the what.
+            </p>
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.85, marginBottom: '20px' }}>
+              When I discovered what AI could actually do, something clicked. For the first time, I could take everything I'd learned across 30 years of business — reading people, reading markets, understanding risk, surviving setbacks — and put it into a product that could help other traders the way I wished something had helped me.
+            </p>
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.85, marginBottom: '20px' }}>
+              I'm 62 years old. I've been in the paging industry, the auction business, real estate, and a dozen things in between. I'm not a Silicon Valley founder. I'm not backed by venture capital. I still work for a living — just on my own terms now, which is the only kind of success that ever mattered to me.
+            </p>
+            <p style={{ fontSize: '17px', fontWeight: 700, color: NAVY, lineHeight: 1.75, marginBottom: '28px', borderTop: `1px solid #e5e7eb`, paddingTop: '24px' }}>
+              The lesson that took me 30 years to learn is simple: the only way the world doesn't control you is if you learn to fend for yourself. That means building real skills — not just following someone else's signals.
+            </p>
+            <p style={{ fontSize: '16px', color: '#374151', lineHeight: 1.85, marginBottom: '28px' }}>
+              That's what Investment Council is built to do — help you build the knowledge to move forward on your own terms.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '16px', color: GOLD, flexShrink: 0 }}>DM</div>
+              <div>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: NAVY }}>Dagoberto Mendez</div>
+                <div style={{ fontSize: '13px', color: '#9ca3af' }}>Founder, Investment Council</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section style={{ background: NAVY, padding: '72px 32px', textAlign: 'center' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#fff', marginBottom: '16px' }}>Ready to learn how the market really works?</h2>
           <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.65)', marginBottom: '32px', lineHeight: 1.7 }}>
-            Join thousands of traders building real knowledge — not just chasing signals.
+            Join a growing community of traders building real knowledge — not just chasing signals.
           </p>
           <button
             onClick={() => router.push('/login')}
