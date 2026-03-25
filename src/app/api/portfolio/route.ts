@@ -1,6 +1,8 @@
 // GET  — fetch all holdings enriched with live prices + portfolio summary
 // POST — add a new holding
 
+export const dynamic = 'force-dynamic'
+
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 

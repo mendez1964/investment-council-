@@ -133,9 +133,9 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
   const loadData = useCallback(async () => {
     try {
       const [stocksRes, catsRes, alertsRes] = await Promise.all([
-        fetch('/api/watchlist'),
-        fetch('/api/watchlist/categories').catch(() => null),
-        fetch('/api/alerts?limit=30'),
+        fetch('/api/watchlist', { cache: 'no-store' }),
+        fetch('/api/watchlist/categories', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/alerts?limit=30', { cache: 'no-store' }),
       ])
       const stocksData = await stocksRes.json()
       const catsData = catsRes ? await catsRes.json() : []
@@ -151,7 +151,7 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
     setLoadingQuotes(true)
     const allTickers = Array.from(new Set([...MARKET_OVERVIEW, ...CRYPTO_OVERVIEW, ...stockList.map(s => s.ticker)]))
     try {
-      const res = await fetch(`/api/watchlist/quotes?tickers=${allTickers.join(',')}`)
+      const res = await fetch(`/api/watchlist/quotes?tickers=${allTickers.join(',')}`, { cache: 'no-store' })
       const data = await res.json()
       setQuotes(data)
     } catch { /* ignore */ }
@@ -164,6 +164,15 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
       .catch(() => {})
       .finally(() => loadData())
     loadQuotes([]) // load market overview + crypto immediately
+
+    // Reload data whenever the user comes back to this browser tab
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') {
+        loadData()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [loadData, loadQuotes])
 
   useEffect(() => {

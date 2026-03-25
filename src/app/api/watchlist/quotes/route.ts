@@ -2,6 +2,8 @@
 // Stocks use Finnhub; crypto uses CoinGecko
 // GET /api/watchlist/quotes?tickers=AAPL,BTC,ETH,MSFT
 
+export const dynamic = 'force-dynamic'
+
 const FINNHUB_KEY = process.env.FINNHUB_API_KEY
 const FINNHUB_BASE = 'https://finnhub.io/api/v1'
 const COINGECKO_BASE = 'https://api.coingecko.com/api/v3'

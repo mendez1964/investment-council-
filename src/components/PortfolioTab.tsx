@@ -168,7 +168,7 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
     if (!quiet) setLoading(true)
     else setRefreshing(true)
     try {
-      const res = await fetch('/api/portfolio')
+      const res = await fetch('/api/portfolio', { cache: 'no-store' })
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setHoldings(Array.isArray(data.holdings) ? data.holdings : [])
@@ -183,11 +183,17 @@ export default function PortfolioTab({ onSendMessage, onSwitchToChat }: Portfoli
 
   useEffect(() => {
     loadPortfolio()
-    // Fetch active Guardian alerts to badge affected holdings
-    fetch('/api/guardian').then(r => r.json()).then(d => {
+    fetch('/api/guardian', { cache: 'no-store' }).then(r => r.json()).then(d => {
       const tickers = new Set<string>((d.alerts ?? []).map((a: any) => a.ticker as string))
       setGuardianTickers(tickers)
     }).catch(() => {})
+
+    // Reload when user comes back to this browser tab
+    function handleVisibility() {
+      if (document.visibilityState === 'visible') loadPortfolio()
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [loadPortfolio])
 
   // Auto-fetch company name, sector, and current price when ticker is typed
