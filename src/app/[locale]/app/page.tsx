@@ -352,11 +352,13 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
   const [sessionTokens, setSessionTokens] = useState({ input: 0, output: 0, cacheRead: 0, cacheWrite: 0 })
   const [totalCost, setTotalCost] = useState(0)
 
-  // Load cumulative cost from localStorage on mount
+  // Load cumulative cost from localStorage — keyed by user ID so each user has their own counter
   useEffect(() => {
-    const stored = localStorage.getItem('ic_total_cost')
+    if (!user?.id) return
+    const key = `ic_total_cost_${user.id}`
+    const stored = localStorage.getItem(key)
     if (stored) setTotalCost(parseFloat(stored) || 0)
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -689,7 +691,7 @@ Be direct and factual. Use numbers.`
                 }
                 setTotalCost(prev => {
                   const next = prev + cost
-                  localStorage.setItem('ic_total_cost', next.toFixed(6))
+                  if (user?.id) localStorage.setItem(`ic_total_cost_${user.id}`, next.toFixed(6))
                   return next
                 })
               } catch {}
@@ -933,7 +935,7 @@ Be direct and factual. Use numbers.`
             title="All-time cumulative cost stored on this device. Click to reset."
             onClick={() => {
               if (confirm('Reset the all-time cost counter to $0.00?')) {
-                localStorage.setItem('ic_total_cost', '0')
+                if (user?.id) localStorage.setItem(`ic_total_cost_${user.id}`, '0')
                 setTotalCost(0)
               }
             }}
