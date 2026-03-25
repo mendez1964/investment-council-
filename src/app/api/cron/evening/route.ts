@@ -9,8 +9,17 @@ function verifyCron(request: Request): boolean {
 const INTERNAL = `http://localhost:${process.env.PORT ?? 3000}`
 
 async function runJobs(secret: string) {
-  console.log('[cron/evening] starting crypto refresh...')
+  console.log('[cron/evening] starting EOD evaluation + crypto refresh...')
 
+  // Step 1: Trigger stock pick evaluation (market is now closed, 9h cutoff will catch today's picks)
+  try {
+    const res = await fetch(`${INTERNAL}/api/ai-picks?type=stocks`, {
+      headers: { 'x-cron-secret': secret },
+    })
+    console.log('[cron/evening] stock_evaluate:', res.status)
+  } catch (e) { console.error('[cron/evening] stock_evaluate error:', e) }
+
+  // Step 2: Refresh + evaluate crypto picks for the new daily candle
   try {
     const res = await fetch(`${INTERNAL}/api/ai-picks?refresh=true&type=crypto`, {
       headers: { 'x-cron-secret': secret },

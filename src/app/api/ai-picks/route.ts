@@ -58,9 +58,18 @@ function extractJSON(text: string): any {
 }
 
 async function evaluatePending(supabase: any) {
-  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // UTC is fine for timestamp comparison
-  const { data: pending } = await supabase
-    .from('ai_picks').select('*').eq('outcome', 'pending').lt('created_at', cutoff)
+  // Stocks: evaluate after 9 hours (picks generated ~7:30 AM ET, market closes ~4:15 PM = 8.75h)
+  // This means the 8 PM evening cron will have EOD results for the same day
+  // Crypto: evaluate after 24 hours (runs 24/7, daily candle comparison)
+  const stockCutoff  = new Date(Date.now() -  9 * 60 * 60 * 1000).toISOString()
+  const cryptoCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: stockPending } = await supabase
+    .from('ai_picks').select('*').eq('outcome', 'pending').eq('type', 'stock').lt('created_at', stockCutoff)
+  const { data: cryptoPending } = await supabase
+    .from('ai_picks').select('*').eq('outcome', 'pending').eq('type', 'crypto').lt('created_at', cryptoCutoff)
+
+  const pending = [...(stockPending ?? []), ...(cryptoPending ?? [])]
   if (!pending?.length) return
 
   await Promise.allSettled(pending.map(async (pick: any) => {
