@@ -482,7 +482,7 @@ export default function LandingPage() {
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🎯', title: 'Options Picks with Entry/Stop/Target', desc: 'Daily options trade ideas with full risk management — entry premium, stop loss %, take profit %, and complete rationale.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
-                { icon: '🛡️', title: 'IC Guardian', desc: 'AI scans all market news daily and alerts you only when something price-moving hits your holdings. In-app, email, and SMS delivery.', tag: 'Trader & Pro', tagBg: '#fef9ee', tagColor: '#92680a' },
+                { icon: '🛡️', title: 'IC Market Guardian', desc: 'AI scans all market news daily and alerts you only when something price-moving hits your holdings. In-app, email, and SMS delivery.', tag: 'Trader & Pro', tagBg: '#fef9ee', tagColor: '#92680a' },
                 { icon: '🔔', title: 'Email & SMS Alerts', desc: 'Morning briefings, EOD recaps, AI picks, options trades, fear & greed extremes, and Guardian news alerts delivered to your inbox or phone.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🌍', title: 'Macro & Sector Intelligence', desc: 'Yield curve analysis, sector rotation signals, market health checks, volatility readings, and macro environment breakdowns.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '📈', title: 'Charts, Screeners & Calendars', desc: 'Interactive charts, candlestick pattern scanner, earnings calendar, IPO calendar, economic events, and market movers.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
@@ -503,7 +503,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── IC GUARDIAN SPOTLIGHT ── */}
+        {/* ── IC MARKET GUARDIAN SPOTLIGHT ── */}
         <section style={{ padding: '80px 32px', background: NAVY, overflow: 'hidden', position: 'relative' }}>
           {/* Background pulse rings */}
           <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none', opacity: 0.04 }}>
@@ -553,7 +553,7 @@ export default function LandingPage() {
                 <line x1="42" y1="58" x2="46" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
                 <line x1="54" y1="58" x2="58" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
               </svg>
-              <div style={{ fontSize: '11px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.2em', textAlign: 'center' }}>IC GUARDIAN</div>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.2em', textAlign: 'center' }}>IC MARKET GUARDIAN</div>
             </div>
 
             {/* Copy */}
@@ -563,7 +563,7 @@ export default function LandingPage() {
                 Watches your portfolio<br />while you live your life.
               </h2>
               <p style={{ fontSize: '16px', color: '#9ca3af', lineHeight: 1.7, margin: '0 0 32px' }}>
-                Every morning, IC Guardian scans thousands of headlines and uses AI to find only the ones that could move <em>your specific holdings</em> — not generic market noise. You get a plain-English impact summary, estimated price move, and severity level. Nothing irrelevant ever reaches you.
+                Every morning, IC Market Guardian scans thousands of headlines and uses AI to find only the ones that could move <em>your specific holdings</em> — not generic market noise. You get a plain-English impact summary, estimated price move, and severity level. Nothing irrelevant ever reaches you.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '36px' }}>
                 {[

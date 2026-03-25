@@ -445,7 +445,7 @@ export default function WatchlistTab({ onSendMessage, onSwitchToChat }: Watchlis
       {/* ── Guardian Badge ── */}
       <div style={{ padding: '6px 16px', background: '#070707', borderBottom: '1px solid #111', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <span style={{ fontSize: '11px' }}>🛡️</span>
-        <span style={{ fontSize: '10px', color: '#2a2a2a', fontWeight: 600, letterSpacing: '0.04em' }}>PROTECTED BY IC GUARDIAN</span>
+        <span style={{ fontSize: '10px', color: '#2a2a2a', fontWeight: 600, letterSpacing: '0.04em' }}>PROTECTED BY IC MARKET GUARDIAN</span>
         <span style={{ fontSize: '10px', color: '#1a1a1a' }}>· AI monitors your holdings 24/7 for price-moving news</span>
       </div>
 

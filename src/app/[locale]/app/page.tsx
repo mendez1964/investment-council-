@@ -940,7 +940,7 @@ Be direct and factual. Use numbers.`
           </button>
         )}
 
-        {/* IC Guardian bell */}
+        {/* IC Market Guardian bell */}
         <div style={{ marginLeft: '4px' }}>
           <GuardianPanel />
         </div>
