@@ -64,7 +64,7 @@ export default function Home() {
       id: 'market',
       title: t('sections.market'),
       items: [
-        { itemId: 'Pre-Market Briefing', label: t('items.preMarket'), prompt: `Give me today's pre-market briefing.
+        { itemId: 'Pre-Market Briefing', label: t('items.preMarket'), tier: 'trader' as const, prompt: `Give me today's pre-market briefing.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
@@ -85,7 +85,7 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
 - 4-5 key price levels to watch today, one line each
 - Bias: Bullish / Neutral / Cautious / Bearish + one sentence of factual reasoning (data-based, not opinion)
 - First 30 minutes: one thing to confirm before committing capital` },
-        { itemId: 'End of Day Summary', label: t('items.eodSummary'), prompt: `Give me today's end-of-day market summary.
+        { itemId: 'End of Day Summary', label: t('items.eodSummary'), tier: 'trader' as const, prompt: `Give me today's end-of-day market summary.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full summary. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have — yields, Bitcoin, movers, etc.]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
@@ -213,8 +213,8 @@ Top gainers, losers, most active — 3-5 bullets maximum. Strip warrants and mic
       id: 'analysis',
       title: t('sections.analysis'),
       items: [
-        { itemId: 'Morning Crypto Briefing', label: t('items.morningCryptoBriefing'), prompt: `Give me this morning's crypto briefing. Cover: overnight BTC and ETH price action and key levels tested, Asian session performance, current funding rates and whether markets are overleveraged, Bitcoin dominance trend, any major news or catalysts overnight, and the top 3 things to watch today. Format as a structured briefing.` },
-        { itemId: 'End of Day Crypto Recap', label: t('items.eodCryptoRecap'), prompt: `Give me today's end-of-day crypto recap. Cover: how BTC and ETH performed today vs the stock market, which sectors of crypto outperformed (DeFi, L2s, meme coins, etc.), funding rate changes during the session, any significant whale activity or exchange flows, key support and resistance levels for overnight trading, and what to watch tomorrow. Format as a structured recap.` },
+        { itemId: 'Morning Crypto Briefing', label: t('items.morningCryptoBriefing'), tier: 'trader' as const, prompt: `Give me this morning's crypto briefing. Cover: overnight BTC and ETH price action and key levels tested, Asian session performance, current funding rates and whether markets are overleveraged, Bitcoin dominance trend, any major news or catalysts overnight, and the top 3 things to watch today. Format as a structured briefing.` },
+        { itemId: 'End of Day Crypto Recap', label: t('items.eodCryptoRecap'), tier: 'trader' as const, prompt: `Give me today's end-of-day crypto recap. Cover: how BTC and ETH performed today vs the stock market, which sectors of crypto outperformed (DeFi, L2s, meme coins, etc.), funding rate changes during the session, any significant whale activity or exchange flows, key support and resistance levels for overnight trading, and what to watch tomorrow. Format as a structured recap.` },
         { itemId: 'Full Crypto Council', label: t('items.fullCryptoCouncil'), prompt: 'Give me the full crypto council view right now. What do Saylor, PlanB, Raoul Pal, Hayes, Vitalik, Cathie Wood, Andreas, and Hoskinson all say about the current crypto market?' },
         { itemId: 'Bitcoin Deep Dive', label: t('items.bitcoinDeepDive'), prompt: 'Give me a full Bitcoin analysis right now using all relevant frameworks — Saylor, PlanB, Andreas, Raoul Pal, and Hayes.' },
         { itemId: 'Ethereum & DeFi', label: t('items.ethereumDefi'), prompt: 'Give me a full Ethereum and DeFi analysis from Vitalik, Raoul Pal, and Cathie Wood perspectives. Include Layer 2 ecosystem health and DeFi TVL context.' },
@@ -724,6 +724,66 @@ Be direct and factual. Use numbers.`
 
   const currentSections = sidebarMode === 'stocks' ? STOCKS_SECTIONS : CRYPTO_SECTIONS
 
+  async function showBriefingTeaser(itemId: string) {
+    setActiveTab('chat')
+    setSidebarMobileOpen(false)
+    setIsLoading(true)
+
+    const isCrypto = itemId === 'Morning Crypto Briefing' || itemId === 'End of Day Crypto Recap'
+    const isEOD = itemId === 'End of Day Summary' || itemId === 'End of Day Crypto Recap'
+
+    let fgValue: number | null = null
+    let fgLabel = ''
+    let guardianCount = 0
+
+    try {
+      const [fgRes, guardianRes] = await Promise.allSettled([
+        fetch('/api/fear-greed'),
+        fetch('/api/guardian'),
+      ])
+      if (fgRes.status === 'fulfilled') {
+        const d = await fgRes.value.json()
+        const fg = Array.isArray(d) ? d[0] : d
+        fgValue = fg?.value != null ? parseInt(fg.value) : null
+        fgLabel = fgValue == null ? '' : fgValue <= 20 ? 'Extreme Fear' : fgValue <= 45 ? 'Fear' : fgValue <= 55 ? 'Neutral' : fgValue <= 75 ? 'Greed' : 'Extreme Greed'
+      }
+      if (guardianRes.status === 'fulfilled') {
+        const d = await guardianRes.value.json()
+        guardianCount = d.unread ?? 0
+      }
+    } catch {}
+
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    const label = isEOD ? (isCrypto ? '📊 End of Day Crypto Recap' : '🌆 End of Day Summary') : (isCrypto ? '🌅 Morning Crypto Briefing' : '🌅 Pre-Market Briefing')
+
+    const teaser = [
+      `## ${label} — ${dateStr}`,
+      '',
+      '**Market Snapshot**',
+      fgValue != null ? `Fear & Greed Index: **${fgValue} — ${fgLabel}**` : 'Fear & Greed: loading...',
+      guardianCount > 0 ? `🛡️ IC Market Guardian: **${guardianCount} alert${guardianCount > 1 ? 's' : ''} on your holdings** today` : '🛡️ IC Market Guardian: No alerts on your holdings today',
+      '',
+      '---',
+      '',
+      '🔒 **Full briefing is a Trader feature**',
+      '',
+      `The complete ${isEOD ? 'recap' : 'briefing'} includes:`,
+      isEOD
+        ? '- Full market close snapshot with performance breakdown\n- Sector scorecard — best and worst performers\n- What today\'s action means for tomorrow\n- Key levels overnight traders are watching'
+        : '- Full market snapshot — futures, yields, Bitcoin, VIX\n- Sector scorecard with live prices\n- Top movers and what they signal\n- Key levels and game plan for the session',
+      '',
+      'Upgrade to Trader ($29.99/mo) to unlock the full briefing every morning and evening — plus AI daily picks, all 18 investment frameworks, and more.',
+    ].join('\n')
+
+    setMessages(prev => [
+      ...prev,
+      { role: 'user', content: label },
+      { role: 'assistant', content: teaser },
+    ])
+    setIsLoading(false)
+    setShowUpgradeModal(true)
+  }
+
   function handleSidebarItemClick(item: SidebarItemType) {
     if ((item as any).isWar) {
       router.push('/war')
@@ -733,6 +793,12 @@ Be direct and factual. Use numbers.`
     if ((item as any).isBattle) {
       router.push('/battle')
       setSidebarMobileOpen(false)
+      return
+    }
+    // Free tier sees a teaser for briefing/recap items
+    const briefingItems = ['Pre-Market Briefing', 'End of Day Summary', 'Morning Crypto Briefing', 'End of Day Crypto Recap']
+    if (userTier === 'free' && item.itemId && briefingItems.includes(item.itemId)) {
+      showBriefingTeaser(item.itemId)
       return
     }
     handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts)

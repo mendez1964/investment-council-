@@ -469,7 +469,7 @@ export default function LandingPage() {
             <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
               {[
                 { icon: '⚡', title: 'On-Demand AI Council Chat', desc: '18 investment frameworks ready to analyze any stock, crypto, or market condition. Ask anything — get structured, unbiased analysis in seconds.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
-                { icon: '🌅', title: 'Pre-Market Briefing & EOD Summary', desc: 'Start every trading day with a full market snapshot — futures, key levels, macro risks, and what to watch. End the day with a full recap.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
+                { icon: '🌅', title: 'Pre-Market Briefing & EOD Summary', desc: 'Start every trading day with a full market snapshot — futures, key levels, macro risks, and what to watch. End the day with a full recap. Free tier gets a limited snapshot preview.', tag: 'Full on Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🎯', title: 'Options Picks with Entry/Stop/Target', desc: 'Daily options trade ideas with full risk management — entry premium, stop loss %, take profit %, and complete rationale.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
@@ -626,7 +626,7 @@ export default function LandingPage() {
                 <button onClick={() => router.push('/login')} style={{ width: '100%', background: 'transparent', border: `1px solid ${BORDER}`, borderRadius: '8px', padding: '10px', color: NAVY, fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Get Started Free
                 </button>
-                {['5 council queries per day', 'Pre-Market Briefing', 'End of Day Summary', 'Portfolio tracker', 'Watchlist'].map(f => (
+                {['5 council queries per day', 'Pre-Market snapshot (limited preview)', 'EOD snapshot (limited preview)', 'Portfolio tracker', 'Watchlist'].map(f => (
                   <div key={f} style={{ display: 'flex', gap: '8px', fontSize: '14px', color: TEXT, marginBottom: '10px' }}>
                     <span style={{ color: '#16a34a', fontWeight: 700, flexShrink: 0 }}>✓</span>{f}
                   </div>
@@ -646,7 +646,7 @@ export default function LandingPage() {
                 <button onClick={() => router.push('/login')} style={{ width: '100%', background: NAVY, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Start Free Trial
                 </button>
-                {['Unlimited council queries', 'All 18 investment frameworks', 'Full stocks & crypto analysis', 'AI daily picks — stocks & crypto', 'Sector rotation, macro, volatility', 'Charts, calendars & screeners', 'Email alerts — 7 types', 'Portfolio & watchlist', 'PDF export & print'].map(f => (
+                {['Unlimited council queries', 'All 18 investment frameworks', 'Full stocks & crypto analysis', 'Full pre-market briefing daily', 'Full end-of-day recap daily', 'AI daily picks — stocks & crypto', 'Sector rotation, macro, volatility', 'Charts, calendars & screeners', 'Email alerts — 7 types', 'Portfolio & watchlist', 'PDF export & print'].map(f => (
                   <div key={f} style={{ display: 'flex', gap: '8px', fontSize: '14px', color: TEXT, marginBottom: '10px' }}>
                     <span style={{ color: '#16a34a', fontWeight: 700, flexShrink: 0 }}>✓</span>{f}
                   </div>
