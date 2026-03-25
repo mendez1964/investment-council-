@@ -59,23 +59,33 @@ function formatNewsTime(iso: string | null, fallback: string) {
 }
 
 function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: string) => void }) {
+  const [hovered, setHovered] = useState(false)
   const c = IMPACT_COLOR[alert.impact_level]
   const dirColor = DIRECTION_COLOR[alert.impact_direction]
   const dirIcon = DIRECTION_ICON[alert.impact_direction]
   const newsTime = formatNewsTime(alert.published_at, alert.created_at)
 
   return (
-    <div style={{
-      background: c.bg, border: `1px solid ${c.border}`,
-      borderLeft: `3px solid ${c.badge}`,
-      borderRadius: '8px', padding: '12px 14px',
-      marginBottom: '8px',
-      opacity: newsTime.stale ? 0.7 : 1,
-    }}>
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? (c.bg === '#0a0a0a' ? '#111' : c.bg) : c.bg,
+        border: `1px solid ${hovered ? c.badge : c.border}`,
+        borderLeft: `3px solid ${c.badge}`,
+        borderRadius: '8px', padding: hovered ? '14px 16px' : '12px 14px',
+        marginBottom: '8px',
+        opacity: newsTime.stale && !hovered ? 0.65 : 1,
+        transition: 'all 0.2s ease',
+        transform: hovered ? 'scale(1.015)' : 'scale(1)',
+        boxShadow: hovered ? `0 4px 20px ${c.badge}30` : 'none',
+        cursor: 'default',
+      }}
+    >
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 800, color: '#e5e5e5', letterSpacing: '0.05em' }}>{alert.ticker}</span>
+          <span style={{ fontSize: hovered ? '14px' : '12px', fontWeight: 800, color: '#e5e5e5', letterSpacing: '0.05em', transition: 'font-size 0.2s' }}>{alert.ticker}</span>
           <span style={{
             fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
             color: c.badge, background: `${c.badge}20`,
@@ -86,38 +96,37 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* News timestamp — most important context */}
           <span style={{
-            fontSize: '9px', color: newsTime.stale ? '#ef4444' : '#555',
+            fontSize: '9px', color: newsTime.stale ? '#ef4444' : '#666',
             fontWeight: newsTime.stale ? 700 : 400,
           }}>
             {newsTime.stale ? '⚠ ' : ''}News: {newsTime.label}
           </span>
           <button
             onClick={() => onClear(alert.id)}
-            style={{ background: 'none', border: 'none', color: '#333', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
+            style={{ background: 'none', border: 'none', color: '#444', fontSize: '14px', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
           >✕</button>
         </div>
       </div>
 
       {/* AI Summary */}
-      <div style={{ fontSize: '12px', color: '#e5e5e5', fontWeight: 600, marginBottom: '4px', lineHeight: 1.4 }}>
+      <div style={{ fontSize: hovered ? '13px' : '12px', color: '#e5e5e5', fontWeight: 600, marginBottom: '6px', lineHeight: 1.5, transition: 'font-size 0.2s' }}>
         {alert.summary}
       </div>
 
-      {/* Headline */}
-      <div style={{ fontSize: '10px', color: '#555', lineHeight: 1.4, fontStyle: 'italic', marginBottom: '6px' }}>
+      {/* Headline — always readable, bigger on hover */}
+      <div style={{ fontSize: hovered ? '11px' : '10px', color: hovered ? '#777' : '#555', lineHeight: 1.5, fontStyle: 'italic', marginBottom: '6px', transition: 'all 0.2s' }}>
         "{alert.headline}"
-        {alert.source && <span style={{ color: '#2a2a2a', marginLeft: '4px' }}>— {alert.source}</span>}
+        {alert.source && <span style={{ color: hovered ? '#555' : '#333', marginLeft: '4px', fontStyle: 'normal', fontWeight: 600 }}>— {alert.source}</span>}
       </div>
 
       {/* Price impact estimate — with strong disclaimer */}
       {alert.price_impact_est && (
-        <div style={{ background: '#0a0a0a', border: '1px solid #1a1a1a', borderRadius: '4px', padding: '5px 8px' }}>
-          <div style={{ fontSize: '10px', color: dirColor, fontWeight: 700 }}>
+        <div style={{ background: '#0a0a0a', border: '1px solid #1f1f1f', borderRadius: '4px', padding: hovered ? '7px 10px' : '5px 8px', transition: 'padding 0.2s' }}>
+          <div style={{ fontSize: hovered ? '11px' : '10px', color: dirColor, fontWeight: 700, transition: 'font-size 0.2s' }}>
             AI estimate at time of news: {alert.price_impact_est}
           </div>
-          <div style={{ fontSize: '9px', color: '#2a2a2a', marginTop: '2px' }}>
+          <div style={{ fontSize: hovered ? '10px' : '9px', color: hovered ? '#444' : '#333', marginTop: '2px', transition: 'all 0.2s' }}>
             Verify current price before acting · Not financial advice
           </div>
         </div>
