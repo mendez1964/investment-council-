@@ -250,21 +250,23 @@ function AlertCard({ alert, onClear }: { alert: GuardianAlert; onClear: (id: str
         {alert.source && <span style={{ color: hovered ? '#555' : '#333', marginLeft: '4px', fontStyle: 'normal', fontWeight: 600 }}>— {alert.source}</span>}
       </div>
 
-      {/* Read article button — opens in-app reader modal */}
-      <div style={{ marginBottom: '6px' }}>
-        <button
-          onClick={e => { e.stopPropagation(); setShowArticle(true) }}
-          style={{
-            background: 'none', border: 'none', padding: 0,
-            fontSize: '10px', fontWeight: 600,
-            color: hovered ? '#C9A34E' : '#555',
-            cursor: 'pointer', fontFamily: 'inherit',
-            transition: 'color 0.2s',
-          }}
-        >
-          📰 Read full article
-        </button>
-      </div>
+      {/* Read article button — only shown when URL is available */}
+      {alert.article_url && (
+        <div style={{ marginBottom: '6px' }}>
+          <button
+            onClick={e => { e.stopPropagation(); setShowArticle(true) }}
+            style={{
+              background: 'none', border: 'none', padding: 0,
+              fontSize: '10px', fontWeight: 600,
+              color: hovered ? '#C9A34E' : '#555',
+              cursor: 'pointer', fontFamily: 'inherit',
+              transition: 'color 0.2s',
+            }}
+          >
+            📰 Read full article
+          </button>
+        </div>
+      )}
 
       {showArticle && <ArticleModal alert={alert} onClose={() => setShowArticle(false)} />}
 
