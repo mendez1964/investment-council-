@@ -38,12 +38,22 @@ interface Stats {
   recent: Array<{ outcome: string; return_pct: number | null }>
 }
 
+interface HistoryDay {
+  date: string
+  picks: Pick[]
+  wins: number
+  losses: number
+  total: number
+  win_rate: number | null
+}
+
 interface APIResponse {
   picks: Pick[]
   stats: Stats
   market_context: string
   generated_at: string
   is_cached: boolean
+  history: HistoryDay[]
 }
 
 function ConfidenceDots({ value, color }: { value: number; color: string }) {
@@ -444,6 +454,54 @@ export default function AIPicks({ onClose }: { onClose: () => void }) {
             </div>
           )}
         </div>
+
+        {/* Past picks history */}
+        {(data?.history ?? []).length > 0 && (
+          <div style={{ flexShrink: 0, marginTop: '20px', borderTop: '1px solid #111', paddingTop: '16px' }}>
+            <div style={{ fontSize: '9px', color: '#2a2a2a', letterSpacing: '0.08em', fontWeight: 700, marginBottom: '10px' }}>PAST PICKS</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {(data?.history ?? []).map(day => {
+                const dayStocks = day.picks.filter(p => p.type === 'stock')
+                const dayCrypto = day.picks.filter(p => p.type === 'crypto')
+                const dayPicks = tab === 'stocks' ? dayStocks : dayCrypto
+                const dateLabel = new Date(day.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                return (
+                  <div key={day.date}>
+                    {/* Day header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: 700, color: '#555' }}>{dateLabel}</div>
+                      {day.total > 0 && (
+                        <>
+                          <div style={{ fontSize: '10px', color: '#2a2a2a' }}>·</div>
+                          <div style={{ fontSize: '10px', color: '#444' }}>
+                            <span style={{ color: '#4ade80' }}>{day.wins}W</span>
+                            <span style={{ color: '#333', margin: '0 3px' }}>–</span>
+                            <span style={{ color: '#f87171' }}>{day.losses}L</span>
+                            {day.win_rate !== null && (
+                              <span style={{ color: day.win_rate >= 55 ? '#4ade80' : day.win_rate >= 45 ? '#fbbf24' : '#f87171', marginLeft: '6px', fontWeight: 700 }}>
+                                {day.win_rate}%
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      )}
+                      {day.total === 0 && (
+                        <div style={{ fontSize: '10px', color: '#2a2a2a' }}>evaluating in 24h</div>
+                      )}
+                    </div>
+                    {dayPicks.length > 0 ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: '6px' }}>
+                        {dayPicks.map(pick => <PickCard key={pick.id} pick={pick} />)}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '10px', color: '#2a2a2a', fontStyle: 'italic' }}>No {tab} picks for this day</div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'center', marginTop: '12px', flexShrink: 0, flexWrap: 'wrap' }}>
           <div style={{ fontSize: '9px', color: '#222', letterSpacing: '0.03em' }}>

@@ -486,15 +486,19 @@ export default function WarPage() {
             </span>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            {isAdmin && !hasPicks && !loading && (
-              <button onClick={() => handleGenerate(false)} disabled={generating} style={{ fontSize: 12, fontWeight: 700, background: DARK_BG, color: GOLD, border: `1px solid ${GOLD}50`, borderRadius: 6, padding: '7px 16px', cursor: 'pointer', opacity: generating ? 0.6 : 1 }}>
-                {generating ? 'Generating…' : '⚔️ Generate Today\'s Picks'}
-              </button>
-            )}
-            {isAdmin && hasPicks && (
-              <button onClick={() => handleGenerate(true)} disabled={generating} style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', opacity: generating ? 0.6 : 1 }}>
-                {generating ? 'Refreshing…' : '↻ Refresh Picks'}
-              </button>
+            {isAdmin && !loading && (
+              <>
+                {!hasPicks && (
+                  <button onClick={() => handleGenerate(false)} disabled={generating} style={{ fontSize: 12, fontWeight: 700, background: DARK_BG, color: GOLD, border: `1px solid ${GOLD}50`, borderRadius: 6, padding: '7px 16px', cursor: 'pointer', opacity: generating ? 0.6 : 1 }}>
+                    {generating ? 'Generating…' : '⚔️ Generate Today\'s Picks'}
+                  </button>
+                )}
+                {hasPicks && (
+                  <button onClick={() => handleGenerate(true)} disabled={generating} style={{ fontSize: 11, fontWeight: 600, color: '#6b7280', background: 'transparent', border: '1px solid #e5e7eb', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', opacity: generating ? 0.6 : 1 }}>
+                    {generating ? 'Refreshing…' : '↻ Refresh Picks'}
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -124,9 +124,9 @@ STOCK SCORING → OUTPUT RULES:
 <70 pts    → SKIP — do not include this stock, find a better one
 
 STOCK HARD RULES:
-- Quality over quantity: return 5-8 picks max, only those scoring 70+
+- Target exactly 10 stock picks — this is the goal every day. Only drop below 10 if the market genuinely cannot produce 10 picks scoring 70+, in which case return as many as qualify (minimum 7).
 - Every rationale must mention the 2 strongest factors (e.g. "Above all MAs, RSI 58, tech sector leading")
-- Mix: at least 2 bullish AND at least 1 bearish pick (markets always have both)
+- Mix: at least 3 bullish AND at least 2 bearish picks (markets always have both directions)
 - No picks purely on name recognition — AAPL, TSLA, NVDA only if they score 70+
 - Preferred universe: SPY, QQQ, IWM components — liquid, real price action`
 
@@ -175,14 +175,15 @@ CRYPTO SCORING → OUTPUT RULES:
 90-100 pts → confidence 9-10, include
 80-89 pts  → confidence 7-8, include
 70-79 pts  → confidence 5-6, include only if narrative score is ≥15
-<70 pts    → SKIP
+65-69 pts  → confidence 4-5, include only if needed to reach minimum 8 picks
+<65 pts   → SKIP
 
 CRYPTO HARD RULES:
-- Quality over quantity: return 5-8 crypto picks max, only those scoring 70+
+- Target 8 crypto picks every day — you must always find 8 that score 65+. If the market is weak, include bearish picks to reach 8. Do not return fewer than 5.
 - BTC and ETH MUST be evaluated first — they set the regime for all others
 - No meme coins unless they have a genuine active narrative (not just "up today")
 - Every rationale must reference the 2 strongest factors
-- Mix bullish and bearish — if market is overextended, include bearish picks`
+- Mix bullish and bearish — if market is overextended, use bearish picks to fill the slate`
 
   const prompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily picks. Score every candidate rigorously. Reject anything under 70.
 
@@ -340,7 +341,7 @@ export async function GET(request: Request) {
     let isCached = false
     let generatedAt = ''
 
-    const expectedCount = isWeekend(today) ? 5 : 10
+    const expectedCount = isWeekend(today) ? 3 : 5
     if (picks.length >= expectedCount && !refresh) {
       isCached = true
       generatedAt = picks[0]?.created_at ?? ''
@@ -362,7 +363,36 @@ export async function GET(request: Request) {
     const stats = calcStats(allPicks ?? [])
     const marketContext = picks[0]?.market_context ?? ''
 
-    return Response.json({ picks, stats, market_context: marketContext, generated_at: generatedAt, is_cached: isCached })
+    // Build last 7 days history (excluding today)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+    const { data: historyPicks } = await supabase
+      .from('ai_picks').select('*')
+      .gte('pick_date', sevenDaysAgoStr)
+      .lt('pick_date', today)
+      .order('pick_date', { ascending: false })
+      .order('confidence', { ascending: false })
+
+    const historyByDate: Record<string, any[]> = {}
+    for (const p of (historyPicks ?? [])) {
+      if (!historyByDate[p.pick_date]) historyByDate[p.pick_date] = []
+      historyByDate[p.pick_date].push(p)
+    }
+    const history = Object.entries(historyByDate).map(([date, dayPicks]) => {
+      const ev = dayPicks.filter(p => p.outcome === 'win' || p.outcome === 'loss')
+      const wins = ev.filter(p => p.outcome === 'win').length
+      return {
+        date,
+        picks: dayPicks,
+        wins,
+        losses: ev.length - wins,
+        total: ev.length,
+        win_rate: ev.length > 0 ? Math.round((wins / ev.length) * 100) : null,
+      }
+    })
+
+    return Response.json({ picks, stats, market_context: marketContext, generated_at: generatedAt, is_cached: isCached, history })
   } catch (err) {
     console.error('[ai-picks] error:', err)
     return Response.json({ error: String(err) }, { status: 500 })

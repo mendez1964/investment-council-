@@ -137,7 +137,8 @@ export async function POST(request: Request) {
           outcome: 'pending',
         }, { onConflict: 'pick_date,ai_name,category' })
 
-        if (!error) generated++
+        if (error) console.error(`[war/generate] DB upsert error ${ai}/${category}:`, error.message, error.details)
+        else generated++
 
         // Rough token estimate: ~300 input + ~150 output per call
         totalInputTokens += 300
