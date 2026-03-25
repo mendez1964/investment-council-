@@ -13,6 +13,7 @@ interface Prefs {
   options_trades: boolean
   economic_calendar: boolean
   fear_greed_alerts: boolean
+  guardian: boolean
 }
 
 const DEFAULT_PREFS: Prefs = {
@@ -24,6 +25,7 @@ const DEFAULT_PREFS: Prefs = {
   options_trades: false,
   economic_calendar: false,
   fear_greed_alerts: false,
+  guardian: false,
 }
 
 const ALERTS = [
@@ -91,6 +93,14 @@ const ALERTS = [
     emoji: '😱',
     tier: 'free' as const,
   },
+  {
+    key: 'guardian',
+    label: 'Market Guardian Alerts',
+    desc: 'AI monitors your portfolio holdings and emails you price-moving news as it happens',
+    time: 'Triggered · As needed',
+    emoji: '🛡️',
+    tier: 'trader' as const,
+  },
 ]
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -155,6 +165,7 @@ export default function AlertsPage() {
           options_trades: data.options_trades ?? false,
           economic_calendar: data.economic_calendar ?? false,
           fear_greed_alerts: data.fear_greed_alerts ?? false,
+          guardian: data.guardian ?? false,
         })
       }
     } catch {}

@@ -26,6 +26,7 @@ export async function POST(request: Request) {
       options_trades: prefs?.options_trades ?? false,
       economic_calendar: prefs?.economic_calendar ?? false,
       fear_greed_alerts: prefs?.fear_greed_alerts ?? false,
+      guardian: prefs?.guardian ?? false,
     }
 
     if (existing) {
