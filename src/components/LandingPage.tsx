@@ -821,6 +821,12 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+            {/* Trustpilot Review Collector */}
+            <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'center' }}>
+              <div className="trustpilot-widget" data-locale="en-US" data-template-id="56278e9abfbbba0bdcd568bc" data-businessunit-id="69c5b4cb7b137baf756afbd9" data-style-height="52px" data-style-width="100%" data-token="e3f70c30-f798-4ff1-b39c-45432236b50b">
+                <a href="https://www.trustpilot.com/review/investmentcouncil.io" target="_blank" rel="noopener">Trustpilot</a>
+              </div>
+            </div>
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>© 2026 Investment Council</span>
