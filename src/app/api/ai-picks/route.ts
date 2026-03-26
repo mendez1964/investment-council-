@@ -189,7 +189,8 @@ STOCK HARD RULES:
 - Every rationale must mention the 2 strongest factors (e.g. "Above all MAs, RSI 58, tech sector leading")
 - Mix: at least 3 bullish AND at least 2 bearish picks (markets always have both directions)
 - No picks purely on name recognition — AAPL, TSLA, NVDA only if they score 70+
-- Preferred universe: SPY, QQQ, IWM components — liquid, real price action` : ''
+- Preferred universe: SPY, QQQ, IWM components — liquid, real price action
+- EACH SYMBOL CAN ONLY APPEAR ONCE — never include the same ticker twice regardless of bias. Choose a different stock for the bearish slot.` : ''
 
   const cryptoSection = `
 ═══════════════════════════════════════════
@@ -244,7 +245,8 @@ CRYPTO HARD RULES:
 - BTC and ETH MUST be evaluated first — they set the regime for all others
 - No meme coins unless they have a genuine active narrative (not just "up today")
 - Every rationale must reference the 2 strongest factors
-- Mix bullish and bearish — if market is overextended, use bearish picks to fill the slate`
+- Mix bullish and bearish — if market is overextended, use bearish picks to fill the slate
+- EACH SYMBOL CAN ONLY APPEAR ONCE — never include the same ticker twice regardless of bias. If BTC is bullish, pick a different coin for the bearish slot.`
 
   const prompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily picks. Score every candidate rigorously. Reject anything under 70.
 
