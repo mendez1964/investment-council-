@@ -1,13 +1,12 @@
-// Stripe price IDs — test mode
-// Switch to live price IDs when going to production
+// Stripe price IDs — live mode
 
 export const PRICES = {
   trader: {
-    monthly: 'price_1TEC2H9T8H0BrnOpbM9Tj36T',
-    yearly: 'price_1TEC4a9T8H0BrnOpSYpaqoqC',
+    monthly: 'price_1TF2N66f3KoBGu7depcijGMf',
+    yearly: 'price_1TF2QV6f3KoBGu7dxQOUbxO8',
   },
   pro: {
-    monthly: 'price_1TEC7E9T8H0BrnOp6jZIMICO',
-    yearly: 'price_1TEC5e9T8H0BrnOp2fVszkDU',
+    monthly: 'price_1TF2Np6f3KoBGu7dkayHYFd7',
+    yearly: 'price_1TF2Pj6f3KoBGu7dqgUJ1f3y',
   },
 }
