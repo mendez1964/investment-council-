@@ -1,9 +1,102 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote } from '@/lib/finnhub'
+import { getQuote, getPivotLevels } from '@/lib/finnhub'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
 import { getBestContract } from '@/lib/tradier'
+
+// Fixed 0DTE universe — master these 5 tickers for maximum edge
+const ODTE_UNIVERSE = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'SPX'] as const
+
+// SPX uses SPY * ratio for price approximation (Finnhub doesn't reliably quote indexes)
+const SPX_SPY_RATIO = 10.27
+
+async function getUnderlyingPrice(ticker: string): Promise<number | null> {
+  try {
+    if (ticker.toUpperCase() === 'SPX') {
+      const spy = await getQuote('SPY')
+      return spy?.c ? parseFloat((spy.c * SPX_SPY_RATIO).toFixed(2)) : null
+    }
+    const q = await getQuote(ticker)
+    return q?.c ?? null
+  } catch { return null }
+}
+
+async function fetchTechnicalLevels(): Promise<string> {
+  const results = await Promise.allSettled(
+    ['SPY', 'QQQ', 'AAPL', 'NVDA'].map(t => getPivotLevels(t))
+  )
+  const lines: string[] = []
+  results.forEach(r => {
+    if (r.status === 'fulfilled' && r.value) {
+      const p = r.value
+      lines.push(
+        `${p.ticker}: $${p.price} | PrevH:${p.prevHigh} PrevL:${p.prevLow} PrevC:${p.prevClose}` +
+        ` | PP:${p.pp} R1:${p.r1} R2:${p.r2} S1:${p.s1} S2:${p.s2}` +
+        ` | Fib61.8%:${p.fib618} Fib50%:${p.fib500} Fib38.2%:${p.fib382}` +
+        ` | 20dSwing H:${p.swingHigh20} L:${p.swingLow20}`
+      )
+    }
+  })
+  if (!lines.length) return ''
+  // Derive SPX levels from SPY * ratio
+  const spyLine = lines.find(l => l.startsWith('SPY:'))
+  if (spyLine) {
+    const spxApprox = spyLine.replace(/SPY:/g, 'SPX(≈SPY×10.27):').replace(/\$?([\d.]+)/g, (m, n) => {
+      const v = parseFloat(n)
+      return isNaN(v) ? m : `$${(v * SPX_SPY_RATIO).toFixed(0)}`
+    })
+    lines.push(spxApprox)
+  }
+  return `\nTECHNICAL LEVELS — pivot points + Fibonacci (use for Factor 3 scoring):\n${lines.join('\n')}\n`
+}
+
+async function fetchNewsContext(): Promise<string> {
+  try {
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'
+    const res = await fetch(`${base}/api/news/context?hours=24&limit=10&min_level=medium`)
+    if (!res.ok) return ''
+    const data = await res.json()
+    const items: any[] = data.news ?? []
+    if (!items.length) return ''
+    const lines = items.map((n: any) => {
+      const dir = n.impact_direction === 'positive' ? '▲' : n.impact_direction === 'negative' ? '▼' : '●'
+      const tickers = (n.affected_tickers ?? []).join(', ')
+      const est = n.price_impact_est ? ` · Est: ${n.price_impact_est}` : ''
+      return `• [${n.impact_level?.toUpperCase()}] ${dir} ${tickers || 'MARKET'}: ${n.summary}${est}`
+    })
+    return `\nBREAKING NEWS — last 24h (use for Factor 2 catalyst scoring):\n${lines.join('\n')}\n`
+  } catch { return '' }
+}
+
+async function fetchOptionsHistory(supabase: any): Promise<string> {
+  try {
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const { data } = await supabase
+      .from('ai_options_picks')
+      .select('underlying, option_type, outcome')
+      .neq('outcome', 'pending')
+      .gte('pick_date', since)
+      .limit(300)
+    if (!data?.length) return ''
+    const stats: Record<string, { w: number; t: number }> = {}
+    for (const p of data) {
+      const k = `${p.underlying}_${p.option_type}`
+      if (!stats[k]) stats[k] = { w: 0, t: 0 }
+      stats[k].t++
+      if (p.outcome === 'win') stats[k].w++
+    }
+    const lines = Object.entries(stats)
+      .sort(([, a], [, b]) => b.t - a.t)
+      .map(([k, s]) => {
+        const [ticker, dir] = k.split('_')
+        const wr = ((s.w / s.t) * 100).toFixed(0)
+        const trend = s.w / s.t >= 0.6 ? '✓ strong' : s.w / s.t <= 0.4 ? '✗ weak — raise bar' : '→ neutral'
+        return `  ${ticker} ${dir.toUpperCase()}S: ${s.w}W/${s.t - s.w}L (${wr}%) ${trend}`
+      })
+    return `\nIC TRACK RECORD — Last 30 days (calibrate confidence from this):\n${lines.join('\n')}\n`
+  } catch { return '' }
+}
 
 const TRADIER_ENABLED = !!process.env.TRADIER_API_KEY
 
@@ -67,13 +160,19 @@ function computeStrike(
   price: number,
   confidence: number,
   optionType: 'call' | 'put',
-  duration: 'daily' | 'weekly'
+  duration: 'daily' | 'weekly',
+  ticker?: string
 ): number {
+  // SPX uses 5-point increments
+  if (ticker?.toUpperCase() === 'SPX') {
+    const atm = Math.round(price / 5) * 5
+    let strikesOTM = confidence >= 9 ? 0 : confidence >= 7 ? 1 : confidence >= 5 ? 2 : 3
+    if (duration === 'weekly') strikesOTM = Math.max(0, strikesOTM - 1)
+    return optionType === 'call' ? atm + 5 * strikesOTM : atm - 5 * strikesOTM
+  }
   const inc = getStrikeIncrement(price)
   const atm = Math.round(price / inc) * inc
-  // strikesOTM: 0=ATM, 1=one increment OTM, etc.
   let strikesOTM = confidence >= 9 ? 0 : confidence >= 7 ? 1 : confidence >= 5 ? 2 : 3
-  // Weekly options: prefer closer to ATM for better fill + value
   if (duration === 'weekly') strikesOTM = Math.max(0, strikesOTM - 1)
   const move = inc * strikesOTM
   return optionType === 'call' ? atm + move : atm - move
@@ -124,74 +223,89 @@ async function evaluatePending(supabase: any) {
   }))
 }
 
-function buildDailyPrompt(count: number, expiryStr: string): string {
-  return `You are an expert options trader using the IC Daily Formula — designed for 0DTE (same-day expiry) options. These trades open at market open and must be closed before EOD. Evaluate every candidate ticker against all 5 factors. Only include trades scoring 65+.
+function buildDailyPrompt(count: number, expiryStr: string, technicalLevels: string, newsContext: string, historyContext: string): string {
+  return `You are an expert 0DTE options trader using the IC Daily Formula. You ONLY trade these 5 tickers: SPX, SPY, QQQ, AAPL, NVDA. Score every trade against all 5 factors using the REAL data provided. Reject anything under 65.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
+${newsContext}
+${technicalLevels}
+${historyContext}
 
 ═══════════════════════════════════════════
 IC DAILY OPTIONS FORMULA — 5 FACTORS (0-20 pts each)
-For 0DTE options — intraday edge only
+UNIVERSE: SPX, SPY, QQQ, AAPL, NVDA ONLY
 ═══════════════════════════════════════════
 
 FACTOR 1 — PRE-MARKET MOMENTUM (0-20)
 Score 20: Strong pre-market gap (>0.8%) in direction of trade with volume confirmation
 Score 15: Moderate pre-market move (0.3-0.8%) with follow-through signals
 Score 10: Flat pre-market but clear opening range setup (first 15-min breakout likely)
-Score 5: Weak or opposite pre-market signal — needs intraday confirmation
-Score 0: No pre-market edge, no gap, no momentum — skip, find something with edge
+Score 5: Weak or opposite pre-market signal
+Score 0: No pre-market edge, no gap, no momentum — skip
 
-FACTOR 2 — INTRADAY CATALYST (0-20)
-Score 20: Known same-day binary event: economic data release (CPI, PPI, jobs, Fed minutes), Fed speaker, index rebalance, major earnings AH the night before driving sympathy plays
-Score 18: High-impact morning news: analyst upgrade/downgrade at open, product announcement, geopolitical move affecting sector
-Score 12: Technical level break at open — gap above major resistance, opening above key MA with volume
-Score 6: General market momentum only — sector in play but no specific trigger
-Score 0: No same-day catalyst — 0DTE without a catalyst is pure gambling, skip
+FACTOR 2 — INTRADAY CATALYST + NEWS (0-20)
+Score 20: Known same-day binary event: economic data release (CPI, PPI, jobs, Fed minutes), Fed speaker, index rebalance
+Score 18: High-impact news in the last 24h (from NEWS section above) directly affecting this ticker — analyst upgrade/downgrade, product announcement, earnings reaction
+Score 14: News affecting broader market/sector (from NEWS section) with indirect impact on this ticker
+Score 12: Technical level break at open — gap above major resistance, VWAP reclaim with volume
+Score 6: General market momentum only — no specific trigger
+Score 0: No catalyst AND no relevant news — 0DTE without a catalyst is gambling, skip
 
-FACTOR 3 — OPENING RANGE & TECHNICAL SETUP (0-20)
-Score 20: Price breaking above (call) or below (put) previous day's high/low at open with 2x+ avg volume
-Score 16: Clean technical pattern at key intraday level — VWAP reclaim, gap fill setup, opening drive continuation
-Score 12: Strong daily trend supporting direction (above/below 20-day MA) — trend continuation likely
-Score 8: Mixed signals but strong intraday momentum favors direction
-Score 0: Fighting the trend, choppy open, no clear structure — skip
+FACTOR 3 — TECHNICAL STRUCTURE: S/R + FIBONACCI + PIVOT POINTS (0-20)
+Use the REAL pivot levels and Fibonacci data provided above for each ticker.
+
+Score 20: HIGH-CONFLUENCE ZONE — price at or within 0.3% of BOTH a Pivot level (PP/R1/S1) AND a Fibonacci level (38.2%/50%/61.8%) simultaneously. This is the highest-probability 0DTE entry.
+Score 16: Price breaking above R1 (call) or below S1 (put) with volume — confirmed pivot breakout
+Score 16: Price bouncing off Fib 61.8% retracement (strong support) → call, or rejecting from Fib 61.8% → put
+Score 14: Price at Fib 38.2% or 50% with trend confirmation. Or price breaking above/below prior day's High/Low.
+Score 12: VWAP reclaim (call) or VWAP loss (put) with volume. Or gap fill setup in progress.
+Score 8: General trend continuation — above/below 20-day MA but no specific level confluence
+Score 4: Mixed signals — price mid-range between S/R levels, no technical anchor
+Score 0: Entry against key S/R — buying above R2 or selling below S2 with no momentum — skip
+
+Fibonacci trade setups:
+• Call: price at Fib 61.8% support + holding → target Fib 38.2% or R1 as profit objective
+• Put: price rejecting from Fib 61.8% resistance → target Fib 50% or S1 as profit objective
+• Strike selection: ATM or 1-strike OTM from the Fib/Pivot confluence level
 
 FACTOR 4 — OPTIONS FLOW & GAMMA (0-20)
-Score 20: Unusual options activity pre-market or at open — large call/put sweeps at the ATM strike, high open interest at target strike
-Score 16: Elevated options volume vs average — market makers likely to chase gamma, amplifying move
-Score 12: Standard liquidity, tight bid/ask spread (<$0.10 for sub-$5 premium), sufficient OI for fill
-Score 6: Thin market or wide spread (>$0.15) — slippage risk, hard fills
-Score 0: Illiquid strike, wide spread >$0.25, or no open interest — impossible to trade efficiently
+Score 20: Unusual options activity — large call/put sweeps at ATM strike, high open interest at target strike, elevated gamma
+Score 16: Elevated options volume vs average — market makers chasing gamma will amplify the move
+Score 12: Standard liquidity, tight bid/ask spread (<$0.10 for sub-$5 premium), sufficient OI
+Score 6: Thin market or wide spread (>$0.15) — slippage risk
+Score 0: Illiquid strike, spread >$0.25 — skip
 
-FACTOR 5 — VOLATILITY PROFILE FOR 0DTE (0-20)
-Score 20: VIX 15-22 range (ideal 0DTE environment — enough movement but not chaotic), IV on the specific option is reasonable (not crushing immediately)
-Score 16: VIX 22-28 — elevated vol, 0DTE premium is rich but big moves are possible, manage size
-Score 12: VIX <15 — low vol, 0DTE will decay fast, ONLY take if catalyst is very strong (score 18-20 on Factor 2)
-Score 5: VIX >28 — chaotic, 0DTE spreads are very wide, extreme risk — only take with massive catalyst
-Score 0: VIX spike above 35 or in active crash mode — do NOT trade 0DTE in panic conditions
+FACTOR 5 — VOLATILITY PROFILE (0-20)
+Score 20: VIX 15-22 (ideal 0DTE environment), IV reasonable — not crushing immediately
+Score 16: VIX 22-28 — elevated vol, big moves possible, manage size
+Score 12: VIX <15 — low vol, 0DTE decays fast, ONLY take if Factor 2 scores 18-20
+Score 5: VIX >28 — chaotic, extreme risk — only with massive catalyst
+Score 0: VIX >35 or crash mode — do NOT trade 0DTE
 
-═══════════════════════════════════════
-0DTE SCORING → CONFIDENCE → STRIKE
-═══════════════════════════════════════
-90-100 pts → confidence 9-10 → ATM strike, full size
+═══════════════════════════════════════════
+SCORING → CONFIDENCE → STRIKE
+═══════════════════════════════════════════
+90-100 pts → confidence 9-10 → ATM strike, target next Pivot/Fib level
 80-89 pts  → confidence 7-8  → ATM or 1-strike OTM
 70-79 pts  → confidence 5-6  → 1-2 strikes OTM, half size
 65-69 pts  → confidence 4    → 2 strikes OTM, quarter size
-<65 pts    → SKIP — 0DTE has no margin for error
+<65 pts    → SKIP
 
-0DTE RISK RULES (tighter than weekly):
-Confidence 8-10: stop_loss_pct=40, take_profit_pct=80 (hit target fast, time decay kills you)
+0DTE RISK RULES:
+Confidence 8-10: stop_loss_pct=40, take_profit_pct=80
 Confidence 6-7:  stop_loss_pct=35, take_profit_pct=60
 Confidence 4-5:  stop_loss_pct=30, take_profit_pct=50
-CRITICAL: 0DTE = close position by 3:45 PM ET regardless of outcome. No overnight holds.
+CRITICAL: Close all positions by 3:45 PM ET. No overnight holds.
 
-HARD RULES FOR 0DTE:
-- Must have a Factor 2 score of ≥12 — no catalyst, no 0DTE trade
+HARD RULES:
+- ONLY trade: SPX, SPY, QQQ, AAPL, NVDA — no other tickers ever
+- Must have Factor 2 score ≥12 — no catalyst + no news = no trade
+- Must have Factor 3 score ≥10 — no technical anchor = no trade
 - At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
-- Rationale MUST mention the catalyst and pre-market condition
-- ONLY use tickers that have Mon/Wed/Fri or daily options expirations: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, GOOGL, AMD — do NOT use sector ETFs (XLK, XLE, XLF, XLY, etc.) or IWM for 0DTE as they do not have daily expirations
-- Do NOT specify a strike — the system will compute the correct strike from the live price
+- Rationale MUST mention: (1) the catalyst or news driver, (2) the specific Pivot/Fibonacci level, (3) the measured move target
+- Do NOT specify a strike — the system computes it from live price
 
-Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (today, 0DTE):
+Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr}:
 {
   "trades": [
     {
@@ -204,8 +318,8 @@ Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (today, 
       "take_profit_pct": 80,
       "confidence": 8,
       "ic_score": 83,
-      "rationale": "Strong pre-market gap +0.6%, CPI data release this morning in-line, VWAP breakout setup",
-      "catalyst": "CPI data release + gap continuation play",
+      "rationale": "SPY pre-market +0.7%, price at Pivot Point $568.50 confluent with Fib 38.2% at $568.20 — high-conviction zone. Fed minutes released this morning — dovish tone removing rate hike risk.",
+      "catalyst": "Fed minutes dovish + gap continuation above PP/Fib38.2% confluence",
       "sector": "ETF"
     }
   ]
@@ -303,7 +417,19 @@ Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (~3 week
 }
 
 async function generatePicks(supabase: any, pickDate: string, expiryStr: string, count: number, type: 'daily' | 'weekly', liveData: string) {
-  const prompt = type === 'daily' ? buildDailyPrompt(count, expiryStr) : buildWeeklyPrompt(count, expiryStr)
+  // For daily picks: fetch technical levels, news, and historical performance
+  let technicalLevels = '', newsContext = '', historyContext = ''
+  if (type === 'daily') {
+    const [techRes, newsRes, histRes] = await Promise.allSettled([
+      fetchTechnicalLevels(),
+      fetchNewsContext(),
+      fetchOptionsHistory(supabase),
+    ])
+    if (techRes.status === 'fulfilled') technicalLevels = techRes.value
+    if (newsRes.status === 'fulfilled') newsContext = newsRes.value
+    if (histRes.status === 'fulfilled') historyContext = histRes.value
+  }
+  const prompt = type === 'daily' ? buildDailyPrompt(count, expiryStr, technicalLevels, newsContext, historyContext) : buildWeeklyPrompt(count, expiryStr)
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -326,14 +452,13 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
 
   const parsed = extractJSON(rawText)
   const trades: any[] = (parsed.trades ?? []).slice(0, count)
-  const prices = await Promise.allSettled(trades.map(t => getQuote(t.underlying).catch(() => null)))
+  const prices = await Promise.allSettled(trades.map(t => getUnderlyingPrice(t.underlying).catch(() => null)))
 
   // If Tradier is enabled, fetch real chain data for each trade in parallel
   const chainResults = TRADIER_ENABLED
     ? await Promise.allSettled(
         trades.map((trade, i) => {
-          const q = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
-          const livePrice: number | null = q?.c ?? null
+          const livePrice: number | null = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
           const optType: 'call' | 'put' = trade.option_type === 'put' ? 'put' : 'call'
           const confidence = Math.min(10, Math.max(1, parseInt(trade.confidence) || 5))
           if (!livePrice) return Promise.resolve(null)
@@ -350,10 +475,10 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
     : null
 
   const rows = trades.map((trade, i) => {
-    const q = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
-    const livePrice: number | null = q?.c ?? null
+    const livePrice: number | null = prices[i].status === 'fulfilled' ? (prices[i] as any).value : null
     const optType: 'call' | 'put' = trade.option_type === 'put' ? 'put' : 'call'
     const confidence = Math.min(10, Math.max(1, parseInt(trade.confidence) || 5))
+    const tickerUpper = trade.underlying?.toUpperCase() ?? ''
 
     // Use real chain data if Tradier returned a result
     const chainResult = chainResults?.[i]?.status === 'fulfilled'
@@ -361,7 +486,7 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
       : null
 
     const strike = chainResult?.strike
-      ?? (livePrice != null ? computeStrike(livePrice, confidence, optType, type) : null)
+      ?? (livePrice != null ? computeStrike(livePrice, confidence, optType, type, tickerUpper) : null)
     const expiry = chainResult?.expiry ?? expiryStr
     const entry_premium = chainResult?.mid ?? null
     const iv = chainResult?.iv ?? null

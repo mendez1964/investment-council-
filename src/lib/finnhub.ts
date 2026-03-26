@@ -202,6 +202,81 @@ export interface TechnicalSnapshot {
   trendSignal: string      // plain-english summary for the AI
 }
 
+export interface PivotLevels {
+  ticker: string
+  price: number
+  prevHigh: number
+  prevLow: number
+  prevClose: number
+  pp: number        // Pivot Point = (H+L+C)/3
+  r1: number        // Resistance 1
+  r2: number        // Resistance 2
+  s1: number        // Support 1
+  s2: number        // Support 2
+  swingHigh20: number
+  swingLow20: number
+  fib618: number    // 61.8% retracement from 20-day swing high
+  fib500: number    // 50.0% retracement
+  fib382: number    // 38.2% retracement
+}
+
+export async function getPivotLevels(ticker: string): Promise<PivotLevels | null> {
+  try {
+    const data = await getCandles(ticker, 30)
+    if (data.s !== 'ok' || !data.c?.length || data.c.length < 3) return null
+
+    const closes = data.c
+    const highs = data.h
+    const lows = data.l
+
+    // Second-to-last candle = previous completed day
+    const prevIdx = closes.length - 2
+    const prevHigh = highs[prevIdx]
+    const prevLow = lows[prevIdx]
+    const prevClose = closes[prevIdx]
+    const price = closes[closes.length - 1]
+
+    // Standard floor trader pivot points
+    const pp = (prevHigh + prevLow + prevClose) / 3
+    const r1 = 2 * pp - prevLow
+    const r2 = pp + (prevHigh - prevLow)
+    const s1 = 2 * pp - prevHigh
+    const s2 = pp - (prevHigh - prevLow)
+
+    // 20-day swing high/low for Fibonacci retracements
+    const start = Math.max(0, closes.length - 21)
+    const swingHigh20 = Math.max(...highs.slice(start, -1))
+    const swingLow20 = Math.min(...lows.slice(start, -1))
+    const range = swingHigh20 - swingLow20
+
+    const fib618 = swingHigh20 - range * 0.618
+    const fib500 = swingHigh20 - range * 0.500
+    const fib382 = swingHigh20 - range * 0.382
+
+    const fmt = (n: number) => parseFloat(n.toFixed(2))
+
+    return {
+      ticker: ticker.toUpperCase(),
+      price: fmt(price),
+      prevHigh: fmt(prevHigh),
+      prevLow: fmt(prevLow),
+      prevClose: fmt(prevClose),
+      pp: fmt(pp),
+      r1: fmt(r1),
+      r2: fmt(r2),
+      s1: fmt(s1),
+      s2: fmt(s2),
+      swingHigh20: fmt(swingHigh20),
+      swingLow20: fmt(swingLow20),
+      fib618: fmt(fib618),
+      fib500: fmt(fib500),
+      fib382: fmt(fib382),
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSnapshot | null> {
   try {
     const data = await getCandles(ticker)
