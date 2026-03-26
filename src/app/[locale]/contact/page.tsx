@@ -51,9 +51,10 @@ export default function ContactPage() {
         </div>
 
         {/* Quick links */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
           {[
             { icon: '📧', label: 'Email Us', sub: 'support@investmentcouncil.io', href: 'mailto:support@investmentcouncil.io' },
+            { icon: '📞', label: 'Call Us', sub: '(530) 278-0567', href: 'tel:+15302780567' },
             { icon: '📄', label: 'Terms of Service', sub: 'Usage & billing terms', href: '/terms' },
             { icon: '🔒', label: 'Privacy Policy', sub: 'How we use your data', href: '/privacy' },
           ].map(item => (
