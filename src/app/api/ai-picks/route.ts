@@ -59,11 +59,10 @@ function extractJSON(text: string): any {
 
 async function evaluatePending(supabase: any) {
   // Stocks: evaluate after 9 hours (picks at 7:30 AM ET, market closes 4:15 PM = 8.75h)
-  // Crypto: evaluate after 12 hours — evening cron runs at 8 PM ET (12.5h after 7:30 AM generation)
-  // IMPORTANT: evening cron deletes+regenerates crypto at 8 PM, so evaluation must happen
-  // within the same GET call BEFORE deletion. 12h cutoff ensures morning picks are evaluated first.
+  // Crypto: evaluate after 23 hours — crypto picks generate at 8 PM, stay open all day,
+  // evaluated by the next evening cron at 8 PM (23h later) before new picks are generated.
   const stockCutoff  = new Date(Date.now() -  9 * 60 * 60 * 1000).toISOString()
-  const cryptoCutoff = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
+  const cryptoCutoff = new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
 
   const { data: stockPending } = await supabase
     .from('ai_picks').select('*').eq('outcome', 'pending').eq('type', 'stock').lt('created_at', stockCutoff)
