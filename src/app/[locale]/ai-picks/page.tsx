@@ -470,9 +470,10 @@ function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) 
 
   if (total === 0) {
     return (
-      <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center', letterSpacing: '0.04em' }}>
-          TRACK RECORD BUILDING — picks are evaluated after 24 hours
+      <div style={{ background: '#fff8ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '14px 16px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>Track Record Building</div>
+        <div style={{ fontSize: '11px', color: '#b45309', lineHeight: 1.5 }}>
+          Picks are evaluated at end of day. Check back tomorrow for your first results. Win rate becomes statistically meaningful after 30+ evaluated picks — give it a few weeks before drawing conclusions.
         </div>
       </div>
     )
@@ -504,6 +505,9 @@ function StatBar({ stats, loading }: { stats: Stats | null; loading: boolean }) 
           <div style={{ marginTop: '5px', background: '#f0f0f0', borderRadius: '3px', height: '4px', width: '80px' }}>
             <div style={{ height: '100%', borderRadius: '3px', background: win_rate >= 55 ? '#16a34a' : win_rate >= 45 ? '#fbbf24' : '#dc2626', width: `${Math.min(win_rate, 100)}%`, transition: 'width 0.5s' }} />
           </div>
+          {total < 30 && (
+            <div style={{ fontSize: '9px', color: '#f59e0b', marginTop: '3px' }}>{total}/30 for significance</div>
+          )}
         </div>
         <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
           <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>AVG RETURN</div>
@@ -572,9 +576,10 @@ function OptionsStatBar({ stats, loading }: { stats: OptionsStats | null; loadin
 
   if (total === 0) {
     return (
-      <div style={{ background: '#ffffff', border: '1px solid #e4e4e7', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#9ca3af', textAlign: 'center' }}>
-          OPTIONS TRACK RECORD BUILDING — evaluated at expiry
+      <div style={{ background: '#fff8ed', border: '1px solid #fed7aa', borderRadius: '8px', padding: '14px 16px', marginBottom: '16px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 700, color: '#92400e', marginBottom: '4px' }}>Options Track Record Building</div>
+        <div style={{ fontSize: '11px', color: '#b45309', lineHeight: 1.5 }}>
+          0DTE picks are evaluated at market close each day. Weekly picks are evaluated at expiry. Win rate becomes meaningful after 30+ evaluated trades — typically 4–6 weeks of daily trading.
         </div>
       </div>
     )
@@ -600,6 +605,9 @@ function OptionsStatBar({ stats, loading }: { stats: OptionsStats | null; loadin
           <div style={{ marginTop: '5px', background: '#f0f0f0', borderRadius: '3px', height: '4px', width: '80px' }}>
             <div style={{ height: '100%', borderRadius: '3px', background: win_rate >= 55 ? '#16a34a' : win_rate >= 45 ? '#fbbf24' : '#dc2626', width: `${Math.min(win_rate, 100)}%` }} />
           </div>
+          {total < 30 && (
+            <div style={{ fontSize: '9px', color: '#f59e0b', marginTop: '3px' }}>{total}/30 for significance</div>
+          )}
         </div>
         <div style={{ paddingRight: '16px', borderRight: '1px solid #e4e4e7', marginRight: '16px' }}>
           <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '4px' }}>BY TYPE</div>
@@ -1056,8 +1064,8 @@ export default function AIPicksPage() {
 
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'center', marginTop: '12px', flexShrink: 0, flexWrap: 'wrap' }}>
           {tab === 'options' ? (
-            <div style={{ fontSize: '9px', color: '#9ca3af' }}>
-              ⚡ Options evaluated ITM/OTM at expiry · Entry/Stop/Target based on premium · Not financial advice
+            <div style={{ fontSize: '9px', color: '#9ca3af', textAlign: 'center', lineHeight: 1.6 }}>
+              ⚡ 0DTE options are high-risk intraday trades — size small and always use stop losses · Evaluated at market close · Win rate is meaningful after 30+ trades (4–6 weeks) · Not financial advice
             </div>
           ) : (
             <>
