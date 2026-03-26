@@ -347,12 +347,19 @@ export default function LandingPage() {
 
             <h1 style={{
               fontSize: 'clamp(36px, 5vw, 60px)', fontWeight: 800,
-              color: '#fff', lineHeight: 1.1, marginBottom: '20px',
+              color: '#fff', lineHeight: 1.1, marginBottom: '16px',
               letterSpacing: '-0.02em',
             }}>
               The AI Stock Analysis Tool<br />
               <span style={{ color: GOLD }}>Built for Retail Traders.</span>
             </h1>
+            <p style={{
+              fontSize: '16px', fontWeight: 600, color: GOLD,
+              letterSpacing: '0.04em', marginBottom: '20px',
+              textTransform: 'uppercase',
+            }}>
+              Institutional-grade analysis for everyday investors
+            </p>
 
             <p style={{
               fontSize: '18px', color: 'rgba(255,255,255,0.7)',
