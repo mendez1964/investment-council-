@@ -9,6 +9,7 @@ import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec
 import { runFullCouncilScan, runFrameworkScan, formatScanResults } from '@/lib/scanner'
 import { getOnChainSnapshot, formatOnChainForCouncil } from '@/lib/glassnode'
 import { getCoinMetricsSnapshot, formatCoinMetricsForCouncil } from '@/lib/coinmetrics'
+import { getExpirations, getChain, roundToATM, midPrice } from '@/lib/tradier'
 
 // Words that look like tickers but aren't — skip these
 const NOT_TICKERS = new Set([
@@ -398,6 +399,85 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
             const formatted = formatCoinMetricsForCouncil(coinmetricsSnap)
             if (formatted) sections.push(formatted)
           }
+        }
+      })()
+    )
+  }
+
+  // ── Options chain data (Tradier — real-time) ─────────────────────────────────
+  const wantsOptions = /\boption|call|put|\bstrike\b|expir|0dte|odte|chain|implied.vol|\biv\b|delta|gamma|theta|vega|open.interest|\boi\b/i.test(msg)
+  const optionsTickers = tickers.filter(t => ['SPY','QQQ','AAPL','NVDA','TSLA','MSFT','AMZN','GOOGL','META','SPX','IWM','NFLX','AMD','PLTR'].includes(t))
+
+  if (wantsOptions && optionsTickers.length > 0 && process.env.TRADIER_API_KEY) {
+    tasks.push(
+      (async () => {
+        const today = new Date().toISOString().split('T')[0]
+        const lines: string[] = []
+
+        await Promise.all(
+          optionsTickers.slice(0, 2).map(async ticker => {
+            try {
+              const [quote, expirations] = await Promise.all([
+                getQuote(ticker).catch(() => null),
+                getExpirations(ticker).catch(() => [] as string[]),
+              ])
+
+              if (!expirations.length) return
+              const underlying = quote?.c ?? null
+
+              // Pick nearest expiry (today if 0DTE exists, else next available)
+              const expiry = expirations.includes(today)
+                ? today
+                : (expirations.find(d => d > today) ?? expirations[0])
+
+              const chain = await getChain(ticker, expiry).catch(() => null)
+              if (!chain) return
+
+              const atm = underlying ? roundToATM(underlying) : null
+              lines.push(`\n${ticker} Options — exp ${expiry} | Underlying: $${underlying?.toFixed(2) ?? '—'} | ATM strike: $${atm ?? '—'}`)
+
+              // Show ATM ± 2 strikes for calls and puts
+              const strikesToShow = (contracts: typeof chain.calls) => {
+                if (!atm) return contracts.slice(0, 5)
+                return contracts
+                  .filter(c => Math.abs(c.strike - atm) <= (underlying! * 0.02))
+                  .sort((a, b) => Math.abs(a.strike - atm) - Math.abs(b.strike - atm))
+                  .slice(0, 5)
+              }
+
+              const calls = strikesToShow(chain.calls)
+              const puts = strikesToShow(chain.puts)
+
+              if (calls.length) {
+                lines.push('  CALLS:')
+                calls.forEach(c => {
+                  const mid = midPrice(c)
+                  const iv = c.implied_volatility ? ` IV:${(c.implied_volatility * 100).toFixed(1)}%` : ''
+                  const delta = c.delta != null ? ` Δ${c.delta.toFixed(2)}` : ''
+                  const oi = c.open_interest ? ` OI:${c.open_interest.toLocaleString()}` : ''
+                  lines.push(`    $${c.strike}C  bid:${c.bid} ask:${c.ask} mid:${mid}${iv}${delta}${oi}`)
+                })
+              }
+              if (puts.length) {
+                lines.push('  PUTS:')
+                puts.forEach(c => {
+                  const mid = midPrice(c)
+                  const iv = c.implied_volatility ? ` IV:${(c.implied_volatility * 100).toFixed(1)}%` : ''
+                  const delta = c.delta != null ? ` Δ${c.delta.toFixed(2)}` : ''
+                  const oi = c.open_interest ? ` OI:${c.open_interest.toLocaleString()}` : ''
+                  lines.push(`    $${c.strike}P  bid:${c.bid} ask:${c.ask} mid:${mid}${iv}${delta}${oi}`)
+                })
+              }
+
+              // Also list next 3 available expiry dates
+              const upcoming = expirations.filter(d => d >= today).slice(0, 4)
+              lines.push(`  Available expiries: ${upcoming.join(', ')}`)
+            } catch { /* skip failed tickers */ }
+          })
+        )
+
+        if (lines.length > 0) {
+          sections.push(`LIVE OPTIONS CHAIN DATA (Tradier — real-time):\n${lines.join('\n')}`)
         }
       })()
     )
