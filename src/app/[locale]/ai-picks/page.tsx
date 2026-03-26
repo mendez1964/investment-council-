@@ -408,7 +408,7 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
 
       {/* Trade levels */}
       <div style={{
-        display: 'grid', gridTemplateColumns: pick.entry_premium != null ? '1fr 1fr 1fr' : '1fr 1fr',
+        display: 'grid', gridTemplateColumns: pick.entry_premium != null ? '1fr 1fr 1fr 1fr' : '1fr 1fr 1fr',
         gap: '4px', marginTop: '4px',
         background: '#f9fafb', borderRadius: '6px', padding: '6px 8px',
       }}>
@@ -426,10 +426,15 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>-{pick.stop_loss_pct}%</div>
           <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium</div>
         </div>
+        <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
+          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TP1</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>+{Math.round(pick.take_profit_pct / 2)}%</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af' }}>partial exit</div>
+        </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TAKE PROFIT</div>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>+{pick.take_profit_pct}%</div>
-          <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TP2</div>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#15803d' }}>+{pick.take_profit_pct}%</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af' }}>full exit</div>
         </div>
       </div>
 

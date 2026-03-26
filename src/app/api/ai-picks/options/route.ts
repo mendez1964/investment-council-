@@ -206,15 +206,42 @@ async function evaluatePending(supabase: any) {
 
   if (!pending?.length) return
 
+  // TP1 threshold: 0.25% underlying move ≈ +40% on ATM 0DTE premium (gamma math)
+  // If intraday high (calls) or low (puts) reached TP1, count as WIN — trader would have locked profit
+  const TP1_UNDERLYING_THRESHOLD = 0.0025
+
   await Promise.allSettled(pending.map(async (pick: any) => {
     let exitPrice: number | null = null
+    let dayHigh: number | null = null
+    let dayLow: number | null = null
     try {
       const q = await getQuote(pick.underlying)
-      // After market close: q.c is the closing price — use it for all options evaluation
       exitPrice = q?.c ?? null
+      dayHigh = q?.h ?? null
+      dayLow = q?.l ?? null
     } catch {}
     if (exitPrice == null) return
-    const isWin = pick.option_type === 'call' ? exitPrice > pick.strike : exitPrice < pick.strike
+
+    const isZeroDTE = pick.expiry === pick.pick_date
+    let isWin = false
+
+    if (isZeroDTE && pick.underlying_entry_price) {
+      // 0DTE: check if intraday move hit TP1 threshold during the day
+      const entry = pick.underlying_entry_price
+      if (pick.option_type === 'call') {
+        const tp1Level = entry * (1 + TP1_UNDERLYING_THRESHOLD)
+        const tp1Hit = (dayHigh ?? exitPrice) >= tp1Level
+        isWin = tp1Hit || exitPrice > pick.strike
+      } else {
+        const tp1Level = entry * (1 - TP1_UNDERLYING_THRESHOLD)
+        const tp1Hit = (dayLow ?? exitPrice) <= tp1Level
+        isWin = tp1Hit || exitPrice < pick.strike
+      }
+    } else {
+      // Weekly: standard ITM/OTM at expiry
+      isWin = pick.option_type === 'call' ? exitPrice > pick.strike : exitPrice < pick.strike
+    }
+
     await supabase.from('ai_options_picks').update({
       outcome: isWin ? 'win' : 'loss',
       exit_underlying_price: exitPrice,
@@ -302,7 +329,7 @@ HARD RULES:
 - Must have Factor 2 score ≥12 — no catalyst + no news = no trade
 - Must have Factor 3 score ≥10 — no technical anchor = no trade
 - At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
-- Rationale MUST mention: (1) the catalyst or news driver, (2) the specific Pivot/Fibonacci level, (3) the measured move target
+- Rationale MUST mention: (1) the catalyst or news driver, (2) the specific Pivot/Fibonacci level, (3) the measured move target — TP1 hit at half of take_profit_pct counts as a WIN
 - Do NOT specify a strike — the system computes it from live price
 
 Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr}:
