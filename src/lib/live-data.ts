@@ -31,6 +31,10 @@ const COMPANY_NAMES: Record<string, string> = {
   amazon: 'AMZN', meta: 'META', facebook: 'META', netflix: 'NFLX',
   nvidia: 'NVDA', tesla: 'TSLA', palantir: 'PLTR', salesforce: 'CRM',
   intel: 'INTC', amd: 'AMD', qualcomm: 'QCOM', broadcom: 'AVGO',
+  smci: 'SMCI', 'super micro': 'SMCI', supermicro: 'SMCI',
+  arm: 'ARM', mstr: 'MSTR', microstrategy: 'MSTR', coin: 'COIN', coinbase: 'COIN',
+  pltr: 'PLTR', crwd: 'CRWD', panw: 'PANW', hood: 'HOOD', robinhood: 'HOOD',
+  sofi: 'SOFI', rivian: 'RIVN', rivn: 'RIVN', lucid: 'LCID', lcid: 'LCID',
   disney: 'DIS', walmart: 'WMT', target: 'TGT', costco: 'COST',
   jpmorgan: 'JPM', 'jp morgan': 'JPM', 'bank of america': 'BAC',
   goldman: 'GS', 'goldman sachs': 'GS', morgan: 'MS', 'morgan stanley': 'MS',
@@ -62,8 +66,8 @@ function extractTickers(message: string): string[] {
     found.add(t)
   }
 
-  // 3. Catch lowercase tickers typed after context keywords: "for nvda", "analyze aapl", etc.
-  const contextRe = /(?:for|of|on|analyze|analysis|check|quote|pull|about|get)\s+([a-z]{2,5})\b/gi
+  // 3. Catch lowercase tickers typed after context keywords: "for nvda", "will smci fall", "buy aapl", etc.
+  const contextRe = /(?:for|of|on|analyze|analysis|check|quote|pull|about|get|will|far|should|would|could|buy|sell|short|long|watch|own|hold|trade|play)\s+([a-z]{2,5})\b/gi
   let cm: RegExpExecArray | null
   while ((cm = contextRe.exec(message)) !== null) {
     const t = cm[1].toUpperCase()

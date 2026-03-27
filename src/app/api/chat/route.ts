@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     })
 
     // Fetch live market data
-    const needsLiveData = /\b(quote|price|stock|ticker|etf|crypto|btc|eth|sol|market|briefing|analysis|analyze|fundamentals|earnings|sector|movers|scan|report|watchlist|portfolio|nvda|aapl|tsla|spy|qqq|msft|amzn|googl|meta|nflx|option|call|put|strike|expiry|0dte|chain|delta|gamma|theta|implied)\b/i.test(latestUserMessage)
+    const needsLiveData = /\b(quote|price|stock|ticker|etf|crypto|btc|eth|sol|market|briefing|analysis|analyze|fundamentals|earnings|sector|movers|scan|report|watchlist|portfolio|nvda|aapl|tsla|spy|qqq|msft|amzn|googl|meta|nflx|option|call|put|strike|expiry|0dte|chain|delta|gamma|theta|implied|fall|drop|rise|surge|crash|rally|target|predict|forecast|outlook|direction|trend|support|resistance|level|short|long|bullish|bearish|buy|sell|trade|hold|move|how far|smci|pltr|crwd|coin|mstr|hood|sofi|rivn|arm)\b/i.test(latestUserMessage)
 
     let liveData = ''
     try {
