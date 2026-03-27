@@ -370,12 +370,25 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
         </div>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px', flexWrap: 'wrap' }}>
           {pick.strike != null && (
-            <span style={{ fontSize: '11px', fontWeight: 700, color: accentColor }}>${pick.strike} {isCall ? 'C' : 'P'}</span>
+            <span style={{ fontSize: '11px', fontWeight: 700, color: accentColor }}>Strike ${pick.strike} {isCall ? 'CALL' : 'PUT'}</span>
           )}
           {expiryLabel && (
             <span style={{ fontSize: '10px', color: '#6b7280' }}>exp {expiryLabel}</span>
           )}
         </div>
+        {pick.strike != null && pick.underlying_entry_price != null && (() => {
+          const dist = isCall
+            ? pick.underlying_entry_price - pick.strike
+            : pick.strike - pick.underlying_entry_price
+          const pct = Math.abs(dist / pick.underlying_entry_price * 100)
+          if (dist >= 0) return null // ITM — no warning needed
+          const absDist = Math.abs(dist)
+          return (
+            <div style={{ fontSize: '9px', color: '#92400e', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 4, padding: '2px 6px', marginTop: 4, display: 'inline-block' }}>
+              ${absDist.toFixed(2)} OTM · {pick.underlying} needs to move {pct.toFixed(1)}% to reach strike
+            </div>
+          )
+        })()}
       </div>
 
       {/* Confidence + IC Score */}
@@ -418,38 +431,59 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
       }}>
         {pick.entry_premium != null && (
           <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
-            <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>MID PRICE</div>
+            <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>ENTRY</div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
               ${fmtPremium(pick.entry_premium)}
             </div>
-            <div style={{ fontSize: '8px', color: '#9ca3af' }}>live est.</div>
+            <div style={{ fontSize: '8px', color: '#9ca3af' }}>limit order</div>
           </div>
         )}
         <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
           <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>STOP LOSS</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>-{pick.stop_loss_pct}%</div>
           {pick.entry_premium != null
-            ? <div style={{ fontSize: '8px', color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 - pick.stop_loss_pct / 100))}</div>
-            : <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium</div>
+            ? <div style={{ fontSize: '8px', color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 - pick.stop_loss_pct / 100))} exit</div>
+            : <div style={{ fontSize: '8px', color: '#9ca3af' }}>exit trade here</div>
           }
         </div>
         <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
-          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TP1</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TARGET 1</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>+{Math.round(pick.take_profit_pct / 2)}%</div>
           {pick.entry_premium != null
-            ? <div style={{ fontSize: '8px', color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 + Math.round(pick.take_profit_pct / 2) / 100))}</div>
-            : <div style={{ fontSize: '8px', color: '#9ca3af' }}>partial exit</div>
+            ? <div style={{ fontSize: '8px', color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 + Math.round(pick.take_profit_pct / 2) / 100))} sell half</div>
+            : <div style={{ fontSize: '8px', color: '#9ca3af' }}>sell half here</div>
           }
         </div>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TP2</div>
+          <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TARGET 2</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#15803d' }}>+{pick.take_profit_pct}%</div>
           {pick.entry_premium != null
-            ? <div style={{ fontSize: '8px', color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 + pick.take_profit_pct / 100))}</div>
-            : <div style={{ fontSize: '8px', color: '#9ca3af' }}>full exit</div>
+            ? <div style={{ fontSize: '8px', color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 + pick.take_profit_pct / 100))} sell rest</div>
+            : <div style={{ fontSize: '8px', color: '#9ca3af' }}>sell rest here</div>
           }
         </div>
       </div>
+
+      {/* How to trade this */}
+      {pick.entry_premium != null && pick.strike != null && (
+        <div style={{
+          fontSize: '9px', color: '#374151', lineHeight: 1.6, marginTop: 2,
+          padding: '6px 8px', background: '#f8fafc', borderRadius: 4,
+          border: '1px solid #e2e8f0',
+        }}>
+          <div style={{ fontWeight: 700, color: '#111827', marginBottom: 3, fontSize: '9px', letterSpacing: '0.05em' }}>HOW TO TRADE THIS</div>
+          <div>1. Open {pick.underlying} options in your broker</div>
+          <div>2. Find the <strong>${pick.strike} {isCall ? 'CALL' : 'PUT'}</strong> expiring {expiryLabel}</div>
+          <div>3. Place a <strong>limit buy at ${fmtPremium(pick.entry_premium)}</strong> per contract — never use a market order</div>
+          <div>4. Each contract controls 100 shares — costs <strong>${(pick.entry_premium * 100).toFixed(0)}</strong> per contract</div>
+          <div>5. Exit immediately if premium drops to <strong>${fmtPremium(pick.entry_premium * (1 - pick.stop_loss_pct / 100))}</strong> (stop loss)</div>
+          <div>6. Sell <strong>half</strong> your contracts at <strong>${fmtPremium(pick.entry_premium * (1 + Math.round(pick.take_profit_pct / 2) / 100))}</strong> to lock in profit (Target 1)</div>
+          <div>7. Sell the <strong>rest</strong> at <strong>${fmtPremium(pick.entry_premium * (1 + pick.take_profit_pct / 100))}</strong> for full target (Target 2)</div>
+          {pick.expiry === new Date().toISOString().split('T')[0] && (
+            <div style={{ color: '#dc2626', fontWeight: 700, marginTop: 2 }}>⚠ Close ALL contracts by 3:45 PM ET — 0DTE options expire worthless at market close</div>
+          )}
+        </div>
+      )}
 
       {/* Status note — live data vs verify */}
       {pick.entry_premium != null ? (
