@@ -135,7 +135,7 @@ async function fetchATMGreeks(today: string): Promise<string> {
           : 'n/a'
 
         // Max pain
-        const allStrikes = [...new Set([...chain.calls.map(c => c.strike), ...chain.puts.map(p => p.strike)])].sort((a, b) => a - b)
+        const allStrikes = Array.from(new Set([...chain.calls.map(c => c.strike), ...chain.puts.map(p => p.strike)])).sort((a, b) => a - b)
         let maxPainStrike = atm, minLoss = Infinity
         for (const s of allStrikes) {
           const loss = chain.calls.reduce((sum, c) => sum + (s > c.strike ? (s - c.strike) * c.open_interest : 0), 0)

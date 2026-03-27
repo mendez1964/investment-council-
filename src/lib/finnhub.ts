@@ -451,8 +451,8 @@ export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSna
 
     const macdSignal = macdResult != null
       ? macdResult.histogram > 0
-        ? `MACD bullish (line=${macdResult.macdLine} sig=${macdResult.macdSignal} hist=+${macdResult.histogram})`
-        : `MACD bearish (line=${macdResult.macdLine} sig=${macdResult.macdSignal} hist=${macdResult.histogram})`
+        ? `MACD bullish (line=${macdResult.macdLine} sig=${macdResult.signalLine} hist=+${macdResult.histogram})`
+        : `MACD bearish (line=${macdResult.macdLine} sig=${macdResult.signalLine} hist=${macdResult.histogram})`
       : ''
 
     const bbSignal = bb != null

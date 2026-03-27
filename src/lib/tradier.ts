@@ -252,8 +252,8 @@ export function computeGEX(chain: OptionsChain, spot: number): GEXResult {
     strikeGEX.set(p.strike, (strikeGEX.get(p.strike) ?? 0) + gex)
   }
 
-  const strikes = [...strikeGEX.keys()].sort((a, b) => a - b)
-  const netGEX = [...strikeGEX.values()].reduce((s, v) => s + v, 0)
+  const strikes = Array.from(strikeGEX.keys()).sort((a, b) => a - b)
+  const netGEX = Array.from(strikeGEX.values()).reduce((s, v) => s + v, 0)
 
   // Find GEX flip level (cumulative from lowest strike — where it crosses zero downward)
   let cumulative = 0
