@@ -1,9 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote, getPivotLevels } from '@/lib/finnhub'
+import { getQuote, getPivotLevels, getIntradayCandles, computeVWAP } from '@/lib/finnhub'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
-import { getBestContract, getExpirations, pickDailyExpiry, getChain, roundToATM, nearestStrike } from '@/lib/tradier'
+import { getBestContract, getExpirations, pickDailyExpiry, getChain, roundToATM, nearestStrike, computeGEX, findUnusualFlow } from '@/lib/tradier'
 
 // Fixed 0DTE universe — master these 5 tickers for maximum edge
 const ODTE_UNIVERSE = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'SPX'] as const
@@ -98,25 +98,34 @@ async function fetchOptionsHistory(supabase: any): Promise<string> {
   } catch { return '' }
 }
 
-// Fetch ATM Greeks + max pain + expected move + put/call ratio BEFORE the AI prompt
+// Fetch full options intelligence BEFORE the AI prompt — Greeks, GEX, unusual flow, VWAP, pre-market gap
 async function fetchATMGreeks(today: string): Promise<string> {
   if (!process.env.TRADIER_API_KEY) return ''
   const GREEK_TICKERS = ['SPY', 'QQQ', 'AAPL', 'NVDA']
   try {
     const results = await Promise.allSettled(
       GREEK_TICKERS.map(async (ticker) => {
-        const [expirations, priceResult] = await Promise.all([
+        const [expirations, quoteData, vwapData] = await Promise.all([
           getExpirations(ticker),
-          getQuote(ticker).then(q => q?.c ?? null).catch(() => null),
+          getQuote(ticker).catch(() => null),
+          getIntradayCandles(ticker, 1, 1).then(c => computeVWAP(c)).catch(() => null),
         ])
         const expiry = pickDailyExpiry(expirations, today)
-        if (!expiry || !priceResult) return null
-        const price = priceResult
+        if (!expiry || !quoteData?.c) return null
+        const price = quoteData.c
         const chain = await getChain(ticker, expiry)
         const atm = roundToATM(price)
         const atmCall = nearestStrike(chain.calls, atm)
         const atmPut  = nearestStrike(chain.puts,  atm)
         if (!atmCall || !atmPut) return null
+
+        // Pre-market gap
+        const gap = quoteData.dp != null ? `${quoteData.dp > 0 ? '▲' : '▼'}${quoteData.dp.toFixed(2)}% gap` : ''
+
+        // Yesterday's VWAP
+        const vwapLine = vwapData != null
+          ? `VWAP(yest)=$${vwapData} (${price > vwapData ? 'above — bullish bias' : 'below — bearish bias'})`
+          : ''
 
         // Expected move = (ATM call mid + ATM put mid) × 0.85
         const callMid = atmCall.ask > 0 && atmCall.bid > 0 ? (atmCall.bid + atmCall.ask) / 2 : atmCall.last
@@ -125,48 +134,61 @@ async function fetchATMGreeks(today: string): Promise<string> {
           ? `±$${((callMid + putMid) * 0.85).toFixed(2)} (${(((callMid + putMid) * 0.85 / price) * 100).toFixed(2)}%)`
           : 'n/a'
 
-        // Max pain — strike where total OI loss is minimized (price gravitates here at expiry)
+        // Max pain
         const allStrikes = [...new Set([...chain.calls.map(c => c.strike), ...chain.puts.map(p => p.strike)])].sort((a, b) => a - b)
-        let maxPainStrike = atm
-        let minLoss = Infinity
+        let maxPainStrike = atm, minLoss = Infinity
         for (const s of allStrikes) {
-          const callLoss = chain.calls.reduce((sum, c) => sum + (s > c.strike ? (s - c.strike) * c.open_interest : 0), 0)
-          const putLoss  = chain.puts.reduce((sum,  p) => sum + (s < p.strike  ? (p.strike - s)  * p.open_interest  : 0), 0)
-          const total = callLoss + putLoss
-          if (total < minLoss) { minLoss = total; maxPainStrike = s }
+          const loss = chain.calls.reduce((sum, c) => sum + (s > c.strike ? (s - c.strike) * c.open_interest : 0), 0)
+                     + chain.puts.reduce((sum,  p) => sum + (s < p.strike  ? (p.strike - s)  * p.open_interest  : 0), 0)
+          if (loss < minLoss) { minLoss = loss; maxPainStrike = s }
         }
 
-        // Put/call OI ratio
+        // P/C ratio
         const totalCallOI = chain.calls.reduce((s, c) => s + c.open_interest, 0)
         const totalPutOI  = chain.puts.reduce((s,  p) => s + p.open_interest,  0)
         const pcRatio = totalCallOI > 0 ? (totalPutOI / totalCallOI).toFixed(2) : 'n/a'
-        const pcSentiment = typeof pcRatio === 'string' && pcRatio !== 'n/a'
-          ? parseFloat(pcRatio) > 1.2 ? 'bearish bias' : parseFloat(pcRatio) < 0.7 ? 'bullish bias' : 'neutral'
-          : ''
+        const pcSentiment = pcRatio !== 'n/a' ? (parseFloat(pcRatio) > 1.2 ? 'bearish' : parseFloat(pcRatio) < 0.7 ? 'bullish' : 'neutral') : ''
+
+        // GEX
+        const gex = computeGEX(chain, price)
+        const gexLine = `GEX: ${gex.netGEX > 0 ? '+' : ''}${gex.netGEX}B (${gex.regime === 'positive' ? 'POSITIVE — price stabilizing, low vol' : 'NEGATIVE — moves amplified, high vol'}) | flip=$${gex.flipLevel ?? 'n/a'} | walls: ${gex.topWalls.map(w => `$${w.strike}`).join('/')} | voids: ${gex.topVoids.map(v => `$${v.strike}`).join('/')}`
+
+        // Unusual flow
+        const unusual = findUnusualFlow(chain, price)
+        const unusualLine = unusual.length > 0
+          ? `Unusual flow: ${unusual.slice(0, 4).map(u => `${u.type.toUpperCase()} $${u.strike} vol=${u.volume} OI=${u.openInterest} ratio=${u.volOiRatio}×`).join(' | ')}`
+          : 'No unusual flow detected'
 
         const fmt = (n: number | null) => n != null ? n.toFixed(4) : 'n/a'
         const fmtPct = (n: number | null) => n != null ? `${(n * 100).toFixed(1)}%` : 'n/a'
         const spread = (c: typeof atmCall) => c.ask > 0 && c.bid > 0 ? `$${(c.ask - c.bid).toFixed(2)}` : 'n/a'
 
         return [
-          `${ticker} ($${price}, ATM $${atm}, expiry ${expiry}):`,
-          `  Expected move today: ${expectedMove} | Max pain: $${maxPainStrike} | P/C OI ratio: ${pcRatio} (${pcSentiment})`,
+          `${ticker} ($${price}${gap ? ' ' + gap : ''}, ATM $${atm}, expiry ${expiry}${vwapLine ? ' | ' + vwapLine : ''}):`,
+          `  Expected move: ${expectedMove} | Max pain: $${maxPainStrike} | P/C OI: ${pcRatio} (${pcSentiment})`,
+          `  ${gexLine}`,
+          `  ${unusualLine}`,
           `  CALL ATM: delta=${fmt(atmCall.delta)} gamma=${fmt(atmCall.gamma)} theta=${fmt(atmCall.theta)} IV=${fmtPct(atmCall.implied_volatility)} OI=${atmCall.open_interest.toLocaleString()} vol=${atmCall.volume} spread=${spread(atmCall)}`,
           `  PUT  ATM: delta=${fmt(atmPut.delta)} gamma=${fmt(atmPut.gamma)} theta=${fmt(atmPut.theta)} IV=${fmtPct(atmPut.implied_volatility)} OI=${atmPut.open_interest.toLocaleString()} vol=${atmPut.volume} spread=${spread(atmPut)}`,
         ].join('\n')
       })
     )
-    const lines = results
-      .filter(r => r.status === 'fulfilled' && r.value)
-      .map(r => (r as PromiseFulfilledResult<string>).value)
+    const lines = results.filter(r => r.status === 'fulfilled' && r.value).map(r => (r as PromiseFulfilledResult<string>).value)
     if (!lines.length) return ''
     return [
-      '\nLIVE OPTIONS CHAIN — ATM Greeks, Expected Move, Max Pain, P/C Ratio (use THESE exact values to score Factor 4):',
+      '\nLIVE OPTIONS INTELLIGENCE — use ALL values below to score every factor:',
       lines.join('\n'),
-      'Greeks guide: delta 0.45-0.55=ATM max leverage | gamma>0.005=explosive 0DTE | theta=daily decay (0DTE always high) | IV>60%=expensive | spread<$0.05=liquid',
-      'Max pain = strike where most options expire worthless — price gravitates here by 4PM on 0DTE days.',
-      'Expected move = market-implied ±range for today. Target must fit WITHIN expected move to be realistic.',
-      'P/C ratio >1.2 = market leaning bearish | <0.7 = leaning bullish | use as sentiment confirmation.\n',
+      '\nGuide:',
+      'Pre-market gap: direction bias before open — confirms or invalidates setups',
+      'VWAP(yest): above=institutional support, below=resistance — key intraday level',
+      'Expected move: target MUST fit within this range to be realistic for 0DTE',
+      'Max pain: price gravitates toward this by 4PM — use to avoid fighting the pin',
+      'GEX POSITIVE: market makers stabilize → slower moves, safer for defined-risk trades',
+      'GEX NEGATIVE: market makers amplify → faster moves, favor momentum but size down',
+      'GEX walls = strike resistance levels. GEX voids = zones of violent movement.',
+      'GEX flip level: if price drops below this, volatility accelerates — use as stop trigger',
+      'Unusual flow: high Vol/OI = fresh directional positioning by informed money — align with it',
+      'P/C >1.2 = market hedged bearish | <0.7 = positioned bullish | use as sentiment filter\n',
     ].join('\n')
   } catch { return '' }
 }

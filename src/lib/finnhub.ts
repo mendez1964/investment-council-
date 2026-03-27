@@ -27,12 +27,43 @@ export async function getProfile(ticker: string) {
   return res.json()
 }
 
-// Full fundamental metrics: PE, EPS, ROE, book value, debt/equity, 52wk high/low, dividends, etc.
+// Full fundamental metrics: PE, EPS, ROE, book value, debt/equity, 52wk high/low, short interest, etc.
 export async function getMetrics(ticker: string) {
   const res = await fetch(`${BASE}/stock/metric?symbol=${ticker.toUpperCase()}&metric=all&token=${getKey()}`, NO_CACHE)
   if (!res.ok) throw new Error(`Finnhub metrics failed for ${ticker}: ${res.status}`)
   const data = await res.json()
   return data.metric ?? {}
+}
+
+// Earnings history — last N quarters to compute beat rate
+export async function getEarningsHistory(ticker: string, quarters = 8): Promise<{ date: string; epsEstimate: number | null; epsActual: number | null; beat: boolean | null }[]> {
+  const to   = new Date().toISOString().split('T')[0]
+  const from = new Date(Date.now() - quarters * 92 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  const res  = await fetch(`${BASE}/stock/earnings?symbol=${ticker.toUpperCase()}&token=${getKey()}`, NO_CACHE)
+  if (!res.ok) return []
+  const data: any[] = await res.json()
+  return (Array.isArray(data) ? data : [])
+    .filter(e => e.period >= from && e.period <= to)
+    .slice(0, quarters)
+    .map(e => ({
+      date:        e.period,
+      epsEstimate: e.estimate ?? null,
+      epsActual:   e.actual   ?? null,
+      beat:        e.estimate != null && e.actual != null ? e.actual >= e.estimate : null,
+    }))
+}
+
+// Intraday candles for VWAP computation (resolution in minutes: 1, 5, 15, 30, 60)
+// NOTE: requires Finnhub paid plan for 1-min data; fails gracefully on free tier
+export async function getIntradayCandles(ticker: string, resolution = 1, daysBack = 1) {
+  const to   = Math.floor(Date.now() / 1000)
+  const from = to - daysBack * 24 * 60 * 60
+  const res  = await fetch(
+    `${BASE}/stock/candle?symbol=${ticker.toUpperCase()}&resolution=${resolution}&from=${from}&to=${to}&token=${getKey()}`,
+    NO_CACHE
+  )
+  if (!res.ok) throw new Error(`Finnhub intraday candles failed for ${ticker}: ${res.status}`)
+  return res.json() as Promise<{ c: number[]; h: number[]; l: number[]; o: number[]; s: string; t: number[]; v: number[] }>
 }
 
 // Insider transactions — who is buying and selling at the company
@@ -161,6 +192,18 @@ export async function getCandles(ticker: string, daysBack = 260) {
   )
   if (!res.ok) throw new Error(`Finnhub candles failed for ${ticker}: ${res.status}`)
   return res.json() as Promise<{ c: number[]; h: number[]; l: number[]; o: number[]; s: string; t: number[]; v: number[] }>
+}
+
+// Compute VWAP from intraday candles (typical price = (H+L+C)/3)
+export function computeVWAP(candles: { h: number[]; l: number[]; c: number[]; v: number[] }): number | null {
+  if (!candles.c?.length) return null
+  let sumPV = 0, sumV = 0
+  for (let i = 0; i < candles.c.length; i++) {
+    const tp = (candles.h[i] + candles.l[i] + candles.c[i]) / 3
+    sumPV += tp * candles.v[i]
+    sumV  += candles.v[i]
+  }
+  return sumV > 0 ? parseFloat((sumPV / sumV).toFixed(2)) : null
 }
 
 function sma(closes: number[], period: number): number | null {

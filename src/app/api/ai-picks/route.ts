@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote, getTechnicalSnapshot, getPivotLevels, getPriceTarget, getRecommendations, getInsiderSentiment } from '@/lib/finnhub'
+import { getQuote, getTechnicalSnapshot, getPivotLevels, getPriceTarget, getRecommendations, getInsiderSentiment, getMetrics, getEarningsHistory, getIntradayCandles, computeVWAP } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
 // getCryptoPrice used for BTC benchmark in GET handler
 import { createServerSupabaseClient } from '@/lib/supabase'
@@ -14,78 +14,152 @@ const PICKS_UNIVERSE = [
   'COIN','PLTR','CRWD','PANW','UBER','SMCI','MSTR',
 ]
 
-// Key tickers to also fetch analyst data for (subset — avoid rate-limiting all 25)
+// Key tickers to also fetch analyst/fundamental/flow data for
 const ANALYST_UNIVERSE = ['SPY','QQQ','AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX','COIN','PLTR','CRWD','SMCI']
 
 async function fetchTechnicalContext(): Promise<string> {
-  const [snapshotResults, pivotResults, vixResult, analystResults, insiderResults] = await Promise.all([
-    Promise.allSettled(PICKS_UNIVERSE.map(ticker => getTechnicalSnapshot(ticker))),
-    Promise.allSettled(PICKS_UNIVERSE.map(ticker => getPivotLevels(ticker))),
+  const [
+    snapshotResults, pivotResults, vixResult,
+    quoteResults,   // pre-market gap + day range
+    metricsResults, // 52w high/low, short interest
+    earningsResults, // beat history
+    vwapResults,    // yesterday's VWAP
+    analystResults, insiderResults,
+  ] = await Promise.all([
+    Promise.allSettled(PICKS_UNIVERSE.map(t => getTechnicalSnapshot(t))),
+    Promise.allSettled(PICKS_UNIVERSE.map(t => getPivotLevels(t))),
     getQuote('VIX').catch(() => null),
-    Promise.allSettled(ANALYST_UNIVERSE.map(ticker =>
-      Promise.all([
-        getPriceTarget(ticker).catch(() => null),
-        getRecommendations(ticker).catch(() => null),
-      ])
+    Promise.allSettled(PICKS_UNIVERSE.map(t => getQuote(t).catch(() => null))),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t => getMetrics(t).catch(() => null))),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t => getEarningsHistory(t, 8).catch(() => []))),
+    Promise.allSettled(PICKS_UNIVERSE.map(t =>
+      getIntradayCandles(t, 1, 1).then(c => computeVWAP(c)).catch(() => null)
     )),
-    Promise.allSettled(ANALYST_UNIVERSE.map(ticker => getInsiderSentiment(ticker).catch(() => null))),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t =>
+      Promise.all([getPriceTarget(t).catch(() => null), getRecommendations(t).catch(() => null)])
+    )),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t => getInsiderSentiment(t).catch(() => null))),
   ])
 
-  // VIX line
+  // VIX
   const vixLine = vixResult?.c != null
-    ? `\nVIX (Fear Index): ${vixResult.c.toFixed(2)}${vixResult.c < 18 ? ' — risk-on regime (Factor5=20)' : vixResult.c < 22 ? ' — neutral regime (Factor5=16)' : vixResult.c < 28 ? ' — elevated fear (Factor5=12)' : ' — risk-off (Factor5=6)'}\n`
+    ? `\nVIX: ${vixResult.c.toFixed(2)}${vixResult.c < 18 ? ' — risk-on (Factor5=20)' : vixResult.c < 22 ? ' — neutral (Factor5=16)' : vixResult.c < 28 ? ' — elevated fear (Factor5=12)' : ' — risk-off (Factor5=6)'}\n`
     : ''
 
   const lines: string[] = []
   snapshotResults.forEach((r, i) => {
     if (r.status !== 'fulfilled' || !r.value) return
     const s = r.value
-    const piv = pivotResults[i].status === 'fulfilled' ? (pivotResults[i] as any).value : null
-    let line = `${s.ticker}: $${s.price} | ${s.trendSignal}`
+    const piv   = pivotResults[i].status === 'fulfilled' ? (pivotResults[i] as any).value : null
+    const q     = quoteResults[i].status === 'fulfilled'  ? (quoteResults[i] as any).value  : null
+    const vwap  = vwapResults[i].status  === 'fulfilled'  ? (vwapResults[i] as any).value   : null
+
+    let line = `${s.ticker}: $${s.price}`
+
+    // Pre-market gap
+    if (q?.dp != null) {
+      const gap = q.dp.toFixed(2)
+      const dir = q.dp > 0 ? '▲' : q.dp < 0 ? '▼' : '—'
+      line += ` ${dir}${gap}% premarket`
+    }
+
+    line += ` | ${s.trendSignal}`
+
+    // Yesterday's VWAP
+    if (vwap != null) {
+      const pos = s.price > vwap ? 'above' : 'below'
+      line += ` | VWAP(yest)=$${vwap} (${pos})`
+    }
+
     if (piv) {
-      line += ` | Pivots: PP=${piv.pp} R1=${piv.r1} R2=${piv.r2} S1=${piv.s1} S2=${piv.s2}`
+      line += ` | PP=${piv.pp} R1=${piv.r1} R2=${piv.r2} S1=${piv.s1} S2=${piv.s2}`
       line += ` | Fib(20d $${piv.swingLow20}–$${piv.swingHigh20}): 38.2%=$${piv.fib382} 50%=$${piv.fib500} 61.8%=$${piv.fib618}`
     }
+
     lines.push(line)
   })
 
-  // Analyst + insider data
-  const analystLines: string[] = []
-  analystResults.forEach((r, i) => {
-    if (r.status !== 'fulfilled') return
-    const [target, recs] = r.value
+  // Fundamental + analyst + insider lines
+  const fundamentalLines: string[] = []
+  metricsResults.forEach((mr, i) => {
     const ticker = ANALYST_UNIVERSE[i]
+    const m = mr.status === 'fulfilled' ? mr.value : null
     const parts: string[] = []
-    if (target?.targetMean) {
-      const snapshot = snapshotResults.find(sr => sr.status === 'fulfilled' && (sr as any).value?.ticker === ticker)
-      const price = snapshot?.status === 'fulfilled' ? (snapshot as any).value?.price : null
-      const upside = price && target.targetMean > 0 ? `${(((target.targetMean - price) / price) * 100).toFixed(1)}% upside` : ''
-      parts.push(`analyst target $${target.targetMean}${upside ? ` (${upside})` : ''}`)
+
+    // 52-week high/low proximity
+    if (m?.['52WeekHigh'] && m?.['52WeekLow']) {
+      const h52 = m['52WeekHigh'], l52 = m['52WeekLow']
+      const snap = snapshotResults.find(sr => sr.status === 'fulfilled' && (sr as any).value?.ticker === ticker)
+      const price = snap?.status === 'fulfilled' ? (snap as any).value?.price : null
+      if (price) {
+        const fromHigh = (((price - h52) / h52) * 100).toFixed(1)
+        const fromLow  = (((price - l52) / l52) * 100).toFixed(1)
+        parts.push(`52w: H=$${h52}(${fromHigh}%) L=$${l52}(+${fromLow}%)`)
+      }
     }
-    if (recs) {
-      const total = (recs.strongBuy ?? 0) + (recs.buy ?? 0) + (recs.hold ?? 0) + (recs.sell ?? 0) + (recs.strongSell ?? 0)
-      const bullish = (recs.strongBuy ?? 0) + (recs.buy ?? 0)
-      if (total > 0) parts.push(`analysts: ${bullish}B/${recs.hold ?? 0}H/${(recs.sell ?? 0) + (recs.strongSell ?? 0)}S`)
+
+    // Short interest
+    if (m?.shortInterestPercent != null) {
+      const si = parseFloat(m.shortInterestPercent).toFixed(1)
+      parts.push(`short%=${si}${parseFloat(si) > 15 ? ' (high — squeeze fuel)' : ''}`)
     }
+
+    // Earnings beat rate
+    const er = earningsResults[i]
+    if (er?.status === 'fulfilled') {
+      const history = er.value as any[]
+      const withData = history.filter(e => e.beat !== null)
+      if (withData.length >= 2) {
+        const beats = withData.filter(e => e.beat).length
+        const beatPct = Math.round((beats / withData.length) * 100)
+        parts.push(`earnings beat ${beats}/${withData.length} qtrs (${beatPct}%)`)
+      }
+    }
+
+    // Analyst targets + recs
+    const ar = analystResults[i]
+    if (ar?.status === 'fulfilled') {
+      const [target, recs] = ar.value as any[]
+      if (target?.targetMean) {
+        const snap = snapshotResults.find(sr => sr.status === 'fulfilled' && (sr as any).value?.ticker === ticker)
+        const price = snap?.status === 'fulfilled' ? (snap as any).value?.price : null
+        const upside = price && target.targetMean > 0 ? ` (${(((target.targetMean - price) / price) * 100).toFixed(1)}% upside)` : ''
+        parts.push(`target $${target.targetMean}${upside}`)
+      }
+      if (recs?.[0]) {
+        const rec = recs[0]
+        const bull = (rec.strongBuy ?? 0) + (rec.buy ?? 0)
+        const bear = (rec.sell ?? 0) + (rec.strongSell ?? 0)
+        if (bull + bear + (rec.hold ?? 0) > 0) parts.push(`analysts: ${bull}B/${rec.hold ?? 0}H/${bear}S`)
+      }
+    }
+
     // Insider sentiment
-    const insiderR = insiderResults[i]
-    if (insiderR?.status === 'fulfilled' && insiderR.value) {
-      const ins = insiderR.value as any
-      if (ins.change != null) parts.push(ins.change > 0 ? `insiders buying (${ins.change > 0 ? '+' : ''}${ins.change})` : `insiders selling (${ins.change})`)
+    const ir = insiderResults[i]
+    if (ir?.status === 'fulfilled' && ir.value) {
+      const ins = ir.value as any
+      const data = Array.isArray(ins.data) ? ins.data : null
+      if (data?.length) {
+        const latest = data[data.length - 1]
+        if (latest?.change != null) parts.push(latest.change > 0 ? `insiders buying (+${latest.change})` : `insiders selling (${latest.change})`)
+      }
     }
-    if (parts.length > 0) analystLines.push(`  ${ticker}: ${parts.join(' | ')}`)
+
+    if (parts.length > 0) fundamentalLines.push(`  ${ticker}: ${parts.join(' | ')}`)
   })
 
   if (!lines.length) return ''
 
-  let out = `\nTECHNICAL INDICATORS — computed from real candle data (use EXACTLY these values to score all factors):\n`
-  out += `Signals: MA trend (Factor1) | RSI (Factor2) | Volume vs 30d avg (Factor2 bonus) | MACD crossover (momentum confirmation) | Bollinger %B (overbought/oversold) | ATR14 (daily range for stop sizing)\n`
+  let out = `\nTECHNICAL INDICATORS — all computed from real data (score every factor from these exact values):\n`
+  out += `Each line: ticker | pre-market gap | MA/RSI/MACD/BB/ATR/Volume signals | yesterday VWAP | pivot levels | Fibonacci\n`
   out += lines.join('\n')
   out += vixLine
-  if (analystLines.length > 0) {
-    out += `\nANALYST CONSENSUS + INSIDER ACTIVITY (use for Factor 4 Catalyst scoring):\n${analystLines.join('\n')}\n`
+  if (fundamentalLines.length > 0) {
+    out += `\nFUNDAMENTAL + ANALYST + INSIDER DATA (use for Factor 3/4 scoring):\n`
+    out += `(52w proximity: near ATH=momentum, near low=bounce | short%>15=squeeze fuel | beat rate=earnings reliability)\n`
+    out += fundamentalLines.join('\n') + '\n'
   }
-  out += `\nPivot levels = floor trader daily pivots. Fibonacci = 20-day swing retracements. S1/S2/fib = support; R1/R2 = resistance. Use for entry quality and target/stop placement.\nFor tickers NOT listed, estimate from price action in live data.\n`
+  out += `\nPivot = floor trader daily pivots. Fibonacci = 20d swing retracements. VWAP = institutional mean price.\nS1/S2/fib = support zones. R1/R2 = resistance. Above VWAP = bullish bias. Below = bearish.\n`
   return out
 }
 

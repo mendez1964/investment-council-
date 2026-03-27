@@ -222,3 +222,103 @@ export function calcIVRank(currentIV: number, low52: number, high52: number): nu
   if (high52 <= low52) return 50
   return Math.round(((currentIV - low52) / (high52 - low52)) * 100)
 }
+
+// ── Gamma Exposure (GEX) ──────────────────────────────────────────────────────
+// GEX = gamma × OI × 100 × spot²  (per contract, in dollar gamma)
+// Positive GEX (calls dominate): market makers long gamma → sell rallies, buy dips → STABILIZES price, suppresses volatility
+// Negative GEX (puts dominate):  market makers short gamma → buy rallies, sell dips → AMPLIFIES moves, increases volatility
+// GEX walls = strikes with highest positive GEX concentration → price magnet/resistance
+// GEX flip = strike where cumulative GEX crosses zero → if price falls below, volatility expands
+export interface GEXResult {
+  netGEX: number            // total net gamma exposure in $ billions
+  flipLevel: number | null  // strike where cumulative GEX flips negative
+  topWalls: { strike: number; gex: number }[]   // top 3 positive GEX (resistance/pin)
+  topVoids: { strike: number; gex: number }[]   // top 3 negative GEX (vol expansion zones)
+  regime: 'positive' | 'negative'               // current GEX regime
+}
+
+export function computeGEX(chain: OptionsChain, spot: number): GEXResult {
+  // Build per-strike GEX map
+  const strikeGEX = new Map<number, number>()
+
+  for (const c of chain.calls) {
+    if (c.gamma == null || c.open_interest === 0) continue
+    const gex = c.gamma * c.open_interest * 100 * spot * spot  // calls add positive GEX
+    strikeGEX.set(c.strike, (strikeGEX.get(c.strike) ?? 0) + gex)
+  }
+  for (const p of chain.puts) {
+    if (p.gamma == null || p.open_interest === 0) continue
+    const gex = -p.gamma * p.open_interest * 100 * spot * spot  // puts add negative GEX
+    strikeGEX.set(p.strike, (strikeGEX.get(p.strike) ?? 0) + gex)
+  }
+
+  const strikes = [...strikeGEX.keys()].sort((a, b) => a - b)
+  const netGEX = [...strikeGEX.values()].reduce((s, v) => s + v, 0)
+
+  // Find GEX flip level (cumulative from lowest strike — where it crosses zero downward)
+  let cumulative = 0
+  let flipLevel: number | null = null
+  for (const s of strikes) {
+    cumulative += strikeGEX.get(s) ?? 0
+    if (flipLevel === null && cumulative < 0) flipLevel = s
+  }
+
+  // Top walls (highest positive GEX strikes above spot) and voids (most negative below spot)
+  const entries = strikes.map(s => ({ strike: s, gex: strikeGEX.get(s) ?? 0 }))
+  const topWalls = entries.filter(e => e.gex > 0).sort((a, b) => b.gex - a.gex).slice(0, 3)
+  const topVoids = entries.filter(e => e.gex < 0).sort((a, b) => a.gex - b.gex).slice(0, 3)
+
+  return {
+    netGEX:    parseFloat((netGEX / 1e9).toFixed(3)),  // convert to $ billions
+    flipLevel,
+    topWalls,
+    topVoids,
+    regime: netGEX >= 0 ? 'positive' : 'negative',
+  }
+}
+
+// ── Unusual Options Flow ──────────────────────────────────────────────────────
+// Detects contracts with anomalous volume relative to open interest (Vol/OI ratio)
+// High Vol/OI = fresh positioning, not just rolling existing positions
+// Large absolute volume at a strike = directional bet by someone with conviction
+export interface UnusualContract {
+  type: 'call' | 'put'
+  strike: number
+  expiry: string
+  volume: number
+  openInterest: number
+  volOiRatio: number
+  mid: number
+  iv: number | null
+  delta: number | null
+}
+
+export function findUnusualFlow(chain: OptionsChain, spot: number, minVolume = 100): UnusualContract[] {
+  const results: UnusualContract[] = []
+
+  for (const c of chain.calls) {
+    if (c.volume < minVolume || c.open_interest === 0) continue
+    const ratio = c.volume / c.open_interest
+    if (ratio >= 0.5) {  // volume is ≥50% of open interest = unusual
+      results.push({
+        type: 'call', strike: c.strike, expiry: c.expiration_date,
+        volume: c.volume, openInterest: c.open_interest, volOiRatio: parseFloat(ratio.toFixed(2)),
+        mid: midPrice(c), iv: c.implied_volatility, delta: c.delta,
+      })
+    }
+  }
+  for (const p of chain.puts) {
+    if (p.volume < minVolume || p.open_interest === 0) continue
+    const ratio = p.volume / p.open_interest
+    if (ratio >= 0.5) {
+      results.push({
+        type: 'put', strike: p.strike, expiry: p.expiration_date,
+        volume: p.volume, openInterest: p.open_interest, volOiRatio: parseFloat(ratio.toFixed(2)),
+        mid: midPrice(p), iv: p.implied_volatility, delta: p.delta,
+      })
+    }
+  }
+
+  // Sort by volume descending — biggest bets first
+  return results.sort((a, b) => b.volume - a.volume).slice(0, 8)
+}
