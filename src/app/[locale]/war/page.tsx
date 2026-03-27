@@ -149,6 +149,11 @@ function PickModal({ pick, color, onClose }: { pick: BattlePick; color: string; 
           </div>
         )}
 
+        {/* Disclaimer */}
+        <div style={{ fontSize: 9, color: '#9ca3af', lineHeight: 1.5, padding: '6px 8px', background: '#fafafa', borderRadius: 4, border: '1px solid #f0f0f0', marginBottom: 10 }}>
+          <strong style={{ color: '#6b7280' }}>Educational purposes only.</strong> These are AI-generated picks used to compare how different AI models perform. This is not financial advice and is not intended as a recommendation to trade. Always do your own research and consult a licensed financial advisor before making any investment decisions.
+        </div>
+
         {/* HOW TO TRADE THIS */}
         {pick.entry_price && (
           <div style={{ fontSize: 9, color: '#374151', lineHeight: 1.7, padding: '8px 10px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
@@ -218,7 +223,10 @@ function PickCard({ pick, color, onClick }: { pick: BattlePick; color: string; o
         </p>
       )}
 
-      <div style={{ fontSize: 11, color: color, fontWeight: 600, marginTop: 4 }}>Click to expand ↗</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+        <span style={{ fontSize: 9, color: '#9ca3af' }}>Educational only · Not financial advice</span>
+        <span style={{ fontSize: 11, color: color, fontWeight: 600 }}>Click to expand ↗</span>
+      </div>
     </div>
   )
 }
