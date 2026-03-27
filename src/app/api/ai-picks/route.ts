@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote, getTechnicalSnapshot } from '@/lib/finnhub'
+import { getQuote, getTechnicalSnapshot, getPivotLevels } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
 // getCryptoPrice used for BTC benchmark in GET handler
 import { createServerSupabaseClient } from '@/lib/supabase'
@@ -15,18 +15,26 @@ const PICKS_UNIVERSE = [
 ]
 
 async function fetchTechnicalContext(): Promise<string> {
-  const results = await Promise.allSettled(
-    PICKS_UNIVERSE.map(ticker => getTechnicalSnapshot(ticker))
-  )
+  const [snapshotResults, pivotResults] = await Promise.all([
+    Promise.allSettled(PICKS_UNIVERSE.map(ticker => getTechnicalSnapshot(ticker))),
+    Promise.allSettled(PICKS_UNIVERSE.map(ticker => getPivotLevels(ticker))),
+  ])
+
   const lines: string[] = []
-  results.forEach((r, i) => {
-    if (r.status === 'fulfilled' && r.value) {
-      const s = r.value
-      lines.push(`${s.ticker}: $${s.price} | ${s.trendSignal}`)
+  snapshotResults.forEach((r, i) => {
+    if (r.status !== 'fulfilled' || !r.value) return
+    const s = r.value
+    const piv = pivotResults[i].status === 'fulfilled' ? (pivotResults[i] as any).value : null
+    let line = `${s.ticker}: $${s.price} | ${s.trendSignal}`
+    if (piv) {
+      line += ` | Pivots: PP=${piv.pp} R1=${piv.r1} R2=${piv.r2} S1=${piv.s1} S2=${piv.s2}`
+      line += ` | Fib(20d swing $${piv.swingLow20}–$${piv.swingHigh20}): 38.2%=$${piv.fib382} 50%=$${piv.fib500} 61.8%=$${piv.fib618}`
     }
+    lines.push(line)
   })
+
   if (!lines.length) return ''
-  return `\nTECHNICAL INDICATORS — computed from real candle data (use EXACTLY these values to score Factor 1 + Factor 2):\n${lines.join('\n')}\nFor any ticker NOT listed above, estimate from price action in the live data.\n`
+  return `\nTECHNICAL INDICATORS — computed from real candle data (use EXACTLY these values to score Factor 1 + Factor 2 + Factor 4):\n${lines.join('\n')}\nPivot levels = floor trader daily pivots. Fibonacci = 20-day swing retracements. Price at/near S1/S2/fib382-618 = support; near R1/R2 = resistance. Use these to sharpen entry quality and catalyst scoring.\nFor any ticker NOT listed above, estimate from price action in the live data.\n`
 }
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -164,9 +172,9 @@ Score 5: Sector slightly lagging, strong stock-specific story
 Score 0: In bottom 2 lagging sectors with no independent catalyst — use as bearish pick instead
 
 FACTOR 4 — CATALYST CLARITY (0-20)
-Score 20: Specific near-term catalyst — earnings beat, product launch, FDA approval, index add, analyst upgrade, technical breakout of major level with volume
-Score 15: Moderate catalyst — sector rotation event, ETF rebalance, peer momentum
-Score 10: Technical catalyst only — key support bounce, flag breakout, gap fill
+Score 20: Specific near-term catalyst — earnings beat, product launch, FDA approval, index add, analyst upgrade, technical breakout of major level with volume, or price bouncing off a key Fibonacci level (38.2%, 50%, 61.8%) or pivot support (S1/S2) with confirmation
+Score 15: Moderate catalyst — sector rotation event, ETF rebalance, peer momentum, or price approaching key pivot resistance (R1/R2) with momentum
+Score 10: Technical catalyst only — key support bounce, flag breakout, gap fill, or price testing PP (pivot point) level
 Score 5: Broad market/macro tailwind only
 Score 0: No identifiable catalyst — DO NOT include this pick. Vibes are not a catalyst.
 

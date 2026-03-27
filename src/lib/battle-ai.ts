@@ -39,9 +39,13 @@ const AI_PERSONAS: Record<string, string> = {
 }
 
 const CATEGORY_INSTRUCTIONS: Record<string, string> = {
-  stock: `Pick ONE stock (or ETF) from SPY/QQQ/IWM components. Give bullish or bearish bias. Pick the absolute highest conviction play today. Liquid tickers only.`,
+  stock: `Pick ONE stock (or ETF) from SPY/QQQ/IWM components. Give bullish or bearish bias. Pick the absolute highest conviction play today. Liquid tickers only.
+
+PIVOT & FIBONACCI REQUIREMENT: The live data includes KEY SUPPORT/RESISTANCE LEVELS with floor trader pivots (PP, R1, R2, S1, S2) and Fibonacci retracements (38.2%, 50%, 61.8%) from the 20-day swing. You MUST use these levels when available: (1) Prefer picks where price is bouncing off fib/pivot support (bullish) or rejecting from R1/R2 (bearish). (2) Set targets at the next R1 or R2 level. (3) Set stops just below S1 or the nearest fib support. Reference the specific levels in your rationale.`,
   crypto: `Pick ONE cryptocurrency. Give bullish or bearish bias. BTC and ETH must be considered first. No meme coins without genuine catalyst.`,
-  option: `Pick ONE 0DTE options trade (expires today). Give call or put. Use only: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD, GLD. Must have a same-day catalyst.`,
+  option: `Pick ONE 0DTE options trade (expires today). Give call or put. Use only: SPY, QQQ, AAPL, NVDA, TSLA, META, AMZN, MSFT, AMD, GLD. Must have a same-day catalyst.
+
+PIVOT & FIBONACCI REQUIREMENT: The live data includes KEY SUPPORT/RESISTANCE LEVELS. For options: (1) Pick strikes near the next pivot resistance (calls) or support (puts). (2) Use fib/pivot levels to confirm the underlying has room to reach the strike. (3) Reference the specific levels when setting your target_pct.`,
 }
 
 // ── ChatGPT's Daily Alpha Engine (WIN SCORE formula) ──────────────────────────
@@ -78,6 +82,8 @@ FACTOR 5 — OVERCROWDING RISK (subtract):
 
 FINAL WIN SCORE = (F1 + F2 + F3 + F4) / 4 − Overcrowding Risk / 10
 Minimum WIN SCORE to pick: 6.5/10. ChatGPT does NOT force a pick below threshold.
+
+PIVOT & FIBONACCI REQUIREMENT: The live data includes KEY SUPPORT/RESISTANCE LEVELS with floor trader pivots (PP, R1, R2, S1, S2) and Fibonacci retracements (38.2%, 50%, 61.8%). Price sitting at fib61.8% or S1 support = unusual accumulation zone, boosts F2 (Unusual Activity). Set target at next R1 or R2 pivot. Set stop just below S1 or fib38.2% support. Reference specific levels in rationale.
 
 In rationale, lead with WIN SCORE and the top 2 factors. Favor growth narratives and earnings catalysts.
 Respond ONLY with raw JSON: {"symbol":"X","bias":"bullish","confidence":8,"win_score":7.4,"rationale":"[WIN:7.4] Momentum×Acceleration 81 + Sentiment shift upgrade+gap...","catalyst":"Earnings beat + guidance raise; consensus was too low","target_pct":3.5,"stop_pct":1.5}`,
@@ -280,6 +286,9 @@ CONTEXTUAL AWARENESS (beyond the chart):
   Context overrides math when contradictory. A Golden Cross with CEO selling = lower conviction.
 
 CS threshold: ≥ 6.5 to make a pick. Gemini does not force picks below threshold.
+
+PIVOT & FIBONACCI REQUIREMENT: The live data includes KEY SUPPORT/RESISTANCE LEVELS with floor trader pivots (PP, R1, R2, S1, S2) and Fibonacci retracements (38.2%, 50%, 61.8%). Integrate these into your Δ_vol (volatility compression) scoring: ATR compression near a fib/pivot support = coiled spring at structure, maximum conviction signal. Set targets at R1/R2, stops at S1 or fib38.2%. Reference the specific levels in rationale and catalyst.
+
 In rationale, lead with CS and the dominant factor (sentiment delta or volatility compression).
 Respond ONLY with raw JSON: {"symbol":"X","bias":"bullish","confidence":8,"conviction_score":7.2,"rationale":"[CS:7.2] Institutional accumulation while retail selling (μ_sent 8.5) + ATR compression to 45% of 20-day (Δ_vol 9.0) / noise floor 1.2...","catalyst":"Sector rotation into tech confirmed; Counter-argument: CEO sold 5% stake last week — watch for follow-through","target_pct":3.5,"stop_pct":1.5}`,
 
@@ -469,6 +478,8 @@ REJECTION RULES:
 - Score < 78 → find a different stock, do not force a pick
 - Volume < 1.5× average → reject even if everything else is perfect
 - R:R < 2:1 → reject immediately
+
+PIVOT & FIBONACCI REQUIREMENT: The live data includes KEY SUPPORT/RESISTANCE LEVELS with floor trader pivots (PP, R1, R2, S1, S2) and Fibonacci retracements (38.2%, 50%, 61.8%). Grok's contrarian edge: look for price at fib61.8% or S2 support that others are ignoring (high Sentiment Edge score). Set targets at R1/R2, stops below S1 or fib38.2%. The R:R must use these actual levels — not arbitrary percentages. Reference them in rationale.
 
 In your rationale, lead with the alpha score and top 2 factors. In catalyst, include the bear-case in one sentence ("Wrong if: ...").
 Respond ONLY with raw JSON: {"symbol":"X","bias":"bullish","confidence":8,"alpha_score":84,"rationale":"[CAS:84] Momentum RSI 58 + 2.8× volume surge...","catalyst":"Earnings beat premarket; Wrong if: market-wide selloff erases gap","target_pct":3.5,"stop_pct":1.5}`,

@@ -31,7 +31,7 @@
 export const maxDuration = 120 // 2 minutes — 12 concurrent AI calls need time
 
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote } from '@/lib/finnhub'
+import { getQuote, getPivotLevels } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
@@ -78,14 +78,30 @@ export async function POST(request: Request) {
     }
   }
 
-  // Fetch live market data
+  // Fetch live market data + pivot/fib levels for key war tickers
   let liveData = ''
+  let pivotContext = ''
+  const WAR_PIVOT_TICKERS = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'TSLA', 'META', 'AMD', 'MSFT', 'AMZN', 'GLD']
   try {
     const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))
-    liveData = await Promise.race([
-      fetchLiveData('pre-market briefing sector rotation VIX fear greed bitcoin dominance funding rates ethereum solana market movers gainers losers economic macro options'),
-      timeout,
+    const [liveResult, pivotResults] = await Promise.all([
+      Promise.race([
+        fetchLiveData('pre-market briefing sector rotation VIX fear greed bitcoin dominance funding rates ethereum solana market movers gainers losers economic macro options'),
+        timeout,
+      ]),
+      Promise.allSettled(WAR_PIVOT_TICKERS.map(t => getPivotLevels(t))),
     ])
+    liveData = liveResult
+    const pivotLines = pivotResults
+      .map((r, i) => {
+        if (r.status !== 'fulfilled' || !r.value) return null
+        const p = r.value
+        return `${p.ticker}: PP=${p.pp} R1=${p.r1} R2=${p.r2} S1=${p.s1} S2=${p.s2} | Fib: 38.2%=$${p.fib382} 50%=$${p.fib500} 61.8%=$${p.fib618} (20d swing $${p.swingLow20}–$${p.swingHigh20})`
+      })
+      .filter(Boolean)
+    if (pivotLines.length > 0) {
+      pivotContext = `\nKEY SUPPORT/RESISTANCE LEVELS (floor trader pivots + Fibonacci retracements):\n${pivotLines.join('\n')}\nUse these levels: price at S1/S2/fib382-618 = support bounce opportunity; near R1/R2 = resistance/short opportunity. Factor these into your pick and target/stop placement.\n`
+    }
   } catch {
     liveData = `Date: ${today}. Live data unavailable — use general market knowledge.`
   }
@@ -100,7 +116,7 @@ export async function POST(request: Request) {
   const jobs = AIs.flatMap(ai =>
     categories.map(async (category) => {
       try {
-        const pick = await generateBattlePick(ai, category, liveData)
+        const pick = await generateBattlePick(ai, category, liveData + pivotContext)
 
         // Fetch entry price
         let entry_price: number | null = null
