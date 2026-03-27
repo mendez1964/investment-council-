@@ -44,13 +44,15 @@ interface WarData {
 
 function parseScore(rationale: string | null) {
   const m = rationale?.match(/^\[(CAS|CS|WIN|IC):([\d.]+)\]/)
-  if (!m) return { label: null, value: null, text: rationale }
+  if (!m) return { label: null, value: null, displayLabel: null, text: rationale }
   const label = m[1], value = parseFloat(m[2])
   const norm = (label === 'CS' || label === 'WIN') ? value * 10 : value
   const color = norm >= 85 ? '#16a34a' : norm >= 70 ? '#d97706' : '#6b7280'
   const bg = norm >= 85 ? '#dcfce7' : norm >= 70 ? '#fef3c7' : '#f4f4f5'
   const text = (rationale ?? '').replace(/^\[(CAS|CS|WIN|IC):[\d.]+\]\s*/, '')
-  return { label, value, norm, color, bg, text }
+  // Never show "WIN" as a display label — it looks like an outcome result
+  const displayLabel = label === 'WIN' ? 'WIN SCORE' : label
+  return { label, displayLabel, value, norm, color, bg, text }
 }
 
 function Skeleton({ h, style }: { h?: number; style?: React.CSSProperties }) {
@@ -105,7 +107,7 @@ function PickModal({ pick, color, onClose }: { pick: BattlePick; color: string; 
 
         {/* Score + Confidence */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          {score.label && <span style={{ fontSize: 12, fontWeight: 700, color: score.color, background: score.bg, borderRadius: 4, padding: '3px 8px' }}>{score.label} {score.value}</span>}
+          {score.displayLabel && <span style={{ fontSize: 12, fontWeight: 700, color: score.color, background: score.bg, borderRadius: 4, padding: '3px 8px' }}>{score.displayLabel} {score.value}</span>}
           <ConfidenceDots value={pick.confidence} color={color} />
           <OutcomeBadge outcome={pick.outcome} />
         </div>
@@ -128,19 +130,53 @@ function PickModal({ pick, color, onClose }: { pick: BattlePick; color: string; 
 
         {/* Price levels */}
         {(pick.entry_price || targetPct || stopPct) && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
             {pick.entry_price && <div style={{ background: '#f9fafb', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
               <div style={{ fontSize: 10, color: '#9ca3af', marginBottom: 3 }}>ENTRY</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#111' }}>${pick.entry_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 9, color: '#9ca3af', marginTop: 2 }}>limit order</div>
             </div>}
-            {targetPct && <div style={{ background: 'rgba(22,163,74,0.06)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+            {stopPct && pick.stop_price && <div style={{ background: 'rgba(220,38,38,0.06)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#dc2626', marginBottom: 3 }}>STOP LOSS</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626' }}>${pick.stop_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 9, color: '#dc2626', marginTop: 2 }}>-{stopPct}% · exit here</div>
+            </div>}
+            {targetPct && pick.target_price && <div style={{ background: 'rgba(22,163,74,0.06)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
               <div style={{ fontSize: 10, color: '#16a34a', marginBottom: 3 }}>TARGET</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>+{targetPct}%</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>${pick.target_price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+              <div style={{ fontSize: 9, color: '#16a34a', marginTop: 2 }}>+{targetPct}% · take profit</div>
             </div>}
-            {stopPct && <div style={{ background: 'rgba(220,38,38,0.06)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#dc2626', marginBottom: 3 }}>STOP</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#dc2626' }}>-{stopPct}%</div>
-            </div>}
+          </div>
+        )}
+
+        {/* HOW TO TRADE THIS */}
+        {pick.entry_price && (
+          <div style={{ fontSize: 9, color: '#374151', lineHeight: 1.7, padding: '8px 10px', background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+            <div style={{ fontWeight: 700, color: '#111827', marginBottom: 4, fontSize: '9px', letterSpacing: '0.05em' }}>HOW TO TRADE THIS</div>
+            {pick.category === 'stock' && <>
+              <div>1. Open <strong>{pick.symbol}</strong> in your broker's stock search</div>
+              <div>2. This is a <strong>{pick.bias.toUpperCase()}</strong> trade — {pick.bias === 'bullish' ? 'you are buying, expecting the price to rise' : 'you are shorting or buying a put, expecting the price to fall'}</div>
+              <div>3. Place a <strong>limit {pick.bias === 'bullish' ? 'buy' : 'sell short'} at ${pick.entry_price.toFixed(2)}</strong> — never use a market order</div>
+              {pick.stop_price && <div>4. Set your <strong>stop loss at ${pick.stop_price.toFixed(2)}</strong> — exit immediately if price hits this level</div>}
+              {pick.target_price && <div>5. Set your <strong>take profit at ${pick.target_price.toFixed(2)}</strong> — close the trade when it reaches this level</div>}
+            </>}
+            {pick.category === 'crypto' && <>
+              <div>1. Open <strong>{pick.symbol}</strong> on your crypto exchange (Coinbase, Kraken, etc.)</div>
+              <div>2. This is a <strong>{pick.bias.toUpperCase()}</strong> trade — {pick.bias === 'bullish' ? 'buy, expecting price to rise' : 'sell or short, expecting price to fall'}</div>
+              <div>3. Place a <strong>limit {pick.bias === 'bullish' ? 'buy' : 'sell'} at ${pick.entry_price.toFixed(2)}</strong></div>
+              {pick.stop_price && <div>4. Set your <strong>stop loss at ${pick.stop_price.toFixed(2)}</strong> — exit if it drops here</div>}
+              {pick.target_price && <div>5. <strong>Take profit at ${pick.target_price.toFixed(2)}</strong> — this is the AI's target</div>}
+              <div style={{ color: '#6b7280', marginTop: 2 }}>Crypto trades are evaluated over 24 hours</div>
+            </>}
+            {pick.category === 'option' && <>
+              <div>1. Open <strong>{pick.symbol}</strong> options in your broker</div>
+              <div>2. This is a <strong>{pick.bias.toUpperCase()}</strong> — buy a {pick.bias === 'call' ? 'CALL (betting price goes up)' : 'PUT (betting price goes down)'}</div>
+              <div>3. The underlying was at <strong>${pick.entry_price.toFixed(2)}</strong> when this pick was made — choose an ATM strike near that price</div>
+              <div>4. Use a <strong>limit order</strong> — never market order on options</div>
+              {pick.stop_price && <div>5. Exit the option if the underlying hits <strong>${pick.stop_price.toFixed(2)}</strong> (stop level)</div>}
+              {pick.target_price && <div>6. Take profit if the underlying reaches <strong>${pick.target_price.toFixed(2)}</strong> (target level)</div>}
+              <div style={{ color: '#dc2626', fontWeight: 700, marginTop: 2 }}>⚠ 0DTE options: close all contracts by 3:45 PM ET — they expire worthless at market close</div>
+            </>}
           </div>
         )}
       </div>
@@ -166,7 +202,7 @@ function PickCard({ pick, color, onClick }: { pick: BattlePick; color: string; o
           <BiasBadge bias={pick.bias} />
         </div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          {score.label && <span style={{ fontSize: 10, fontWeight: 700, color: score.color, background: score.bg, borderRadius: 4, padding: '2px 6px' }}>{score.label} {score.value}</span>}
+          {score.displayLabel && <span style={{ fontSize: 10, fontWeight: 700, color: score.color, background: score.bg, borderRadius: 4, padding: '2px 6px' }}>{score.displayLabel} {score.value}</span>}
           <OutcomeBadge outcome={pick.outcome} />
         </div>
       </div>

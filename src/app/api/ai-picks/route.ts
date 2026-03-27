@@ -424,8 +424,10 @@ export async function GET(request: Request) {
 
     const supabase = createServerSupabaseClient()
 
-    // Evaluate pending picks older than 24h
-    await evaluatePending(supabase)
+    // Only evaluate pending picks when called by the cron — never on a regular page load
+    const cronSecret = request.headers.get('x-cron-secret')
+    const validCron = cronSecret === (process.env.CRON_SECRET ?? 'ic-cron-2024')
+    if (validCron) await evaluatePending(supabase)
 
     // Check for today's picks (filter by type if requested)
     let query = supabase.from('ai_picks').select('*').eq('pick_date', today)

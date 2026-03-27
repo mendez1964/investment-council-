@@ -27,6 +27,15 @@ async function runJobs(secret: string) {
     console.log('[cron/evening] crypto_refresh:', res.status)
   } catch (e) { console.error('[cron/evening] crypto_refresh error:', e) }
 
+  // Step 3: Evaluate War of the AIs battle picks
+  try {
+    const res = await fetch(`${INTERNAL}/api/war`, {
+      method: 'POST',
+      headers: { 'x-cron-secret': secret },
+    })
+    console.log('[cron/evening] battle_evaluate:', res.status)
+  } catch (e) { console.error('[cron/evening] battle_evaluate error:', e) }
+
   console.log('[cron/evening] done:', new Date().toISOString())
 }
 

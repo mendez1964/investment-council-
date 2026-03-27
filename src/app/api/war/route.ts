@@ -1,6 +1,75 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
+import { getQuote } from '@/lib/finnhub'
+import { getCryptoPrice } from '@/lib/coingecko'
 
 export const dynamic = 'force-dynamic'
+
+const CRYPTO_ID_MAP: Record<string, string> = {
+  BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  XRP: 'ripple', ADA: 'cardano', AVAX: 'avalanche-2', DOT: 'polkadot',
+  DOGE: 'dogecoin', LINK: 'chainlink', LTC: 'litecoin', UNI: 'uniswap',
+  AAVE: 'aave', MATIC: 'matic-network', ATOM: 'cosmos', NEAR: 'near',
+  SUI: 'sui', APT: 'aptos', TON: 'the-open-network', TRX: 'tron',
+}
+
+async function evaluateBattlePicks(supabase: any) {
+  // Stocks/options: evaluate after 9h (picks at 7:30 AM, market closes ~4:15 PM)
+  // Crypto: evaluate after 23h (24-hour candle)
+  const stockCutoff  = new Date(Date.now() -  9 * 60 * 60 * 1000).toISOString()
+  const cryptoCutoff = new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
+
+  const { data: stockPending } = await supabase
+    .from('battle_picks').select('*').eq('outcome', 'pending')
+    .in('category', ['stock', 'option']).lt('created_at', stockCutoff)
+  const { data: cryptoPending } = await supabase
+    .from('battle_picks').select('*').eq('outcome', 'pending')
+    .eq('category', 'crypto').lt('created_at', cryptoCutoff)
+
+  const pending = [...(stockPending ?? []), ...(cryptoPending ?? [])]
+  if (!pending.length) return
+
+  await Promise.allSettled(pending.map(async (pick: any) => {
+    let currentPrice: number | null = null
+    try {
+      if (pick.category === 'crypto') {
+        const coinId = CRYPTO_ID_MAP[pick.symbol?.toUpperCase()] ?? pick.symbol?.toLowerCase()
+        const p = await getCryptoPrice(coinId) as any
+        currentPrice = p?.price ?? null
+      } else {
+        const q = await getQuote(pick.symbol)
+        currentPrice = q?.c ?? null
+      }
+    } catch {}
+    if (!currentPrice || !pick.entry_price) return
+
+    const priceChangePct = ((currentPrice - pick.entry_price) / pick.entry_price) * 100
+    const bias = pick.bias?.toLowerCase()
+    const directional = (bias === 'bullish' || bias === 'call') ? priceChangePct : -priceChangePct
+    const targetHit = pick.target_price != null
+      ? (bias === 'bullish' || bias === 'call' ? currentPrice >= pick.target_price : currentPrice <= pick.target_price)
+      : false
+
+    await supabase.from('battle_picks').update({
+      outcome: directional > 0 ? 'win' : 'loss',
+      exit_price: currentPrice,
+      return_pct: parseFloat(priceChangePct.toFixed(4)),
+      target_hit: targetHit,
+      evaluated_at: new Date().toISOString(),
+    }).eq('id', pick.id)
+  }))
+}
+
+function verifyCron(request: Request): boolean {
+  const secret = request.headers.get('x-cron-secret')
+  return secret === (process.env.CRON_SECRET ?? 'ic-cron-2024')
+}
+
+export async function POST(request: Request) {
+  if (!verifyCron(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const supabase = createServerSupabaseClient()
+  await evaluateBattlePicks(supabase)
+  return Response.json({ ok: true, evaluated_at: new Date().toISOString() })
+}
 
 export async function GET() {
   const supabase = createServerSupabaseClient()
