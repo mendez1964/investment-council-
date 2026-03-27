@@ -238,6 +238,37 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
     )
   }
 
+  // ── Company news for any detected ticker — works for ALL stocks, no watchlist needed ──
+  // Fetches last 72h of headlines directly from Finnhub on every query
+  if (tickers.length > 0) {
+    tasks.push(
+      Promise.allSettled(
+        tickers.map(ticker => getCompanyNews(ticker).catch(() => []))
+      ).then(results => {
+        const cutoff72h = Date.now() - 72 * 60 * 60 * 1000
+        const lines: string[] = []
+        results.forEach((r, idx) => {
+          if (r.status !== 'fulfilled') return
+          const items: any[] = (r.value ?? [])
+            .filter((n: any) => n.datetime && n.datetime * 1000 >= cutoff72h)
+            .slice(0, 6)
+          if (items.length === 0) return
+          const ticker = tickers[idx]
+          lines.push(`\n${ticker} — news (last 72h):`)
+          items.forEach((n: any) => {
+            const dt = new Date(n.datetime * 1000).toLocaleString('en-US', {
+              timeZone: 'America/New_York', month: 'short', day: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })
+            lines.push(`  [${dt} ET] ${n.headline} — ${n.source}`)
+            if (n.summary) lines.push(`  ${n.summary.slice(0, 200)}`)
+          })
+        })
+        if (lines.length > 0) sections.push(`RECENT COMPANY NEWS (Finnhub — last 72h):${lines.join('\n')}`)
+      })
+    )
+  }
+
   // ── Earnings calendar (briefings + earnings queries — Finnhub, cached 1hr) ───
   if (wantsEarnings) {
     tasks.push(

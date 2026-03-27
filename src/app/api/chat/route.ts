@@ -144,13 +144,13 @@ export async function POST(request: Request) {
       console.error('[live-data] failed:', (err as Error).message)
     }
 
-    // Inject market news context for briefings and market-related queries
-    const isBriefing = /briefing|pre.?market|end.?of.?day|eod|recap|what.*happen|news|catalyst|mover/i.test(latestUserMessage)
-    if (isBriefing) {
+    // Inject news context — always for any financial question, not just briefings
+    if (needsLiveData) {
       try {
         const { createServerSupabaseClient: getDB } = await import('@/lib/supabase')
         const db = getDB()
-        const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString() // 72h window
+        // Pull all high/medium news + any news specifically affecting detected tickers
         const { data: newsItems } = await db
           .from('market_news')
           .select('headline, summary, impact_level, impact_direction, affected_tickers, source, price_impact_est')
@@ -158,12 +158,12 @@ export async function POST(request: Request) {
           .eq('is_price_moving', true)
           .in('impact_level', ['high', 'medium'])
           .order('created_at', { ascending: false })
-          .limit(12)
+          .limit(20)
         if (newsItems && newsItems.length > 0) {
           const newsBlock = newsItems.map(n =>
             `[${n.impact_level?.toUpperCase()} / ${n.impact_direction}] ${n.affected_tickers?.join(', ') ?? ''}: ${n.headline} — ${n.summary}${n.price_impact_est ? ` (est. ${n.price_impact_est})` : ''}`
           ).join('\n')
-          liveData += `\n\n## BREAKING MARKET NEWS (last 24h — high/medium impact only)\n${newsBlock}`
+          liveData += `\n\n## MARKET NEWS (last 72h — high/medium impact)\n${newsBlock}`
           console.log(`[news-context] injected ${newsItems.length} items`)
         }
       } catch (err) {
