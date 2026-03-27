@@ -2,7 +2,7 @@
 // and returns it as a formatted context block for Claude
 
 import { getTopMovers } from '@/lib/alpha-vantage'
-import { getQuote, getProfile, getMetrics, getEarningsCalendar, formatEarningsCalendar } from '@/lib/finnhub'
+import { getQuote, getProfile, getMetrics, getEarningsCalendar, formatEarningsCalendar, getMarketNews, getCompanyNews } from '@/lib/finnhub'
 import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth } from '@/lib/fred'
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
@@ -238,33 +238,63 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
     )
   }
 
-  // ── Company news for any detected ticker — works for ALL stocks, no watchlist needed ──
-  // Fetches last 72h of headlines directly from Finnhub on every query
+  // ── Company news — dual source for any ticker, no watchlist needed ──────────
+  // Source 1: Finnhub company-specific endpoint (7-day window)
+  // Source 2: Finnhub general market news filtered by ticker mention in headline/related
+  // If either source fails the other still provides coverage
   if (tickers.length > 0) {
     tasks.push(
-      Promise.allSettled(
-        tickers.map(ticker => getCompanyNews(ticker).catch(() => []))
-      ).then(results => {
+      Promise.allSettled([
+        ...tickers.map(ticker => getCompanyNews(ticker).catch(() => [])),
+        getMarketNews('general').catch(() => []),
+      ]).then(results => {
         const cutoff72h = Date.now() - 72 * 60 * 60 * 1000
-        const lines: string[] = []
-        results.forEach((r, idx) => {
+        const allNews: { ticker: string; datetime: number; headline: string; source: string; summary?: string }[] = []
+
+        // Company-specific results (one per ticker)
+        results.slice(0, tickers.length).forEach((r, idx) => {
           if (r.status !== 'fulfilled') return
-          const items: any[] = (r.value ?? [])
-            .filter((n: any) => n.datetime && n.datetime * 1000 >= cutoff72h)
-            .slice(0, 6)
-          if (items.length === 0) return
           const ticker = tickers[idx]
-          lines.push(`\n${ticker} — news (last 72h):`)
-          items.forEach((n: any) => {
+          ;(r.value as any[] ?? [])
+            .filter((n: any) => n.datetime && n.datetime * 1000 >= cutoff72h)
+            .forEach((n: any) => allNews.push({ ticker, datetime: n.datetime, headline: n.headline, source: n.source, summary: n.summary }))
+        })
+
+        // General market news — filter for any ticker mention in headline or related field
+        const generalResult = results[tickers.length]
+        if (generalResult?.status === 'fulfilled') {
+          for (const ticker of tickers) {
+            ;(generalResult.value as any[] ?? [])
+              .filter((n: any) =>
+                n.datetime && n.datetime * 1000 >= cutoff72h &&
+                (n.related?.toUpperCase().includes(ticker) || n.headline?.toUpperCase().includes(ticker))
+              )
+              .forEach((n: any) => allNews.push({ ticker, datetime: n.datetime, headline: n.headline, source: n.source, summary: n.summary }))
+          }
+        }
+
+        // Deduplicate by headline prefix, sort newest first
+        const seen = new Set<string>()
+        const unique = allNews
+          .filter(n => { const k = n.headline?.slice(0, 60); if (!k || seen.has(k)) return false; seen.add(k); return true })
+          .sort((a, b) => b.datetime - a.datetime)
+
+        if (unique.length === 0) return
+
+        const lines: string[] = []
+        for (const ticker of tickers) {
+          const items = unique.filter(n => n.ticker === ticker).slice(0, 6)
+          if (items.length === 0) continue
+          lines.push(`\n${ticker} — recent news:`)
+          items.forEach(n => {
             const dt = new Date(n.datetime * 1000).toLocaleString('en-US', {
-              timeZone: 'America/New_York', month: 'short', day: 'numeric',
-              hour: '2-digit', minute: '2-digit',
+              timeZone: 'America/New_York', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
             })
             lines.push(`  [${dt} ET] ${n.headline} — ${n.source}`)
             if (n.summary) lines.push(`  ${n.summary.slice(0, 200)}`)
           })
-        })
-        if (lines.length > 0) sections.push(`RECENT COMPANY NEWS (Finnhub — last 72h):${lines.join('\n')}`)
+        }
+        if (lines.length > 0) sections.push(`RECENT NEWS (last 72h):${lines.join('\n')}`)
       })
     )
   }
