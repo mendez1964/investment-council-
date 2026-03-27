@@ -326,6 +326,7 @@ CRITICAL: Close all positions by 3:45 PM ET. No overnight holds.
 
 HARD RULES:
 - ONLY trade: SPX, SPY, QQQ, AAPL, NVDA — no other tickers ever
+- EXACTLY ONE trade per underlying — all 5 must appear: SPX, SPY, QQQ, AAPL, NVDA. No ticker may appear twice.
 - Must have Factor 2 score ≥12 — no catalyst + no news = no trade
 - Must have Factor 3 score ≥10 — no technical anchor = no trade
 - At least ${Math.ceil(count / 2)} calls AND at least ${Math.floor(count / 2)} puts
@@ -478,7 +479,16 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
   })
 
   const parsed = extractJSON(rawText)
-  const trades: any[] = (parsed.trades ?? []).slice(0, count)
+  // Deduplicate: keep only the highest ic_score pick per underlying
+  const seenUnderlying = new Map<string, any>()
+  for (const t of (parsed.trades ?? [])) {
+    const key = (t.underlying ?? '').toUpperCase()
+    const existing = seenUnderlying.get(key)
+    if (!existing || (parseInt(t.ic_score) || 0) > (parseInt(existing.ic_score) || 0)) {
+      seenUnderlying.set(key, t)
+    }
+  }
+  const trades: any[] = Array.from(seenUnderlying.values()).slice(0, count)
   const prices = await Promise.allSettled(trades.map(t => getUnderlyingPrice(t.underlying).catch(() => null)))
 
   // If Tradier is enabled, fetch real chain data for each trade in parallel
