@@ -641,9 +641,357 @@ export default function OwnerPage() {
               </div>
             )}
 
+            {/* Social Media Engine */}
+            <SocialPanel password={password} />
+
             <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', paddingBottom: '16px' }}>
               Investment Council · Owner Dashboard · Data from Supabase
             </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Social Media Engine Panel ────────────────────────────────────────────────
+
+interface SocialPost {
+  id: string
+  platform: string
+  theme: string
+  post_text: string
+  hashtags: string[]
+  status: string
+  scheduled_at: string | null
+  posted_at: string | null
+  created_at: string
+  error_message: string | null
+}
+
+const PLATFORM_COLOR: Record<string, string> = {
+  twitter: '#1d9bf0',
+  linkedin: '#0a66c2',
+  medium: '#000000',
+  reddit: '#ff4500',
+}
+
+const PLATFORM_LABEL: Record<string, string> = {
+  twitter: 'Twitter/X',
+  linkedin: 'LinkedIn',
+  medium: 'Medium',
+  reddit: 'Reddit',
+}
+
+const STATUS_COLOR: Record<string, string> = {
+  pending: '#9ca3af',
+  approved: '#d97706',
+  scheduled: '#2563eb',
+  posted: '#16a34a',
+  failed: '#dc2626',
+}
+
+function SocialPanel({ password }: { password: string }) {
+  const [posts, setPosts] = useState<SocialPost[]>([])
+  const [summary, setSummary] = useState({ pending: 0, approved: 0, scheduled: 0, posted: 0, failed: 0 })
+  const [filter, setFilter] = useState('pending')
+  const [loading, setLoading] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [genResult, setGenResult] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editText, setEditText] = useState('')
+  const [schedulingId, setSchedulingId] = useState<string | null>(null)
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [publishingId, setPublishingId] = useState<string | null>(null)
+
+  const loadPosts = useCallback(async (statusFilter = filter) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/social/posts?status=${statusFilter}&limit=30`, {
+        headers: { 'x-owner-password': password },
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPosts(data.posts ?? [])
+        setSummary(data.summary ?? summary)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [filter, password, summary])
+
+  useEffect(() => { loadPosts() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleGenerate() {
+    setGenerating(true)
+    setGenResult(null)
+    try {
+      const res = await fetch('/api/admin/social/generate', {
+        method: 'POST',
+        headers: { 'x-owner-password': password },
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setGenResult(`Generated ${data.generated} posts from picks data`)
+        await loadPosts('pending')
+        setFilter('pending')
+      } else {
+        setGenResult(`Error: ${data.error}`)
+      }
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  async function handleApprove(id: string) {
+    await fetch(`/api/admin/social/posts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ status: 'approved' }),
+    })
+    await loadPosts()
+  }
+
+  async function handleReject(id: string) {
+    await fetch(`/api/admin/social/posts/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-owner-password': password },
+    })
+    await loadPosts()
+  }
+
+  async function handleSaveEdit(id: string) {
+    await fetch(`/api/admin/social/posts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ post_text: editText }),
+    })
+    setEditingId(null)
+    await loadPosts()
+  }
+
+  async function handleSchedule(id: string) {
+    if (!scheduleDate) return
+    await fetch(`/api/admin/social/posts/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ status: 'scheduled', scheduled_at: new Date(scheduleDate).toISOString() }),
+    })
+    setSchedulingId(null)
+    setScheduleDate('')
+    await loadPosts()
+  }
+
+  async function handlePublishNow(id: string) {
+    setPublishingId(id)
+    try {
+      const res = await fetch(`/api/admin/social/publish/${id}`, {
+        method: 'POST',
+        headers: { 'x-owner-password': password },
+      })
+      const data = await res.json()
+      if (!res.ok) alert(`Publish failed: ${data.error}`)
+      await loadPosts()
+    } finally {
+      setPublishingId(null)
+    }
+  }
+
+  const filters = ['pending', 'approved', 'scheduled', 'posted', 'failed', 'all']
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em' }}>SOCIAL MEDIA ENGINE</div>
+
+      {/* Summary + Generate */}
+      <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' as const, marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#111' }}>Auto-Promotion Posts</div>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' as const }}>
+            {Object.entries(summary).map(([status, count]) => (
+              <div key={status} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: STATUS_COLOR[status] ?? '#9ca3af' }} />
+                <span style={{ fontSize: '11px', color: '#6b7280' }}>{status}</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151' }}>{count}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => loadPosts()}
+              disabled={loading}
+              style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #e4e4e7', background: 'transparent', color: '#6b7280', fontSize: '11px', fontWeight: 600, cursor: loading ? 'default' : 'pointer', fontFamily: 'inherit' }}
+            >
+              {loading ? 'Loading...' : 'Refresh'}
+            </button>
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              style={{ padding: '6px 16px', borderRadius: '6px', border: 'none', background: generating ? '#9ca3af' : '#111', color: '#fff', fontSize: '12px', fontWeight: 700, cursor: generating ? 'default' : 'pointer', fontFamily: 'inherit' }}
+            >
+              {generating ? 'Generating...' : 'Generate Posts'}
+            </button>
+          </div>
+        </div>
+
+        {genResult && (
+          <div style={{ fontSize: '11px', padding: '8px 12px', borderRadius: '6px', background: genResult.startsWith('Error') ? '#fff5f5' : '#f0fdf4', color: genResult.startsWith('Error') ? '#dc2626' : '#16a34a', marginBottom: '12px' }}>
+            {genResult}
+          </div>
+        )}
+
+        {/* Filter tabs */}
+        <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+          {filters.map(f => (
+            <button
+              key={f}
+              onClick={() => { setFilter(f); loadPosts(f) }}
+              style={{
+                padding: '4px 12px', borderRadius: '5px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: '11px', fontWeight: 600, textTransform: 'capitalize' as const,
+                background: filter === f ? '#111' : '#f4f4f5',
+                color: filter === f ? '#fff' : '#6b7280',
+              }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Post cards */}
+        {posts.length === 0 ? (
+          <div style={{ fontSize: '11px', color: '#9ca3af', padding: '24px', textAlign: 'center' }}>
+            {filter === 'pending' ? 'No pending posts — click Generate Posts to create some' : `No ${filter} posts`}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {posts.map(post => (
+              <div key={post.id} style={{ border: '1px solid #e4e4e7', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: '#fff', background: PLATFORM_COLOR[post.platform] ?? '#111', borderRadius: '4px', padding: '2px 7px' }}>
+                    {PLATFORM_LABEL[post.platform] ?? post.platform}
+                  </span>
+                  <span style={{ fontSize: '10px', color: '#9ca3af', background: '#f4f4f5', borderRadius: '4px', padding: '2px 7px' }}>
+                    {post.theme.replace(/_/g, ' ')}
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: STATUS_COLOR[post.status] ?? '#9ca3af', marginLeft: 'auto' }}>
+                    {post.status.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: '9px', color: '#9ca3af' }}>
+                    {new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+
+                {/* Post text */}
+                {editingId === post.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <textarea
+                      value={editText}
+                      onChange={e => setEditText(e.target.value)}
+                      rows={4}
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #2563eb', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' as const }}
+                    />
+                    <div style={{ fontSize: '10px', color: editText.length > 280 ? '#dc2626' : '#9ca3af' }}>{editText.length} chars {post.platform === 'twitter' && editText.length > 280 ? '— over Twitter limit' : ''}</div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => handleSaveEdit(post.id)} style={{ padding: '5px 14px', borderRadius: '5px', border: 'none', background: '#111', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Save</button>
+                      <button onClick={() => setEditingId(null)} style={{ padding: '5px 12px', borderRadius: '5px', border: '1px solid #e4e4e7', background: 'transparent', color: '#6b7280', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#374151', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{post.post_text}</div>
+                )}
+
+                {/* Hashtags */}
+                {post.hashtags?.length > 0 && editingId !== post.id && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const }}>
+                    {post.hashtags.map(h => (
+                      <span key={h} style={{ fontSize: '10px', color: '#2563eb', background: '#eff6ff', borderRadius: '4px', padding: '2px 7px' }}>#{h}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Schedule input */}
+                {schedulingId === post.id && (
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="datetime-local"
+                      value={scheduleDate}
+                      onChange={e => setScheduleDate(e.target.value)}
+                      style={{ padding: '5px 8px', borderRadius: '5px', border: '1px solid #e4e4e7', fontSize: '11px', fontFamily: 'inherit', outline: 'none' }}
+                    />
+                    <button onClick={() => handleSchedule(post.id)} style={{ padding: '5px 12px', borderRadius: '5px', border: 'none', background: '#2563eb', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Schedule</button>
+                    <button onClick={() => setSchedulingId(null)} style={{ padding: '5px 10px', borderRadius: '5px', border: '1px solid #e4e4e7', background: 'transparent', color: '#6b7280', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
+                  </div>
+                )}
+
+                {/* Scheduled time display */}
+                {post.scheduled_at && post.status === 'scheduled' && (
+                  <div style={{ fontSize: '10px', color: '#2563eb' }}>
+                    Scheduled: {new Date(post.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
+
+                {/* Posted info */}
+                {post.status === 'posted' && post.posted_at && (
+                  <div style={{ fontSize: '10px', color: '#16a34a' }}>
+                    Posted: {new Date(post.posted_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                )}
+
+                {/* Error */}
+                {post.error_message && (
+                  <div style={{ fontSize: '10px', color: '#dc2626', background: '#fff5f5', padding: '6px 8px', borderRadius: '4px' }}>{post.error_message}</div>
+                )}
+
+                {/* Actions */}
+                {post.status !== 'posted' && editingId !== post.id && schedulingId !== post.id && (
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' as const, paddingTop: '4px', borderTop: '1px solid #f4f4f5' }}>
+                    {post.status === 'pending' && (
+                      <button onClick={() => handleApprove(post.id)} style={{ padding: '4px 12px', borderRadius: '5px', border: 'none', background: '#16a34a', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Approve</button>
+                    )}
+                    {(post.status === 'pending' || post.status === 'approved') && (
+                      <>
+                        <button
+                          onClick={() => { setEditingId(post.id); setEditText(post.post_text) }}
+                          style={{ padding: '4px 12px', borderRadius: '5px', border: '1px solid #e4e4e7', background: 'transparent', color: '#374151', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => { setSchedulingId(post.id); setScheduleDate('') }}
+                          style={{ padding: '4px 12px', borderRadius: '5px', border: '1px solid #2563eb', background: 'transparent', color: '#2563eb', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          Schedule
+                        </button>
+                        <button
+                          onClick={() => handlePublishNow(post.id)}
+                          disabled={publishingId === post.id}
+                          style={{ padding: '4px 12px', borderRadius: '5px', border: 'none', background: '#7c3aed', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: publishingId === post.id ? 'default' : 'pointer', fontFamily: 'inherit' }}
+                        >
+                          {publishingId === post.id ? 'Posting...' : 'Post Now'}
+                        </button>
+                      </>
+                    )}
+                    {post.status === 'scheduled' && (
+                      <button
+                        onClick={() => handlePublishNow(post.id)}
+                        disabled={publishingId === post.id}
+                        style={{ padding: '4px 12px', borderRadius: '5px', border: 'none', background: '#7c3aed', color: '#fff', fontSize: '11px', fontWeight: 700, cursor: publishingId === post.id ? 'default' : 'pointer', fontFamily: 'inherit' }}
+                      >
+                        {publishingId === post.id ? 'Posting...' : 'Post Now'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleReject(post.id)}
+                      style={{ padding: '4px 12px', borderRadius: '5px', border: '1px solid #fecaca', background: 'transparent', color: '#dc2626', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto' }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
