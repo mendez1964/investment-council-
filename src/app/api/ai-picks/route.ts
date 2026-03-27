@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { fetchLiveData } from '@/lib/live-data'
-import { getQuote, getTechnicalSnapshot, getPivotLevels } from '@/lib/finnhub'
+import { getQuote, getTechnicalSnapshot, getPivotLevels, getPriceTarget, getRecommendations, getInsiderSentiment } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
 // getCryptoPrice used for BTC benchmark in GET handler
 import { createServerSupabaseClient } from '@/lib/supabase'
@@ -14,11 +14,27 @@ const PICKS_UNIVERSE = [
   'COIN','PLTR','CRWD','PANW','UBER','SMCI','MSTR',
 ]
 
+// Key tickers to also fetch analyst data for (subset — avoid rate-limiting all 25)
+const ANALYST_UNIVERSE = ['SPY','QQQ','AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX','COIN','PLTR','CRWD','SMCI']
+
 async function fetchTechnicalContext(): Promise<string> {
-  const [snapshotResults, pivotResults] = await Promise.all([
+  const [snapshotResults, pivotResults, vixResult, analystResults, insiderResults] = await Promise.all([
     Promise.allSettled(PICKS_UNIVERSE.map(ticker => getTechnicalSnapshot(ticker))),
     Promise.allSettled(PICKS_UNIVERSE.map(ticker => getPivotLevels(ticker))),
+    getQuote('VIX').catch(() => null),
+    Promise.allSettled(ANALYST_UNIVERSE.map(ticker =>
+      Promise.all([
+        getPriceTarget(ticker).catch(() => null),
+        getRecommendations(ticker).catch(() => null),
+      ])
+    )),
+    Promise.allSettled(ANALYST_UNIVERSE.map(ticker => getInsiderSentiment(ticker).catch(() => null))),
   ])
+
+  // VIX line
+  const vixLine = vixResult?.c != null
+    ? `\nVIX (Fear Index): ${vixResult.c.toFixed(2)}${vixResult.c < 18 ? ' — risk-on regime (Factor5=20)' : vixResult.c < 22 ? ' — neutral regime (Factor5=16)' : vixResult.c < 28 ? ' — elevated fear (Factor5=12)' : ' — risk-off (Factor5=6)'}\n`
+    : ''
 
   const lines: string[] = []
   snapshotResults.forEach((r, i) => {
@@ -28,13 +44,49 @@ async function fetchTechnicalContext(): Promise<string> {
     let line = `${s.ticker}: $${s.price} | ${s.trendSignal}`
     if (piv) {
       line += ` | Pivots: PP=${piv.pp} R1=${piv.r1} R2=${piv.r2} S1=${piv.s1} S2=${piv.s2}`
-      line += ` | Fib(20d swing $${piv.swingLow20}–$${piv.swingHigh20}): 38.2%=$${piv.fib382} 50%=$${piv.fib500} 61.8%=$${piv.fib618}`
+      line += ` | Fib(20d $${piv.swingLow20}–$${piv.swingHigh20}): 38.2%=$${piv.fib382} 50%=$${piv.fib500} 61.8%=$${piv.fib618}`
     }
     lines.push(line)
   })
 
+  // Analyst + insider data
+  const analystLines: string[] = []
+  analystResults.forEach((r, i) => {
+    if (r.status !== 'fulfilled') return
+    const [target, recs] = r.value
+    const ticker = ANALYST_UNIVERSE[i]
+    const parts: string[] = []
+    if (target?.targetMean) {
+      const snapshot = snapshotResults.find(sr => sr.status === 'fulfilled' && (sr as any).value?.ticker === ticker)
+      const price = snapshot?.status === 'fulfilled' ? (snapshot as any).value?.price : null
+      const upside = price && target.targetMean > 0 ? `${(((target.targetMean - price) / price) * 100).toFixed(1)}% upside` : ''
+      parts.push(`analyst target $${target.targetMean}${upside ? ` (${upside})` : ''}`)
+    }
+    if (recs) {
+      const total = (recs.strongBuy ?? 0) + (recs.buy ?? 0) + (recs.hold ?? 0) + (recs.sell ?? 0) + (recs.strongSell ?? 0)
+      const bullish = (recs.strongBuy ?? 0) + (recs.buy ?? 0)
+      if (total > 0) parts.push(`analysts: ${bullish}B/${recs.hold ?? 0}H/${(recs.sell ?? 0) + (recs.strongSell ?? 0)}S`)
+    }
+    // Insider sentiment
+    const insiderR = insiderResults[i]
+    if (insiderR?.status === 'fulfilled' && insiderR.value) {
+      const ins = insiderR.value as any
+      if (ins.change != null) parts.push(ins.change > 0 ? `insiders buying (${ins.change > 0 ? '+' : ''}${ins.change})` : `insiders selling (${ins.change})`)
+    }
+    if (parts.length > 0) analystLines.push(`  ${ticker}: ${parts.join(' | ')}`)
+  })
+
   if (!lines.length) return ''
-  return `\nTECHNICAL INDICATORS — computed from real candle data (use EXACTLY these values to score Factor 1 + Factor 2 + Factor 4):\n${lines.join('\n')}\nPivot levels = floor trader daily pivots. Fibonacci = 20-day swing retracements. Price at/near S1/S2/fib382-618 = support; near R1/R2 = resistance. Use these to sharpen entry quality and catalyst scoring.\nFor any ticker NOT listed above, estimate from price action in the live data.\n`
+
+  let out = `\nTECHNICAL INDICATORS — computed from real candle data (use EXACTLY these values to score all factors):\n`
+  out += `Signals: MA trend (Factor1) | RSI (Factor2) | Volume vs 30d avg (Factor2 bonus) | MACD crossover (momentum confirmation) | Bollinger %B (overbought/oversold) | ATR14 (daily range for stop sizing)\n`
+  out += lines.join('\n')
+  out += vixLine
+  if (analystLines.length > 0) {
+    out += `\nANALYST CONSENSUS + INSIDER ACTIVITY (use for Factor 4 Catalyst scoring):\n${analystLines.join('\n')}\n`
+  }
+  out += `\nPivot levels = floor trader daily pivots. Fibonacci = 20-day swing retracements. S1/S2/fib = support; R1/R2 = resistance. Use for entry quality and target/stop placement.\nFor tickers NOT listed, estimate from price action in live data.\n`
+  return out
 }
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })

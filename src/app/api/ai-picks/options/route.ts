@@ -98,33 +98,61 @@ async function fetchOptionsHistory(supabase: any): Promise<string> {
   } catch { return '' }
 }
 
-// Fetch ATM Greeks for all 0DTE tickers BEFORE the AI prompt so Factor 4 scores from real data
+// Fetch ATM Greeks + max pain + expected move + put/call ratio BEFORE the AI prompt
 async function fetchATMGreeks(today: string): Promise<string> {
   if (!process.env.TRADIER_API_KEY) return ''
-  // SPX options trade under SPXW on Tradier — fall back if unavailable
   const GREEK_TICKERS = ['SPY', 'QQQ', 'AAPL', 'NVDA']
   try {
     const results = await Promise.allSettled(
       GREEK_TICKERS.map(async (ticker) => {
-        const expirations = await getExpirations(ticker)
+        const [expirations, priceResult] = await Promise.all([
+          getExpirations(ticker),
+          getQuote(ticker).then(q => q?.c ?? null).catch(() => null),
+        ])
         const expiry = pickDailyExpiry(expirations, today)
-        if (!expiry) return null
+        if (!expiry || !priceResult) return null
+        const price = priceResult
         const chain = await getChain(ticker, expiry)
-        const price = await getQuote(ticker).then(q => q?.c ?? null).catch(() => null)
-        if (!price) return null
         const atm = roundToATM(price)
         const atmCall = nearestStrike(chain.calls, atm)
         const atmPut  = nearestStrike(chain.puts,  atm)
         if (!atmCall || !atmPut) return null
+
+        // Expected move = (ATM call mid + ATM put mid) × 0.85
+        const callMid = atmCall.ask > 0 && atmCall.bid > 0 ? (atmCall.bid + atmCall.ask) / 2 : atmCall.last
+        const putMid  = atmPut.ask  > 0 && atmPut.bid  > 0 ? (atmPut.bid  + atmPut.ask)  / 2 : atmPut.last
+        const expectedMove = callMid > 0 && putMid > 0
+          ? `±$${((callMid + putMid) * 0.85).toFixed(2)} (${(((callMid + putMid) * 0.85 / price) * 100).toFixed(2)}%)`
+          : 'n/a'
+
+        // Max pain — strike where total OI loss is minimized (price gravitates here at expiry)
+        const allStrikes = [...new Set([...chain.calls.map(c => c.strike), ...chain.puts.map(p => p.strike)])].sort((a, b) => a - b)
+        let maxPainStrike = atm
+        let minLoss = Infinity
+        for (const s of allStrikes) {
+          const callLoss = chain.calls.reduce((sum, c) => sum + (s > c.strike ? (s - c.strike) * c.open_interest : 0), 0)
+          const putLoss  = chain.puts.reduce((sum,  p) => sum + (s < p.strike  ? (p.strike - s)  * p.open_interest  : 0), 0)
+          const total = callLoss + putLoss
+          if (total < minLoss) { minLoss = total; maxPainStrike = s }
+        }
+
+        // Put/call OI ratio
+        const totalCallOI = chain.calls.reduce((s, c) => s + c.open_interest, 0)
+        const totalPutOI  = chain.puts.reduce((s,  p) => s + p.open_interest,  0)
+        const pcRatio = totalCallOI > 0 ? (totalPutOI / totalCallOI).toFixed(2) : 'n/a'
+        const pcSentiment = typeof pcRatio === 'string' && pcRatio !== 'n/a'
+          ? parseFloat(pcRatio) > 1.2 ? 'bearish bias' : parseFloat(pcRatio) < 0.7 ? 'bullish bias' : 'neutral'
+          : ''
 
         const fmt = (n: number | null) => n != null ? n.toFixed(4) : 'n/a'
         const fmtPct = (n: number | null) => n != null ? `${(n * 100).toFixed(1)}%` : 'n/a'
         const spread = (c: typeof atmCall) => c.ask > 0 && c.bid > 0 ? `$${(c.ask - c.bid).toFixed(2)}` : 'n/a'
 
         return [
-          `${ticker} (price $${price}, ATM strike $${atm}, expiry ${expiry}):`,
-          `  CALL: delta=${fmt(atmCall.delta)} gamma=${fmt(atmCall.gamma)} theta=${fmt(atmCall.theta)} IV=${fmtPct(atmCall.implied_volatility)} OI=${atmCall.open_interest.toLocaleString()} vol=${atmCall.volume} bid/ask=$${atmCall.bid}/$${atmCall.ask} spread=${spread(atmCall)}`,
-          `  PUT:  delta=${fmt(atmPut.delta)}  gamma=${fmt(atmPut.gamma)} theta=${fmt(atmPut.theta)} IV=${fmtPct(atmPut.implied_volatility)} OI=${atmPut.open_interest.toLocaleString()} vol=${atmPut.volume} bid/ask=$${atmPut.bid}/$${atmPut.ask} spread=${spread(atmPut)}`,
+          `${ticker} ($${price}, ATM $${atm}, expiry ${expiry}):`,
+          `  Expected move today: ${expectedMove} | Max pain: $${maxPainStrike} | P/C OI ratio: ${pcRatio} (${pcSentiment})`,
+          `  CALL ATM: delta=${fmt(atmCall.delta)} gamma=${fmt(atmCall.gamma)} theta=${fmt(atmCall.theta)} IV=${fmtPct(atmCall.implied_volatility)} OI=${atmCall.open_interest.toLocaleString()} vol=${atmCall.volume} spread=${spread(atmCall)}`,
+          `  PUT  ATM: delta=${fmt(atmPut.delta)} gamma=${fmt(atmPut.gamma)} theta=${fmt(atmPut.theta)} IV=${fmtPct(atmPut.implied_volatility)} OI=${atmPut.open_interest.toLocaleString()} vol=${atmPut.volume} spread=${spread(atmPut)}`,
         ].join('\n')
       })
     )
@@ -132,7 +160,14 @@ async function fetchATMGreeks(today: string): Promise<string> {
       .filter(r => r.status === 'fulfilled' && r.value)
       .map(r => (r as PromiseFulfilledResult<string>).value)
     if (!lines.length) return ''
-    return `\nLIVE OPTIONS CHAIN — ATM Greeks (use THESE exact values to score Factor 4):\n${lines.join('\n')}\nGreeks guide: delta 0.45-0.55=ATM (max leverage) | high gamma=explosive on moves | theta=daily decay cost | IV>60%=expensive premium | spread<$0.05=liquid\n`
+    return [
+      '\nLIVE OPTIONS CHAIN — ATM Greeks, Expected Move, Max Pain, P/C Ratio (use THESE exact values to score Factor 4):',
+      lines.join('\n'),
+      'Greeks guide: delta 0.45-0.55=ATM max leverage | gamma>0.005=explosive 0DTE | theta=daily decay (0DTE always high) | IV>60%=expensive | spread<$0.05=liquid',
+      'Max pain = strike where most options expire worthless — price gravitates here by 4PM on 0DTE days.',
+      'Expected move = market-implied ±range for today. Target must fit WITHIN expected move to be realistic.',
+      'P/C ratio >1.2 = market leaning bearish | <0.7 = leaning bullish | use as sentiment confirmation.\n',
+    ].join('\n')
   } catch { return '' }
 }
 

@@ -169,6 +169,69 @@ function sma(closes: number[], period: number): number | null {
   return slice.reduce((a, b) => a + b, 0) / period
 }
 
+function ema(closes: number[], period: number): number | null {
+  if (closes.length < period) return null
+  const k = 2 / (period + 1)
+  let val = closes.slice(0, period).reduce((a, b) => a + b, 0) / period
+  for (let i = period; i < closes.length; i++) val = closes[i] * k + val * (1 - k)
+  return val
+}
+
+function macd(closes: number[]): { macdLine: number; signalLine: number; histogram: number } | null {
+  if (closes.length < 35) return null // need 26 + 9 minimum
+  const ema12 = ema(closes, 12)
+  const ema26 = ema(closes, 26)
+  if (ema12 == null || ema26 == null) return null
+  // Build MACD series from each point to compute EMA9 of MACD
+  const macdSeries: number[] = []
+  for (let i = 26; i <= closes.length; i++) {
+    const e12 = ema(closes.slice(0, i), 12)
+    const e26 = ema(closes.slice(0, i), 26)
+    if (e12 != null && e26 != null) macdSeries.push(e12 - e26)
+  }
+  if (macdSeries.length < 9) return null
+  const signal = ema(macdSeries, 9)
+  if (signal == null) return null
+  const macdLine = macdSeries[macdSeries.length - 1]
+  return {
+    macdLine: parseFloat(macdLine.toFixed(4)),
+    signalLine: parseFloat(signal.toFixed(4)),
+    histogram: parseFloat((macdLine - signal).toFixed(4)),
+  }
+}
+
+function atr(highs: number[], lows: number[], closes: number[], period = 14): number | null {
+  if (closes.length < period + 1) return null
+  const trs: number[] = []
+  for (let i = closes.length - period; i < closes.length; i++) {
+    const tr = Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i - 1]),
+      Math.abs(lows[i] - closes[i - 1])
+    )
+    trs.push(tr)
+  }
+  return parseFloat((trs.reduce((a, b) => a + b, 0) / trs.length).toFixed(4))
+}
+
+function bollingerBands(closes: number[], period = 20, multiplier = 2): { upper: number; middle: number; lower: number; pctB: number } | null {
+  if (closes.length < period) return null
+  const slice = closes.slice(-period)
+  const mid = slice.reduce((a, b) => a + b, 0) / period
+  const variance = slice.reduce((sum, c) => sum + Math.pow(c - mid, 2), 0) / period
+  const stdDev = Math.sqrt(variance)
+  const upper = mid + multiplier * stdDev
+  const lower = mid - multiplier * stdDev
+  const price = closes[closes.length - 1]
+  const pctB = stdDev > 0 ? parseFloat(((price - lower) / (upper - lower) * 100).toFixed(1)) : 50
+  return {
+    upper: parseFloat(upper.toFixed(2)),
+    middle: parseFloat(mid.toFixed(2)),
+    lower: parseFloat(lower.toFixed(2)),
+    pctB,
+  }
+}
+
 function rsi(closes: number[], period = 14): number | null {
   if (closes.length < period + 1) return null
   let gains = 0, losses = 0
@@ -182,7 +245,7 @@ function rsi(closes: number[], period = 14): number | null {
   return parseFloat((100 - 100 / (1 + rs)).toFixed(1))
 }
 
-function avgVolume(volumes: number[], period = 20): number | null {
+function avgVolume(volumes: number[], period = 30): number | null {
   if (volumes.length < period) return null
   const slice = volumes.slice(-period)
   return slice.reduce((a, b) => a + b, 0) / period
@@ -198,8 +261,15 @@ export interface TechnicalSnapshot {
   aboveSma20: boolean | null
   aboveSma50: boolean | null
   aboveSma200: boolean | null
-  volVsAvg: number | null  // today's vol / 20-day avg vol ratio
-  trendSignal: string      // plain-english summary for the AI
+  volVsAvg: number | null       // today's vol / 30-day avg vol ratio
+  atr14: number | null          // Average True Range (14-day)
+  macdLine: number | null       // MACD line (EMA12 - EMA26)
+  macdSignal: number | null     // Signal line (EMA9 of MACD)
+  macdHistogram: number | null  // Histogram (MACD - Signal) — positive = bullish momentum building
+  bbUpper: number | null        // Bollinger Band upper (SMA20 + 2σ)
+  bbLower: number | null        // Bollinger Band lower (SMA20 - 2σ)
+  bbPctB: number | null         // %B: >80 = overbought, <20 = oversold, 50 = at midband
+  trendSignal: string           // plain-english summary for the AI
 }
 
 export interface PivotLevels {
@@ -283,6 +353,8 @@ export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSna
     if (data.s !== 'ok' || !data.c?.length) return null
 
     const closes = data.c
+    const highs  = data.h
+    const lows   = data.l
     const volumes = data.v
     const price = closes[closes.length - 1]
 
@@ -295,11 +367,21 @@ export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSna
     const aboveSma50 = sma50 != null ? price > sma50 : null
     const aboveSma200 = sma200 != null ? price > sma200 : null
 
+    // Volume vs 30-day average (excluding today)
     const todayVol = volumes[volumes.length - 1]
-    const avgVol = avgVolume(volumes.slice(0, -1), 20) // exclude today
+    const avgVol = avgVolume(volumes.slice(0, -1), 30)
     const volVsAvg = avgVol && avgVol > 0 ? parseFloat((todayVol / avgVol).toFixed(2)) : null
 
-    // Build a plain-english trend signal so the AI can score Factor 1 + Factor 2 directly
+    // MACD (12, 26, 9)
+    const macdResult = macd(closes)
+
+    // ATR (14-day)
+    const atr14 = atr(highs, lows, closes, 14)
+
+    // Bollinger Bands (20, 2)
+    const bb = bollingerBands(closes, 20, 2)
+
+    // Build plain-english trend signal
     const maCount = [aboveSma20, aboveSma50, aboveSma200].filter(v => v === true).length
     const belowCount = [aboveSma20, aboveSma50, aboveSma200].filter(v => v === false).length
     let trendSignal = ''
@@ -320,9 +402,25 @@ export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSna
       : 'RSI unavailable'
 
     const volSignal = volVsAvg != null
-      ? volVsAvg >= 1.3 ? `vol ${(volVsAvg * 100).toFixed(0)}% of avg (+3 bonus pts)`
-      : `vol ${(volVsAvg * 100).toFixed(0)}% of avg`
+      ? volVsAvg >= 1.3 ? `vol ${(volVsAvg * 100).toFixed(0)}% of 30d avg (+3 bonus pts)`
+      : `vol ${(volVsAvg * 100).toFixed(0)}% of 30d avg`
       : ''
+
+    const macdSignal = macdResult != null
+      ? macdResult.histogram > 0
+        ? `MACD bullish (line=${macdResult.macdLine} sig=${macdResult.macdSignal} hist=+${macdResult.histogram})`
+        : `MACD bearish (line=${macdResult.macdLine} sig=${macdResult.macdSignal} hist=${macdResult.histogram})`
+      : ''
+
+    const bbSignal = bb != null
+      ? bb.pctB > 80 ? `BB %B=${bb.pctB} (near upper band — overbought)`
+      : bb.pctB < 20 ? `BB %B=${bb.pctB} (near lower band — oversold/support)`
+      : `BB %B=${bb.pctB} (mid-range)`
+      : ''
+
+    const atrSignal = atr14 != null ? `ATR14=$${atr14} (${price > 0 ? ((atr14 / price) * 100).toFixed(1) : '?'}% daily range)` : ''
+
+    const parts = [trendSignal, rsiSignal, volSignal, macdSignal, bbSignal, atrSignal].filter(Boolean)
 
     return {
       ticker: ticker.toUpperCase(),
@@ -335,7 +433,14 @@ export async function getTechnicalSnapshot(ticker: string): Promise<TechnicalSna
       aboveSma50,
       aboveSma200,
       volVsAvg,
-      trendSignal: `${trendSignal} | ${rsiSignal}${volSignal ? ' | ' + volSignal : ''}`,
+      atr14,
+      macdLine:      macdResult?.macdLine      ?? null,
+      macdSignal:    macdResult?.signalLine     ?? null,
+      macdHistogram: macdResult?.histogram      ?? null,
+      bbUpper:       bb?.upper                  ?? null,
+      bbLower:       bb?.lower                  ?? null,
+      bbPctB:        bb?.pctB                   ?? null,
+      trendSignal: parts.join(' | '),
     }
   } catch {
     return null
