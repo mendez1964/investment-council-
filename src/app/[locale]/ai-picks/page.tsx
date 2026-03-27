@@ -288,6 +288,10 @@ function PickCard({ pick }: { pick: Pick }) {
   )
 }
 
+function fmtPremium(v: number): string {
+  return v < 0.10 ? v.toFixed(3) : v.toFixed(2)
+}
+
 function OptionsPickCard({ pick }: { pick: OptionsPick }) {
   const duration = getPickDuration(pick)
   const isCall = pick.option_type === 'call'
@@ -416,7 +420,7 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
           <div style={{ textAlign: 'center', borderRight: '1px solid #e5e7eb' }}>
             <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>MID PRICE</div>
             <div style={{ fontSize: '13px', fontWeight: 700, color: '#374151', fontVariantNumeric: 'tabular-nums' }}>
-              ${pick.entry_premium.toFixed(2)}
+              ${fmtPremium(pick.entry_premium)}
             </div>
             <div style={{ fontSize: '8px', color: '#9ca3af' }}>live est.</div>
           </div>
@@ -425,7 +429,7 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
           <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>STOP LOSS</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>-{pick.stop_loss_pct}%</div>
           {pick.entry_premium != null
-            ? <div style={{ fontSize: '8px', color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>${(pick.entry_premium * (1 - pick.stop_loss_pct / 100)).toFixed(2)}</div>
+            ? <div style={{ fontSize: '8px', color: '#dc2626', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 - pick.stop_loss_pct / 100))}</div>
             : <div style={{ fontSize: '8px', color: '#9ca3af' }}>of premium</div>
           }
         </div>
@@ -433,7 +437,7 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
           <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TP1</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#16a34a' }}>+{Math.round(pick.take_profit_pct / 2)}%</div>
           {pick.entry_premium != null
-            ? <div style={{ fontSize: '8px', color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>${(pick.entry_premium * (1 + Math.round(pick.take_profit_pct / 2) / 100)).toFixed(2)}</div>
+            ? <div style={{ fontSize: '8px', color: '#16a34a', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 + Math.round(pick.take_profit_pct / 2) / 100))}</div>
             : <div style={{ fontSize: '8px', color: '#9ca3af' }}>partial exit</div>
           }
         </div>
@@ -441,7 +445,7 @@ function OptionsPickCard({ pick }: { pick: OptionsPick }) {
           <div style={{ fontSize: '8px', color: '#9ca3af', letterSpacing: '0.05em', marginBottom: '2px' }}>TP2</div>
           <div style={{ fontSize: '13px', fontWeight: 700, color: '#15803d' }}>+{pick.take_profit_pct}%</div>
           {pick.entry_premium != null
-            ? <div style={{ fontSize: '8px', color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>${(pick.entry_premium * (1 + pick.take_profit_pct / 100)).toFixed(2)}</div>
+            ? <div style={{ fontSize: '8px', color: '#15803d', fontVariantNumeric: 'tabular-nums' }}>${fmtPremium(pick.entry_premium * (1 + pick.take_profit_pct / 100))}</div>
             : <div style={{ fontSize: '8px', color: '#9ca3af' }}>full exit</div>
           }
         </div>
