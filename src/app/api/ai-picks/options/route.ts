@@ -3,7 +3,7 @@ import { fetchLiveData } from '@/lib/live-data'
 import { getQuote, getPivotLevels } from '@/lib/finnhub'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
-import { getBestContract } from '@/lib/tradier'
+import { getBestContract, getExpirations, pickDailyExpiry, getChain, roundToATM, nearestStrike } from '@/lib/tradier'
 
 // Fixed 0DTE universe — master these 5 tickers for maximum edge
 const ODTE_UNIVERSE = ['SPY', 'QQQ', 'AAPL', 'NVDA', 'SPX'] as const
@@ -95,6 +95,44 @@ async function fetchOptionsHistory(supabase: any): Promise<string> {
         return `  ${ticker} ${dir.toUpperCase()}S: ${s.w}W/${s.t - s.w}L (${wr}%) ${trend}`
       })
     return `\nIC TRACK RECORD — Last 30 days (calibrate confidence from this):\n${lines.join('\n')}\n`
+  } catch { return '' }
+}
+
+// Fetch ATM Greeks for all 0DTE tickers BEFORE the AI prompt so Factor 4 scores from real data
+async function fetchATMGreeks(today: string): Promise<string> {
+  if (!process.env.TRADIER_API_KEY) return ''
+  // SPX options trade under SPXW on Tradier — fall back if unavailable
+  const GREEK_TICKERS = ['SPY', 'QQQ', 'AAPL', 'NVDA']
+  try {
+    const results = await Promise.allSettled(
+      GREEK_TICKERS.map(async (ticker) => {
+        const expirations = await getExpirations(ticker)
+        const expiry = pickDailyExpiry(expirations, today)
+        if (!expiry) return null
+        const chain = await getChain(ticker, expiry)
+        const price = await getQuote(ticker).then(q => q?.c ?? null).catch(() => null)
+        if (!price) return null
+        const atm = roundToATM(price)
+        const atmCall = nearestStrike(chain.calls, atm)
+        const atmPut  = nearestStrike(chain.puts,  atm)
+        if (!atmCall || !atmPut) return null
+
+        const fmt = (n: number | null) => n != null ? n.toFixed(4) : 'n/a'
+        const fmtPct = (n: number | null) => n != null ? `${(n * 100).toFixed(1)}%` : 'n/a'
+        const spread = (c: typeof atmCall) => c.ask > 0 && c.bid > 0 ? `$${(c.ask - c.bid).toFixed(2)}` : 'n/a'
+
+        return [
+          `${ticker} (price $${price}, ATM strike $${atm}, expiry ${expiry}):`,
+          `  CALL: delta=${fmt(atmCall.delta)} gamma=${fmt(atmCall.gamma)} theta=${fmt(atmCall.theta)} IV=${fmtPct(atmCall.implied_volatility)} OI=${atmCall.open_interest.toLocaleString()} vol=${atmCall.volume} bid/ask=$${atmCall.bid}/$${atmCall.ask} spread=${spread(atmCall)}`,
+          `  PUT:  delta=${fmt(atmPut.delta)}  gamma=${fmt(atmPut.gamma)} theta=${fmt(atmPut.theta)} IV=${fmtPct(atmPut.implied_volatility)} OI=${atmPut.open_interest.toLocaleString()} vol=${atmPut.volume} bid/ask=$${atmPut.bid}/$${atmPut.ask} spread=${spread(atmPut)}`,
+        ].join('\n')
+      })
+    )
+    const lines = results
+      .filter(r => r.status === 'fulfilled' && r.value)
+      .map(r => (r as PromiseFulfilledResult<string>).value)
+    if (!lines.length) return ''
+    return `\nLIVE OPTIONS CHAIN — ATM Greeks (use THESE exact values to score Factor 4):\n${lines.join('\n')}\nGreeks guide: delta 0.45-0.55=ATM (max leverage) | high gamma=explosive on moves | theta=daily decay cost | IV>60%=expensive premium | spread<$0.05=liquid\n`
   } catch { return '' }
 }
 
@@ -250,12 +288,13 @@ async function evaluatePending(supabase: any) {
   }))
 }
 
-function buildDailyPrompt(count: number, expiryStr: string, technicalLevels: string, newsContext: string, historyContext: string): string {
+function buildDailyPrompt(count: number, expiryStr: string, technicalLevels: string, newsContext: string, historyContext: string, greeksContext: string): string {
   return `You are an expert 0DTE options trader using the IC Daily Formula. You ONLY trade these 5 tickers: SPX, SPY, QQQ, AAPL, NVDA. Score every trade against all 5 factors using the REAL data provided. Reject anything under 65.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
 ${newsContext}
 ${technicalLevels}
+${greeksContext}
 ${historyContext}
 
 ═══════════════════════════════════════════
@@ -295,12 +334,14 @@ Fibonacci trade setups:
 • Put: price rejecting from Fib 61.8% resistance → target Fib 50% or S1 as profit objective
 • Strike selection: ATM or 1-strike OTM from the Fib/Pivot confluence level
 
-FACTOR 4 — OPTIONS FLOW & GAMMA (0-20)
-Score 20: Unusual options activity — large call/put sweeps at ATM strike, high open interest at target strike, elevated gamma
-Score 16: Elevated options volume vs average — market makers chasing gamma will amplify the move
-Score 12: Standard liquidity, tight bid/ask spread (<$0.10 for sub-$5 premium), sufficient OI
-Score 6: Thin market or wide spread (>$0.15) — slippage risk
-Score 0: Illiquid strike, spread >$0.25 — skip
+FACTOR 4 — OPTIONS FLOW & GREEKS (0-20)
+Use the REAL Greek values from LIVE OPTIONS CHAIN above for this ticker. Do NOT estimate — score from the actual numbers.
+Score 20: Delta 0.45-0.55 (ATM, max gamma leverage) + gamma >0.005 (explosive moves) + spread <$0.05 (tight, liquid) + OI >5,000 + volume elevated vs OI
+Score 16: Delta 0.35-0.45 or 0.55-0.65 + gamma 0.003-0.005 + spread $0.05-$0.10 + OI >2,000 — good but slightly off ATM
+Score 12: Standard liquidity — spread <$0.15, OI >500, gamma >0.001 — tradeable but not ideal
+Score 6: Spread $0.15-$0.25 or OI <500 or gamma <0.001 — slippage risk, size down
+Score 0: Spread >$0.25 or OI <100 or gamma near zero — illiquid, skip
+Theta note: for 0DTE, theta is always high — factor this in by requiring a same-day catalyst (Factor 2) to justify the decay. If theta > $0.50/day and no catalyst → reduce score.
 
 FACTOR 5 — VOLATILITY PROFILE (0-20)
 Score 20: VIX 15-22 (ideal 0DTE environment), IV reasonable — not crushing immediately
@@ -447,17 +488,20 @@ Required JSON format — EXACTLY ${count} trades, expiring ${expiryStr} (~3 week
 async function generatePicks(supabase: any, pickDate: string, expiryStr: string, count: number, type: 'daily' | 'weekly', liveData: string) {
   // For daily picks: fetch technical levels, news, and historical performance
   let technicalLevels = '', newsContext = '', historyContext = ''
+  let greeksContext = ''
   if (type === 'daily') {
-    const [techRes, newsRes, histRes] = await Promise.allSettled([
+    const [techRes, newsRes, histRes, greeksRes] = await Promise.allSettled([
       fetchTechnicalLevels(),
       fetchNewsContext(),
       fetchOptionsHistory(supabase),
+      fetchATMGreeks(pickDate),
     ])
     if (techRes.status === 'fulfilled') technicalLevels = techRes.value
     if (newsRes.status === 'fulfilled') newsContext = newsRes.value
     if (histRes.status === 'fulfilled') historyContext = histRes.value
+    if (greeksRes.status === 'fulfilled') greeksContext = greeksRes.value
   }
-  const prompt = type === 'daily' ? buildDailyPrompt(count, expiryStr, technicalLevels, newsContext, historyContext) : buildWeeklyPrompt(count, expiryStr)
+  const prompt = type === 'daily' ? buildDailyPrompt(count, expiryStr, technicalLevels, newsContext, historyContext, greeksContext) : buildWeeklyPrompt(count, expiryStr)
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
