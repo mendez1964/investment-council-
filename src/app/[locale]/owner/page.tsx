@@ -113,6 +113,117 @@ interface ManagedUser {
   admin_granted: boolean
 }
 
+const TIER_COLOR: Record<string, string> = { free: '#6b7280', trader: '#d97706', pro: '#7c3aed' }
+const TIER_BG: Record<string, string>    = { free: '#f3f4f6', trader: '#fffbeb', pro: '#f5f3ff' }
+
+function RecentLoginsPanel({ password }: { password: string }) {
+  const [users, setUsers] = useState<Array<{
+    id: string; email: string; display_name: string | null
+    tier: string; created_at: string; last_sign_in_at: string | null
+  }>>([])
+  const [loading, setLoading] = useState(true)
+  const [filter, setFilter] = useState<'all' | 'free' | 'trader' | 'pro'>('all')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    fetch('/api/owner/logins', { headers: { 'x-owner-password': password } })
+      .then(r => r.json())
+      .then(data => { setUsers(data.users ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const filtered = users.filter(u => {
+    if (filter !== 'all' && u.tier !== filter) return false
+    if (search && !u.email.toLowerCase().includes(search.toLowerCase()) &&
+        !(u.display_name ?? '').toLowerCase().includes(search.toLowerCase())) return false
+    return true
+  })
+
+  function timeAgo(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime()
+    const mins  = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days  = Math.floor(diff / 86400000)
+    if (mins < 2)   return 'just now'
+    if (mins < 60)  return `${mins}m ago`
+    if (hours < 24) return `${hours}h ago`
+    if (days < 30)  return `${days}d ago`
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#111' }}>User Logins</div>
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>All accounts sorted by most recent login</div>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search email..."
+            style={{ padding: '5px 10px', fontSize: '11px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'inherit', width: '160px' }}
+          />
+          {(['all', 'free', 'trader', 'pro'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setFilter(t)}
+              style={{
+                padding: '4px 10px', fontSize: '10px', fontWeight: 700, borderRadius: '5px', cursor: 'pointer', fontFamily: 'inherit',
+                border: `1px solid ${filter === t ? (t === 'all' ? '#111' : TIER_COLOR[t]) : '#e4e4e7'}`,
+                background: filter === t ? (t === 'all' ? '#111' : TIER_BG[t]) : 'transparent',
+                color: filter === t ? (t === 'all' ? '#fff' : TIER_COLOR[t]) : '#9ca3af',
+                textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ fontSize: '11px', color: '#9ca3af', padding: '20px 0' }}>Loading...</div>
+      ) : (
+        <>
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>{filtered.length} user{filtered.length !== 1 ? 's' : ''}</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+              <thead>
+                <tr>
+                  {['Email', 'Name', 'Tier', 'Last Login', 'Joined'].map(h => (
+                    <th key={h} style={{ textAlign: 'left', padding: '5px 10px', color: '#9ca3af', fontWeight: 600, fontSize: '9px', letterSpacing: '0.07em', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(u => (
+                  <tr key={u.id} style={{ borderBottom: '1px solid #fafafa' }}>
+                    <td style={{ padding: '7px 10px', color: '#374151', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
+                    <td style={{ padding: '7px 10px', color: '#6b7280', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.display_name ?? <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                    <td style={{ padding: '7px 10px' }}>
+                      <span style={{ fontSize: '9px', fontWeight: 700, color: TIER_COLOR[u.tier] ?? '#6b7280', background: TIER_BG[u.tier] ?? '#f3f4f6', borderRadius: '3px', padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                        {u.tier}
+                      </span>
+                    </td>
+                    <td style={{ padding: '7px 10px', color: u.last_sign_in_at ? '#374151' : '#d1d5db', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                      {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : 'never'}
+                    </td>
+                    <td style={{ padding: '7px 10px', color: '#9ca3af', whiteSpace: 'nowrap', fontSize: '10px' }}>
+                      {new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function ManageUsers({ password }: { password: string }) {
   const [email, setEmail] = useState('')
   const [found, setFound] = useState<ManagedUser | null>(null)
@@ -680,6 +791,7 @@ export default function OwnerPage() {
 
             {/* Users tab */}
             {activeTab === 'users' && <>
+            <RecentLoginsPanel password={password} />
             <ManageUsers password={password} />
 
             {/* Top features this week */}
