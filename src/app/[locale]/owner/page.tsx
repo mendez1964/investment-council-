@@ -535,12 +535,20 @@ function AffiliatesPanel({ password }: { password: string }) {
   )
 }
 
+const OWNER_TABS = [
+  { id: 'overview',   label: '📊 Overview' },
+  { id: 'users',      label: '👥 Users' },
+  { id: 'affiliates', label: '🔗 Affiliates' },
+  { id: 'social',     label: '📣 Social' },
+]
+
 export default function OwnerPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPasswordState] = useState('')
   const [stats, setStats] = useState<OwnerStats | null>(null)
   const [loading, setLoading] = useState(false)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
+  const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
     const saved = sessionStorage.getItem(PASSWORD_KEY)
@@ -598,13 +606,33 @@ export default function OwnerPage() {
         </button>
       </div>
 
+      {/* Tab nav */}
+      <div style={{ background: '#fff', borderBottom: '1px solid #e4e4e7', padding: '0 32px', display: 'flex', gap: '4px' }}>
+        {OWNER_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '10px 16px', fontSize: '12px', fontWeight: 600,
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit', borderBottom: `2px solid ${activeTab === tab.id ? '#111' : 'transparent'}`,
+              color: activeTab === tab.id ? '#111' : '#9ca3af',
+              transition: 'color 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px' }}>
         {!stats ? (
           <div style={{ textAlign: 'center', padding: '80px', color: '#9ca3af' }}>Loading metrics...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
-            {/* Today */}
+            {/* Today — Overview tab */}
+            {activeTab === 'overview' && <>
             <div>
               <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', marginBottom: '12px' }}>TODAY</div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -641,7 +669,10 @@ export default function OwnerPage() {
               </div>
             )}
 
-            {/* Manage Users */}
+            </>}
+
+            {/* Users tab */}
+            {activeTab === 'users' && <>
             <ManageUsers password={password} />
 
             {/* Top features this week */}
@@ -824,11 +855,13 @@ export default function OwnerPage() {
               </div>
             )}
 
-            {/* Affiliates */}
-            <AffiliatesPanel password={password} />
+            </>}
 
-            {/* Social Media Engine */}
-            <SocialPanel password={password} />
+            {/* Affiliates tab */}
+            {activeTab === 'affiliates' && <AffiliatesPanel password={password} />}
+
+            {/* Social tab */}
+            {activeTab === 'social' && <SocialPanel password={password} />}
 
             <div style={{ fontSize: '10px', color: '#9ca3af', textAlign: 'center', paddingBottom: '16px' }}>
               Investment Council · Owner Dashboard · Data from Supabase
