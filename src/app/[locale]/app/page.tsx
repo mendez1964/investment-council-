@@ -1103,27 +1103,44 @@ Be direct and factual. Use numbers.`
 
         {/* Owner dashboard — admin only */}
         {user?.email === 'mendezdag@gmail.com' && (
-          <button
-            onClick={() => router.push('/owner')}
-            style={{
+          <>
+            <div style={{
               marginLeft: '8px',
-              background: 'transparent',
-              border: '1px solid #1f1f1f',
+              background: '#1a0f00',
+              border: '1px solid #3d2200',
               borderRadius: '6px',
               padding: '4px 10px',
               color: '#f59e0b',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              letterSpacing: '0.04em',
+              fontSize: '10px',
+              fontWeight: 800,
+              letterSpacing: '0.1em',
               whiteSpace: 'nowrap',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.borderColor = '#4a3010' }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.borderColor = '#1f1f1f' }}
-          >
-            ⚙ Owner
-          </button>
+              userSelect: 'none',
+            }}>
+              OWNER
+            </div>
+            <button
+              onClick={() => router.push('/owner')}
+              style={{
+                marginLeft: '6px',
+                background: 'transparent',
+                border: '1px solid #1f1f1f',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                color: '#f59e0b',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.borderColor = '#4a3010' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.borderColor = '#1f1f1f' }}
+            >
+              ⚙ Admin
+            </button>
+          </>
         )}
 
         {/* Logout */}
