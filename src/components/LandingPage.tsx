@@ -520,38 +520,7 @@ export default function LandingPage() {
 
               {/* Logo + label */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                <svg width="110" height="126" viewBox="0 0 100 115" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <style>{`
-                    @keyframes guardianSweep {
-                      from { transform: rotate(0deg); transform-origin: 50px 68px; }
-                      to   { transform: rotate(360deg); transform-origin: 50px 68px; }
-                    }
-                    @keyframes guardianPulse {
-                      0%, 100% { opacity: 0.15; }
-                      50% { opacity: 0.4; }
-                    }
-                    .g-sweep { animation: guardianSweep 4s linear infinite; transform-origin: 50px 68px; }
-                    .g-ring1 { animation: guardianPulse 4s ease-in-out infinite 0s; }
-                    .g-ring2 { animation: guardianPulse 4s ease-in-out infinite 0.8s; }
-                    .g-ring3 { animation: guardianPulse 4s ease-in-out infinite 1.6s; }
-                  `}</style>
-                  <path d="M50 4 L92 18 L92 58 Q92 88 50 108 Q8 88 8 58 L8 18 Z"
-                    fill="none" stroke="#C9A34E" strokeWidth="2.5" strokeLinejoin="round"/>
-                  <path d="M50 14 L84 26 L84 56 Q84 80 50 98 Q16 80 16 56 L16 26 Z"
-                    fill="#C9A34E" fillOpacity="0.04"/>
-                  <circle className="g-ring1" cx="50" cy="58" r="12" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
-                  <circle className="g-ring2" cx="50" cy="58" r="22" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
-                  <circle className="g-ring3" cx="50" cy="58" r="32" fill="none" stroke="#C9A34E" strokeWidth="0.8"/>
-                  <g className="g-sweep">
-                    <line x1="50" y1="58" x2="50" y2="26" stroke="#C9A34E" strokeWidth="1.5" strokeLinecap="round"/>
-                    <path d="M50 58 L50 26 A32 32 0 0 1 82 58 Z" fill="#C9A34E" fillOpacity="0.08"/>
-                  </g>
-                  <circle cx="50" cy="58" r="3.5" fill="#C9A34E"/>
-                  <line x1="50" y1="50" x2="50" y2="54" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                  <line x1="50" y1="62" x2="50" y2="66" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                  <line x1="42" y1="58" x2="46" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                  <line x1="54" y1="58" x2="58" y2="58" stroke="#C9A34E" strokeWidth="1" strokeLinecap="round"/>
-                </svg>
+                <img src="/guardian-icon.svg" alt="IC Market Guardian" width={110} height={126} style={{ display: 'block' }} />
                 <div style={{ fontSize: '9px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.22em', textAlign: 'center', opacity: 0.7 }}>POWERED BY IC MARKET GUARDIAN</div>
               </div>
 
