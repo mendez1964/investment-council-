@@ -50,6 +50,14 @@ const ALERTS = [
     tier: 'pro' as const,
   },
   {
+    key: 'options_briefing',
+    label: 'Options Morning Brief',
+    desc: 'VIX environment, best strategy type for the day, key risk events, and 0DTE conditions',
+    time: '7:30 AM ET · Weekdays',
+    emoji: '📊',
+    tier: 'pro' as const,
+  },
+  {
     key: 'morning_briefing_stocks',
     label: 'Stock Morning Briefing',
     desc: 'Pre-market overview, futures, key levels, and what to watch',

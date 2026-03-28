@@ -54,6 +54,11 @@ async function runJobs(secret: string) {
   } catch (e) { console.error('[cron/morning] email_options error:', e) }
 
   try {
+    const res = await callInternal('/api/email/send/options-briefing', 'POST', secret)
+    console.log('[cron/morning] email_options_briefing:', JSON.stringify(res))
+  } catch (e) { console.error('[cron/morning] email_options_briefing error:', e) }
+
+  try {
     const res = await callInternal('/api/war/generate', 'POST', secret)
     console.log('[cron/morning] war_generate:', JSON.stringify(res))
   } catch (e) { console.error('[cron/morning] war_generate error:', e) }

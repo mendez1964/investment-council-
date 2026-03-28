@@ -40,6 +40,7 @@ export type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 const ICON_MAP: Record<string, LucideIcon> = {
   'Analyze a Stock / ETF': Search,
   'Analyze a Crypto': Search,
+  'Options Briefing': BarChart2,
   'Pre-Market Briefing': Sunrise,
   'End of Day Summary': Sunset,
   'Market Health': Activity,

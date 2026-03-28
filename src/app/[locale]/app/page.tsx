@@ -95,6 +95,28 @@ export default function Home() {
       id: 'market',
       title: t('sections.market'),
       items: [
+        { itemId: 'Options Briefing', label: 'Options Morning Brief', tier: 'pro' as const, prompt: `Give me today's options morning briefing.
+
+## OPTIONS MORNING BRIEF — [Today's Date]
+
+**1. VOLATILITY ENVIRONMENT**
+Check VIX from the live data. State the level, whether IV is elevated, compressed, or neutral, and what that means for premium buyers vs sellers today.
+
+**2. BEST STRATEGY TYPE TODAY**
+Based on the vol environment, what options strategies have edge right now? Credit spreads in high IV? Debit spreads in low IV? Straddles near catalysts? One direct sentence per strategy with the reason.
+
+**3. KEY RISK EVENTS THIS WEEK**
+Major earnings, Fed speakers, or economic data that options traders must know before positioning. 3-5 bullets. Use the economic calendar data if available.
+
+**4. OPTIONS MARKET CONDITIONS**
+- Put/call ratio context — elevated, neutral, or low?
+- Any notable skew or unusual activity
+- 0DTE conditions: favorable or unfavorable for intraday plays today?
+
+**5. TRADING REMINDERS**
+2-3 short rules-based reminders (IV crush risk, position sizing near events, premium decay timing).
+
+Under 350 words. Direct and data-first. No fluff.` },
         { itemId: 'Pre-Market Briefing', label: t('items.preMarket'), tier: 'trader' as const, prompt: `Give me today's pre-market briefing.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
