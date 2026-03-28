@@ -6,16 +6,21 @@ export const maxDuration = 60
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = createServerSupabaseClientAuth()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { data: plan } = await supabase
-    .from('trading_plans')
-    .select('*')
-    .eq('user_id', user.id)
-    .maybeSingle()
+  const { id } = await request.json().catch(() => ({}))
+
+  let query = supabase.from('trading_plans').select('*').eq('user_id', user.id)
+  if (id) {
+    query = query.eq('id', id)
+  } else {
+    query = query.order('created_at', { ascending: false }).limit(1)
+  }
+  const { data: rows } = await query
+  const plan = rows?.[0] ?? null
 
   if (!plan) return Response.json({ error: 'No trading plan found' }, { status: 404 })
 
