@@ -910,7 +910,7 @@ Be direct and factual. Use numbers.`
         `}</style>
 
         <img
-          src="/logo.svg"
+          src="/investmentcouncillogo.svg"
           alt="Investment Council"
           style={{ height: '52px', width: 'auto', flexShrink: 0 }}
         />
