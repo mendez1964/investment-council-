@@ -520,7 +520,7 @@ export default function LandingPage() {
 
               {/* Logo + label */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-                <img src="/guardian-icon.svg" alt="IC Market Guardian" width={110} height={126} style={{ display: 'block' }} />
+                <img src="/Gaurdian logo .png" alt="IC Market Guardian" width={110} height={126} style={{ display: 'block' }} />
                 <div style={{ fontSize: '9px', fontWeight: 800, color: '#C9A34E', letterSpacing: '0.22em', textAlign: 'center', opacity: 0.7 }}>POWERED BY IC MARKET GUARDIAN</div>
               </div>
 
