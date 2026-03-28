@@ -21,6 +21,7 @@ import Sidebar, { type SidebarItem as SidebarItemType } from '@/components/Sideb
 import UpgradeModal from '@/components/UpgradeModal'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import GuardianPanel from '@/components/GuardianPanel'
+import TradingPlanTab from '@/components/TradingPlanTab'
 import { Menu } from 'lucide-react'
 import ReviewPrompt from '@/components/ReviewPrompt'
 
@@ -304,7 +305,7 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'chat' | 'pine' | 'watchlist' | 'portfolio' | 'training'>('chat')
+  const [activeTab, setActiveTab] = useState<'chat' | 'pine' | 'watchlist' | 'portfolio' | 'training' | 'trading-plan'>('chat')
   const [unreadAlerts, setUnreadAlerts] = useState(0)
   const [activePineScript, setActivePineScript] = useState<{ name: string; code: string } | null>(null)
   const pineCodeInjected = useRef(false)
@@ -1186,6 +1187,7 @@ Be direct and factual. Use numbers.`
             { id: 'pine', label: `📈 ${ta('tabs.pine')}` },
             { id: 'watchlist', label: `👁 ${ta('tabs.watchlist')}` },
             { id: 'portfolio', label: `💼 ${ta('tabs.portfolio')}` },
+            { id: 'trading-plan', label: '📋 Trading Plan' },
             { id: 'training', label: `📚 ${ta('tabs.training')}` },
           ] as const).map(tab => (
             <button
@@ -1274,6 +1276,11 @@ Be direct and factual. Use numbers.`
           {/* Portfolio Tab */}
           <div style={{ flex: 1, overflow: 'hidden', display: activeTab === 'portfolio' ? 'flex' : 'none', flexDirection: 'column' }}>
             <PortfolioTab onSendMessage={sendMessageWithText} onSwitchToChat={() => setActiveTab('chat')} />
+          </div>
+
+          {/* Trading Plan Tab */}
+          <div style={{ flex: 1, overflow: 'hidden', display: activeTab === 'trading-plan' ? 'flex' : 'none', flexDirection: 'column' }}>
+            <TradingPlanTab onSendMessage={sendMessageWithText} />
           </div>
 
           {/* ── Chat Messages ──────────────────────────────────────────── */}
