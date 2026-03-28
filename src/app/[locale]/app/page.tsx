@@ -912,7 +912,7 @@ Be direct and factual. Use numbers.`
         <img
           src="/investmentcouncil2.svg"
           alt="Investment Council"
-          style={{ height: '64px', width: 'auto', flexShrink: 0 }}
+          style={{ height: '90px', width: 'auto', flexShrink: 0 }}
         />
 
         {/* New Chat button */}

@@ -282,7 +282,7 @@ export default function LandingPage() {
           padding: '0 32px', height: '64px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <img src="/investmentcouncil2.svg" alt="Investment Council" style={{ height: '40px' }} />
+          <img src="/investmentcouncil2.svg" alt="Investment Council" style={{ height: '70px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
             <div className="landing-nav-links" style={{ display: 'flex', gap: '24px' }}>
               {[
@@ -756,7 +756,7 @@ export default function LandingPage() {
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '32px', marginBottom: '40px' }}>
               <div style={{ maxWidth: '280px' }}>
-                <img src="/investmentcouncil2.svg" alt="Investment Council" style={{ height: '32px', marginBottom: '12px', filter: 'brightness(0.55)' }} />
+                <img src="/investmentcouncil2.svg" alt="Investment Council" style={{ height: '60px', marginBottom: '12px', filter: 'brightness(0.55)' }} />
                 <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', lineHeight: 1.6 }}>
                   AI-powered investment research for retail traders. No hype. No agenda. Just analysis.
                 </p>
