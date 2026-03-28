@@ -408,8 +408,9 @@ export default function GuardianPanel() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src="/guardian-icon.svg" alt="Guardian" style={{ width: '22px', height: '22px', flexShrink: 0 }} />
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#C9A34E', letterSpacing: '0.05em' }}>
-                    🛡️ IC MARKET GUARDIAN
+                    IC MARKET GUARDIAN
                   </span>
                   {unread > 0 && (
                     <span style={{ fontSize: '9px', background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: '3px', padding: '1px 5px', fontWeight: 700 }}>

@@ -908,20 +908,11 @@ Be direct and factual. Use numbers.`
           }
         `}</style>
 
-        <div style={{
-          width: '28px', height: '28px', borderRadius: '6px',
-          background: 'linear-gradient(135deg, #1a472a, #2d6a4f)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '14px', flexShrink: 0,
-        }}>⚡</div>
-        <div>
-          <div style={{ fontSize: '14px', fontWeight: 600, color: '#e5e5e5', letterSpacing: '-0.01em' }}>
-            Investment Council
-          </div>
-          <div style={{ fontSize: '10px', color: '#444', marginTop: '1px' }}>
-            {ta('subtitle')}
-          </div>
-        </div>
+        <img
+          src="/logo.svg"
+          alt="Investment Council"
+          style={{ height: '36px', width: 'auto', flexShrink: 0 }}
+        />
 
         {/* New Chat button */}
         {messages.length > 0 && (
