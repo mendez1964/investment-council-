@@ -22,6 +22,7 @@ import UpgradeModal from '@/components/UpgradeModal'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import GuardianPanel from '@/components/GuardianPanel'
 import { Menu } from 'lucide-react'
+import ReviewPrompt from '@/components/ReviewPrompt'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -337,6 +338,7 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
   // Auth
   const [user, setUser] = useState<any>(null)
   const [userTier, setUserTier] = useState<'free' | 'trader' | 'pro' | null>(null)
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const supabase = createBrowserSupabaseClient()
 
@@ -349,6 +351,7 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
         if (res.ok) {
           const profile = await res.json()
           setUserTier(profile.tier ?? 'free')
+          setTrialEndsAt(profile.trial_ends_at ?? null)
           // Restore saved language preference
           const savedLocale = profile.locale
           if (savedLocale && savedLocale !== currentLocale) {
@@ -868,6 +871,8 @@ Be direct and factual. Use numbers.`
         />
       )}
 
+      <ReviewPrompt trialEndsAt={trialEndsAt} tier={userTier ?? 'free'} />
+
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div style={{
         padding: '12px 16px',
@@ -1075,6 +1080,22 @@ Be direct and factual. Use numbers.`
           onMouseLeave={e => { e.currentTarget.style.color = '#444'; e.currentTarget.style.borderColor = '#1f1f1f' }}
         >
           Support
+        </button>
+
+        {/* Review */}
+        <button
+          onClick={() => router.push('/review')}
+          title="Leave a review"
+          style={{
+            marginLeft: '8px', background: 'transparent', border: '1px solid #1f1f1f',
+            borderRadius: '6px', padding: '4px 10px', color: '#f59e0b',
+            fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            letterSpacing: '0.04em', whiteSpace: 'nowrap',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.borderColor = '#4a3010' }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#f59e0b'; e.currentTarget.style.borderColor = '#1f1f1f' }}
+        >
+          ⭐ Review
         </button>
 
         {/* Profile */}

@@ -750,6 +750,90 @@ function AffiliatesPanel({ password }: { password: string }) {
   )
 }
 
+function ReviewsPanel({ password }: { password: string }) {
+  const [data, setData] = useState<{ reviews: any[]; summary: any } | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/owner/reviews', { headers: { 'x-owner-password': password } })
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const starColor = (r: number) => r >= 4 ? '#16a34a' : r === 3 ? '#d97706' : '#dc2626'
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 700, color: '#111', marginBottom: '16px' }}>User Reviews</div>
+
+      {loading ? (
+        <div style={{ fontSize: '11px', color: '#9ca3af' }}>Loading...</div>
+      ) : !data || data.reviews.length === 0 ? (
+        <div style={{ fontSize: '11px', color: '#9ca3af' }}>No reviews yet.</div>
+      ) : (
+        <>
+          {/* Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
+            <div style={{ background: '#f9fafb', border: '1px solid #f0f0f0', borderRadius: '8px', padding: '12px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '4px' }}>AVG RATING</div>
+              <div style={{ fontSize: '28px', fontWeight: 800, color: '#f59e0b' }}>{'★'.repeat(Math.round(Number(data.summary.avg_rating)))}{'☆'.repeat(5 - Math.round(Number(data.summary.avg_rating)))}</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#111' }}>{data.summary.avg_rating} / 5</div>
+            </div>
+            {[
+              { label: 'PICKS HELPFUL',   val: data.summary.picks_helpful_yes },
+              { label: 'WOULD USE DAILY', val: data.summary.would_use_daily_yes },
+              { label: 'WOULD RECOMMEND', val: data.summary.would_recommend_yes },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#f9fafb', border: '1px solid #f0f0f0', borderRadius: '8px', padding: '12px 16px', textAlign: 'center' }}>
+                <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '4px' }}>{s.label}</div>
+                <div style={{ fontSize: '26px', fontWeight: 800, color: s.val >= 70 ? '#16a34a' : s.val >= 50 ? '#d97706' : '#dc2626' }}>
+                  {s.val !== null ? `${s.val}%` : '—'}
+                </div>
+                <div style={{ fontSize: '10px', color: '#9ca3af' }}>said Yes</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Reviews list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {data.reviews.map((r: any) => (
+              <div key={r.id} style={{ border: '1px solid #f0f0f0', borderRadius: '8px', padding: '14px 16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '18px', fontWeight: 800, color: starColor(r.rating) }}>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                    <span style={{ fontSize: '11px', color: '#9ca3af' }}>{r.email ?? 'anonymous'}</span>
+                  </div>
+                  <span style={{ fontSize: '10px', color: '#9ca3af' }}>
+                    {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: r.improve ? '10px' : 0 }}>
+                  {[
+                    { label: 'Picks helpful', val: r.picks_helpful },
+                    { label: 'AI trustworthy', val: r.ai_trustworthy },
+                    { label: 'Easy to use', val: r.easy_to_use },
+                    { label: 'Saves time', val: r.saves_time },
+                    { label: 'Would use daily', val: r.would_use_daily },
+                    { label: 'Recommend', val: r.would_recommend },
+                  ].filter(f => f.val).map(f => (
+                    <div key={f.label} style={{ fontSize: '10px', color: '#6b7280' }}>
+                      <span style={{ color: '#9ca3af' }}>{f.label}: </span>
+                      <span style={{ fontWeight: 700, color: f.val === 'Yes' ? '#16a34a' : f.val === 'No' ? '#dc2626' : '#d97706' }}>{f.val}</span>
+                    </div>
+                  ))}
+                </div>
+                {r.top_feature && <div style={{ fontSize: '10px', color: '#7c3aed', marginBottom: 4 }}>Top feature: <b>{r.top_feature}</b></div>}
+                {r.improve && <div style={{ fontSize: '12px', color: '#374151', fontStyle: 'italic', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #f9fafb' }}>"{r.improve}"</div>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 const OWNER_TABS = [
   { id: 'overview',   label: '📊 Overview' },
   { id: 'users',      label: '👥 Users' },
@@ -1073,6 +1157,7 @@ export default function OwnerPage() {
               </div>
             )}
 
+            <ReviewsPanel password={password} />
             </>}
 
             {/* Affiliates tab */}
