@@ -911,7 +911,7 @@ Be direct and factual. Use numbers.`
         <img
           src="/logo.svg"
           alt="Investment Council"
-          style={{ height: '36px', width: 'auto', flexShrink: 0 }}
+          style={{ height: '52px', width: 'auto', flexShrink: 0 }}
         />
 
         {/* New Chat button */}
