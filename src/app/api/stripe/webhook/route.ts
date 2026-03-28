@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       }).eq('id', userId)
       console.log(`[webhook] checkout.completed user:${userId} price:${priceId} → tier:${tier}`)
 
-      // Handle referral conversion
+      // Log referral as pending — converted only on first real payment (invoice.payment_succeeded)
       const refCode = session.metadata?.ref_code as string | undefined
       if (refCode) {
         const { data: refCodeRow } = await supabase
@@ -90,36 +90,14 @@ export async function POST(request: Request) {
           .single()
 
         if (refCodeRow?.user_id) {
-          const referrerId = refCodeRow.user_id
-
-          // Log the conversion
           await supabase.from('referrals').upsert({
-            referrer_id: referrerId,
+            referrer_id: refCodeRow.user_id,
             referred_user_id: userId,
             code: refCode,
-            status: 'converted',
+            status: 'pending',
             reward_type: 'free_month',
-            converted_at: new Date().toISOString(),
           }, { onConflict: 'referrer_id,referred_user_id' })
-
-          // Credit the referrer with 1 free month (applied on their next checkout or accumulates)
-          await supabase.rpc('increment_referral_credit', { p_user_id: referrerId, p_months: 1 })
-            .then(async ({ error }) => {
-              if (error) {
-                // Fallback: direct update if rpc doesn't exist
-                const { data: ref } = await supabase
-                  .from('profiles')
-                  .select('referral_credit_months')
-                  .eq('id', referrerId)
-                  .single()
-                await supabase
-                  .from('profiles')
-                  .update({ referral_credit_months: (ref?.referral_credit_months ?? 0) + 1 })
-                  .eq('id', referrerId)
-              }
-            })
-
-          console.log(`[webhook] referral converted: referrer:${referrerId} ← ref:${userId} code:${refCode}`)
+          console.log(`[webhook] referral pending: referrer:${refCodeRow.user_id} ← referred:${userId} code:${refCode}`)
         }
       }
     }
@@ -141,6 +119,52 @@ export async function POST(request: Request) {
       }
       await supabase.from('profiles').update({ tier }).eq('id', userId)
       console.log(`[webhook] subscription.updated user:${userId} price:${priceId} status:${status} → tier:${tier}`)
+    }
+  }
+
+  // First real payment — convert pending referral and reward referrer
+  if (event.type === 'invoice.payment_succeeded') {
+    const invoice = event.data.object as Stripe.Invoice
+    const customerId = invoice.customer as string
+    const amountPaid = invoice.amount_paid ?? 0
+
+    if (amountPaid > 0 && customerId) {
+      // Find the user by their Stripe customer ID
+      const { data: payer } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('stripe_customer_id', customerId)
+        .single()
+
+      if (payer?.id) {
+        // Find their pending referral
+        const { data: referral } = await supabase
+          .from('referrals')
+          .select('id, referrer_id')
+          .eq('referred_user_id', payer.id)
+          .eq('status', 'pending')
+          .single()
+
+        if (referral) {
+          // Mark as converted
+          await supabase.from('referrals')
+            .update({ status: 'converted', converted_at: new Date().toISOString() })
+            .eq('id', referral.id)
+
+          // Credit the referrer with 1 free month
+          const { data: refProfile } = await supabase
+            .from('profiles')
+            .select('referral_credit_months')
+            .eq('id', referral.referrer_id)
+            .single()
+
+          await supabase.from('profiles')
+            .update({ referral_credit_months: (refProfile?.referral_credit_months ?? 0) + 1 })
+            .eq('id', referral.referrer_id)
+
+          console.log(`[webhook] referral converted on payment: referrer:${referral.referrer_id} ← payer:${payer.id}`)
+        }
+      }
     }
   }
 

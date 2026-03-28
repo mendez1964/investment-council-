@@ -352,6 +352,189 @@ function ManageUsers({ password }: { password: string }) {
   )
 }
 
+interface AffiliateRow {
+  user_id: string
+  email: string
+  code: string
+  total: number
+  converted: number
+  paid: number
+  pending_credit: number
+}
+
+interface ReferralRow {
+  id: string
+  referrer_id: string
+  referred_user_id: string | null
+  code: string
+  status: string
+  converted_at: string | null
+  paid_at: string | null
+  created_at: string
+}
+
+function AffiliatesPanel({ password }: { password: string }) {
+  const [affiliates, setAffiliates] = useState<AffiliateRow[]>([])
+  const [referrals, setReferrals] = useState<ReferralRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  async function load() {
+    setLoading(true)
+    const res = await fetch('/api/owner/affiliates', { headers: { 'x-owner-password': password } })
+    if (res.ok) {
+      const data = await res.json()
+      setAffiliates(data.affiliates ?? [])
+      setReferrals(data.referrals ?? [])
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  async function markPaid(referralId: string) {
+    await fetch('/api/owner/affiliates', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ referral_id: referralId }),
+    })
+    load()
+  }
+
+  const totalReferrers  = affiliates.length
+  const totalReferrals  = referrals.length
+  const totalConverted  = referrals.filter(r => r.status === 'converted' || r.status === 'paid').length
+  const totalPending    = referrals.filter(r => r.status === 'pending').length
+
+  const statusColor = (s: string) =>
+    s === 'converted' ? '#16a34a' : s === 'paid' ? '#2563eb' : '#d97706'
+  const statusBg = (s: string) =>
+    s === 'converted' ? '#dcfce7' : s === 'paid' ? '#dbeafe' : '#fffbeb'
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#111' }}>Affiliates & Referrals</div>
+          <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>Only counts after first real payment — not trial starts</div>
+        </div>
+        <button
+          onClick={load}
+          style={{ background: '#f4f4f5', border: '1px solid #e4e4e7', borderRadius: '6px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', color: '#374151', fontFamily: 'inherit' }}
+        >
+          ↻ Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ fontSize: '11px', color: '#9ca3af', padding: '20px 0' }}>Loading...</div>
+      ) : (
+        <>
+          {/* Summary */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
+            {[
+              { label: 'REFERRERS', value: totalReferrers, color: '#111' },
+              { label: 'TOTAL CLICKS', value: totalReferrals, color: '#6b7280' },
+              { label: 'CONVERTED (PAID)', value: totalConverted, color: '#16a34a' },
+              { label: 'PENDING TRIAL', value: totalPending, color: '#d97706' },
+            ].map(s => (
+              <div key={s.label} style={{ background: '#f9fafb', border: '1px solid #f0f0f0', borderRadius: '8px', padding: '12px 16px' }}>
+                <div style={{ fontSize: '9px', color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '4px' }}>{s.label}</div>
+                <div style={{ fontSize: '26px', fontWeight: 800, color: s.color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Affiliates table */}
+          {affiliates.length === 0 ? (
+            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '20px' }}>No referral codes generated yet.</div>
+          ) : (
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '8px' }}>ALL REFERRERS</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr>
+                    {['Email', 'Code', 'Clicks', 'Converted', 'Pending Credit'].map(h => (
+                      <th key={h} style={{ textAlign: h === 'Email' ? 'left' : 'right', padding: '5px 10px', color: '#9ca3af', fontWeight: 600, fontSize: '9px', letterSpacing: '0.07em', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {affiliates.map(a => (
+                    <tr key={a.user_id} style={{ borderBottom: '1px solid #fafafa' }}>
+                      <td style={{ padding: '7px 10px', color: '#374151', fontWeight: 600 }}>{a.email}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', fontFamily: 'monospace', color: '#7c3aed', fontWeight: 700, letterSpacing: '0.08em' }}>{a.code}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', color: '#6b7280', fontVariantNumeric: 'tabular-nums' }}>{a.total}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right', color: '#16a34a', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{a.converted}</td>
+                      <td style={{ padding: '7px 10px', textAlign: 'right' }}>
+                        {a.pending_credit > 0 ? (
+                          <span style={{ fontSize: '10px', fontWeight: 700, color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '4px', padding: '2px 7px' }}>
+                            {a.pending_credit} mo
+                          </span>
+                        ) : (
+                          <span style={{ color: '#9ca3af' }}>—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Referrals log */}
+          {referrals.length > 0 && (
+            <div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '8px' }}>REFERRAL LOG</div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr>
+                    {['Date', 'Code', 'Status', 'Converted', ''].map(h => (
+                      <th key={h} style={{ textAlign: h === '' ? 'right' : 'left', padding: '5px 10px', color: '#9ca3af', fontWeight: 600, fontSize: '9px', letterSpacing: '0.07em', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {referrals.slice(0, 50).map(r => (
+                    <tr key={r.id} style={{ borderBottom: '1px solid #fafafa' }}>
+                      <td style={{ padding: '6px 10px', color: '#9ca3af', fontSize: '10px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                        {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </td>
+                      <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: '#7c3aed', fontWeight: 700, fontSize: '10px', letterSpacing: '0.08em' }}>{r.code}</td>
+                      <td style={{ padding: '6px 10px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: statusColor(r.status), background: statusBg(r.status), borderRadius: '3px', padding: '1px 6px' }}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '6px 10px', color: '#6b7280', fontSize: '10px' }}>
+                        {r.converted_at ? new Date(r.converted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
+                      </td>
+                      <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                        {r.status === 'converted' && (
+                          <button
+                            onClick={() => markPaid(r.id)}
+                            style={{ fontSize: '9px', fontWeight: 700, color: '#2563eb', background: 'transparent', border: '1px solid #bfdbfe', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontFamily: 'inherit' }}
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                        {r.status === 'paid' && (
+                          <span style={{ fontSize: '9px', color: '#9ca3af' }}>
+                            {r.paid_at ? new Date(r.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'paid'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function OwnerPage() {
   const [authed, setAuthed] = useState(false)
   const [password, setPasswordState] = useState('')
@@ -640,6 +823,9 @@ export default function OwnerPage() {
                 </div>
               </div>
             )}
+
+            {/* Affiliates */}
+            <AffiliatesPanel password={password} />
 
             {/* Social Media Engine */}
             <SocialPanel password={password} />
