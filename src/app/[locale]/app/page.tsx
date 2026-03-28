@@ -910,9 +910,9 @@ Be direct and factual. Use numbers.`
         `}</style>
 
         <img
-          src="/logo-preview.svg"
+          src="/investmentcouncil.svg"
           alt="Investment Council"
-          style={{ height: '52px', width: 'auto', flexShrink: 0 }}
+          style={{ height: '64px', width: 'auto', flexShrink: 0 }}
         />
 
         {/* New Chat button */}
