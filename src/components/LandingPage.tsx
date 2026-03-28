@@ -478,7 +478,7 @@ export default function LandingPage() {
             </div>
             <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
               {[
-                { icon: '⚡', title: 'On-Demand AI Council Chat', desc: '18 investment frameworks ready to analyze any stock, crypto, or market condition. Ask anything — get structured, unbiased analysis in seconds.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
+                { icon: '/icon-chat.svg', title: 'On-Demand AI Council Chat', desc: '18 investment frameworks ready to analyze any stock, crypto, or market condition. Ask anything — get structured, unbiased analysis in seconds.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '🌅', title: 'Pre-Market Briefing & EOD Summary', desc: 'Start every trading day with a full market snapshot — futures, key levels, macro risks, and what to watch. End the day with a full recap. Free tier gets a limited snapshot preview.', tag: 'Full on Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
@@ -495,7 +495,12 @@ export default function LandingPage() {
                   onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.boxShadow = '0 4px 24px rgba(201,163,78,0.12)'; e.currentTarget.style.transform = 'translateY(-2px)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = BORDER; e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)' }}
                 >
-                  <div style={{ fontSize: '28px', marginBottom: '12px' }}>{icon}</div>
+                  <div style={{ marginBottom: '12px' }}>
+                    {icon.startsWith('/')
+                      ? <img src={icon} alt={title} style={{ width: '52px', height: '52px', objectFit: 'contain' }} />
+                      : <span style={{ fontSize: '28px' }}>{icon}</span>
+                    }
+                  </div>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, color: NAVY, margin: '0 0 8px' }}>{title}</h3>
                   <p style={{ fontSize: '14px', color: TEXT_MUTED, lineHeight: 1.6, margin: '0 0 12px' }}>{desc}</p>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: tagColor, background: tagBg, borderRadius: '4px', padding: '3px 8px' }}>{tag}</span>
