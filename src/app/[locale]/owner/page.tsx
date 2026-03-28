@@ -224,6 +224,103 @@ function RecentLoginsPanel({ password }: { password: string }) {
   )
 }
 
+function CreateStaffUser({ password }: { password: string }) {
+  const [email, setEmail] = useState('')
+  const [pw, setPw] = useState('')
+  const [name, setName] = useState('')
+  const [tier, setTier] = useState<'free' | 'trader' | 'pro'>('pro')
+  const [saving, setSaving] = useState(false)
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null)
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault()
+    setSaving(true)
+    setResult(null)
+    const res = await fetch('/api/owner/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+      body: JSON.stringify({ email, password: pw, tier, display_name: name }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (res.ok) {
+      setResult({ ok: true, message: `✓ Account created — ${data.email} (${data.tier})` })
+      setEmail(''); setPw(''); setName('')
+    } else {
+      setResult({ ok: false, message: data.error ?? 'Failed to create account' })
+    }
+  }
+
+  const tierColor = (t: string) => t === 'pro' ? '#7c3aed' : t === 'trader' ? '#d97706' : '#6b7280'
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+      <div style={{ fontSize: '12px', fontWeight: 700, color: '#111', marginBottom: '4px' }}>Create Staff Account</div>
+      <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '16px' }}>Create a login for a staff member. Account is confirmed immediately — they can log in right away.</div>
+
+      <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: '4px' }}>EMAIL *</label>
+            <input
+              type="email" value={email} onChange={e => setEmail(e.target.value)} required
+              placeholder="staff@example.com"
+              style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: '4px' }}>PASSWORD *</label>
+            <input
+              type="text" value={pw} onChange={e => setPw(e.target.value)} required minLength={8}
+              placeholder="min 8 characters"
+              style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box' as const }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '10px', alignItems: 'end' }}>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: '4px' }}>DISPLAY NAME</label>
+            <input
+              type="text" value={name} onChange={e => setName(e.target.value)}
+              placeholder="e.g. John (Support)"
+              style={{ width: '100%', padding: '8px 10px', fontSize: '12px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' as const }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: '4px' }}>TIER</label>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              {(['free', 'trader', 'pro'] as const).map(t => (
+                <button key={t} type="button" onClick={() => setTier(t)}
+                  style={{
+                    padding: '7px 12px', borderRadius: '5px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+                    border: `1px solid ${tier === t ? tierColor(t) : '#e4e4e7'}`,
+                    background: tier === t ? `${tierColor(t)}15` : 'transparent',
+                    color: tier === t ? tierColor(t) : '#9ca3af',
+                    textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+                  }}
+                >{t}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {result && (
+          <div style={{ fontSize: '11px', fontWeight: 600, padding: '8px 12px', borderRadius: '6px', background: result.ok ? '#f0fdf4' : '#fff5f5', color: result.ok ? '#16a34a' : '#dc2626', border: `1px solid ${result.ok ? '#86efac' : '#fca5a5'}` }}>
+            {result.message}
+          </div>
+        )}
+
+        <button type="submit" disabled={saving}
+          style={{ padding: '9px', fontSize: '12px', fontWeight: 700, background: saving ? '#9ca3af' : '#111', color: '#fff', border: 'none', borderRadius: '7px', cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit' }}
+        >
+          {saving ? 'Creating...' : 'Create Account →'}
+        </button>
+      </form>
+    </div>
+  )
+}
+
 function ManageUsers({ password }: { password: string }) {
   const [email, setEmail] = useState('')
   const [found, setFound] = useState<ManagedUser | null>(null)
@@ -787,6 +884,8 @@ export default function OwnerPage() {
               </div>
             )}
 
+            <CreateStaffUser password={password} />
+            <ManageUsers password={password} />
             </>}
 
             {/* Users tab */}

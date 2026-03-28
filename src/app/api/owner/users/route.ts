@@ -40,6 +40,36 @@ export async function GET(request: Request) {
   })
 }
 
+// POST /api/owner/users — create a staff account with email + password
+export async function POST(request: Request) {
+  if (!verifyOwner(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { email, password, tier, display_name } = await request.json()
+  if (!email || !password) return Response.json({ error: 'email and password required' }, { status: 400 })
+  if (password.length < 8) return Response.json({ error: 'Password must be at least 8 characters' }, { status: 400 })
+
+  const supabase = createServerSupabaseClient()
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email: email.trim().toLowerCase(),
+    password,
+    email_confirm: true,
+  })
+
+  if (error) return Response.json({ error: error.message }, { status: 400 })
+
+  const userId = data.user.id
+  const assignedTier = ['free', 'trader', 'pro'].includes(tier) ? tier : 'free'
+
+  await supabase.from('profiles').upsert({
+    id: userId,
+    tier: assignedTier,
+    display_name: display_name?.trim() || null,
+  }, { onConflict: 'id' })
+
+  return Response.json({ ok: true, user_id: userId, email: data.user.email, tier: assignedTier })
+}
+
 // PATCH /api/owner/users — grant a user a tier
 export async function PATCH(request: Request) {
   if (!verifyOwner(request)) return Response.json({ error: 'Unauthorized' }, { status: 401 })
