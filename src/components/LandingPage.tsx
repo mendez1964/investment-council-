@@ -488,6 +488,7 @@ export default function LandingPage() {
                 { icon: '🌍', title: 'Macro & Sector Intelligence', desc: 'Yield curve analysis, sector rotation signals, market health checks, volatility readings, and macro environment breakdowns.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '📈', title: 'Charts, Screeners & Calendars', desc: 'Interactive charts, candlestick pattern scanner, earnings calendar, IPO calendar, economic events, and market movers.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🧮', title: 'Trade Tools & Calculators', desc: 'Position sizing, risk assessment, entry/stop/target calculator, hold-or-cut analysis, and portfolio & watchlist tracking.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
+                { icon: '📋', title: 'Trading Plan Builder', desc: 'Build your personal trading rulebook in 6 steps — style, risk rules, entry criteria, exit rules, position sizing, and market filters. Claude scores your plan 0–100, detects contradictions, and gives specific improvements. Every version is saved by date so you can track how your discipline evolves over time.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
               ].map(({ icon, title, desc, tag, tagBg, tagColor }) => (
                 <div key={title}
                   style={{ border: `1px solid ${BORDER}`, borderRadius: '12px', padding: '24px', transition: 'all 0.2s' }}
