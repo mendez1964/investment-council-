@@ -58,9 +58,16 @@ export async function GET(request: Request) {
     ...stats,
   })).sort((a, b) => b.converted - a.converted)
 
+  // Enrich referrals with emails for both parties
+  const enrichedReferrals = (referrals ?? []).map(r => ({
+    ...r,
+    referrer_email: emailMap[r.referrer_id] ?? 'unknown',
+    referred_email: r.referred_user_id ? (emailMap[r.referred_user_id] ?? 'unknown') : null,
+  }))
+
   return Response.json({
     affiliates,
-    referrals: referrals ?? [],
+    referrals: enrichedReferrals,
   })
 }
 

@@ -366,6 +366,8 @@ interface ReferralRow {
   id: string
   referrer_id: string
   referred_user_id: string | null
+  referrer_email: string
+  referred_email: string | null
   code: string
   status: string
   converted_at: string | null
@@ -488,7 +490,7 @@ function AffiliatesPanel({ password }: { password: string }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
                 <thead>
                   <tr>
-                    {['Date', 'Code', 'Status', 'Converted', ''].map(h => (
+                    {['Date', 'Referrer', 'Referred', 'Status', 'Converted', ''].map(h => (
                       <th key={h} style={{ textAlign: h === '' ? 'right' : 'left', padding: '5px 10px', color: '#9ca3af', fontWeight: 600, fontSize: '9px', letterSpacing: '0.07em', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
                     ))}
                   </tr>
@@ -499,13 +501,18 @@ function AffiliatesPanel({ password }: { password: string }) {
                       <td style={{ padding: '6px 10px', color: '#9ca3af', fontSize: '10px', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                         {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </td>
-                      <td style={{ padding: '6px 10px', fontFamily: 'monospace', color: '#7c3aed', fontWeight: 700, fontSize: '10px', letterSpacing: '0.08em' }}>{r.code}</td>
+                      <td style={{ padding: '6px 10px', fontSize: '11px', color: '#374151', fontWeight: 600, maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.referrer_email}
+                      </td>
+                      <td style={{ padding: '6px 10px', fontSize: '11px', color: '#6b7280', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {r.referred_email ?? <span style={{ color: '#d1d5db' }}>pending signup</span>}
+                      </td>
                       <td style={{ padding: '6px 10px' }}>
                         <span style={{ fontSize: '9px', fontWeight: 700, color: statusColor(r.status), background: statusBg(r.status), borderRadius: '3px', padding: '1px 6px' }}>
                           {r.status}
                         </span>
                       </td>
-                      <td style={{ padding: '6px 10px', color: '#6b7280', fontSize: '10px' }}>
+                      <td style={{ padding: '6px 10px', color: '#6b7280', fontSize: '10px', whiteSpace: 'nowrap' }}>
                         {r.converted_at ? new Date(r.converted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '—'}
                       </td>
                       <td style={{ padding: '6px 10px', textAlign: 'right' }}>
