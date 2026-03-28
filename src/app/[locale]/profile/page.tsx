@@ -154,6 +154,21 @@ export default function ProfilePage() {
   const [reqSubmitting, setReqSubmitting] = useState(false)
   const [reqError, setReqError] = useState('')
 
+  // Referral
+  const [refCode, setRefCode] = useState<string | null>(null)
+  const [refStats, setRefStats] = useState<{ total: number; pending: number; converted: number } | null>(null)
+  const [refCopied, setRefCopied] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/referral')
+      .then(r => r.json())
+      .then(data => {
+        if (data.code) setRefCode(data.code)
+        if (data.stats) setRefStats(data.stats)
+      })
+      .catch(() => {})
+  }, [])
+
   useEffect(() => {
     fetch('/api/user/profile')
       .then(r => r.json())
@@ -590,6 +605,62 @@ export default function ProfilePage() {
             🔒 Keys are encrypted and stored securely. Leave blank to use Investment Council's shared keys.
           </div>
         </div>
+
+        {/* Refer a Friend */}
+        {refCode && (
+          <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 14, padding: '24px', marginBottom: 24 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#111', margin: '0 0 4px', letterSpacing: '-0.01em' }}>Refer a Friend</h2>
+            <p style={{ fontSize: 12, color: '#9ca3af', margin: '0 0 16px' }}>
+              Share your link. When someone subscribes, they get <b>1 free month</b> — and so do you.
+            </p>
+
+            {/* Referral link */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <div style={{
+                flex: 1, padding: '10px 12px', fontSize: 13, background: '#f9fafb',
+                border: '1px solid #e5e7eb', borderRadius: 8, color: '#374151',
+                fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                investmentcouncil.io?ref={refCode}
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(`https://www.investmentcouncil.io?ref=${refCode}`)
+                  setRefCopied(true)
+                  setTimeout(() => setRefCopied(false), 2000)
+                }}
+                style={{
+                  padding: '10px 16px', fontSize: 12, fontWeight: 700,
+                  background: refCopied ? '#16a34a' : '#111', color: '#fff',
+                  border: 'none', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+                  transition: 'background 0.15s',
+                }}
+              >
+                {refCopied ? '✓ Copied!' : 'Copy Link'}
+              </button>
+            </div>
+
+            {/* Stats */}
+            {refStats && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                {[
+                  { label: 'Links Clicked',  value: refStats.total,     color: '#6b7280' },
+                  { label: 'Subscribed',     value: refStats.converted, color: '#16a34a' },
+                  { label: 'Pending',        value: refStats.pending,   color: '#f59e0b' },
+                ].map(stat => (
+                  <div key={stat.label} style={{ textAlign: 'center', padding: '12px 8px', background: '#f9fafb', borderRadius: 10, border: '1px solid #f3f4f6' }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                    <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: 14, padding: '10px 12px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 12, color: '#15803d', lineHeight: 1.6 }}>
+              Your referral code: <b style={{ fontFamily: 'monospace', letterSpacing: '0.08em' }}>{refCode}</b> — share it anywhere. Credits apply automatically on your next billing cycle.
+            </div>
+          </div>
+        )}
 
         {/* Error / success */}
         {error && <div style={{ marginBottom: 16, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, fontSize: 13, color: '#dc2626' }}>{error}</div>}

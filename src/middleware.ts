@@ -10,6 +10,19 @@ const intlMiddleware = createMiddleware({
   localePrefix: 'as-needed',
 })
 
+function applyRefCookie(response: NextResponse, request: NextRequest): NextResponse {
+  const refCode = request.nextUrl.searchParams.get('ref')?.toUpperCase()
+  if (refCode && /^[A-Z0-9]{6}$/.test(refCode) && !request.cookies.has('ref_code')) {
+    response.cookies.set('ref_code', refCode, {
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+    })
+  }
+  return response
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
@@ -54,10 +67,10 @@ export async function middleware(request: NextRequest) {
       // Detect current locale from URL to redirect to locale-prefixed login
       const locale = pathname.match(/^\/(es|pt|fr)/)?.[1] ?? 'en'
       const loginPath = locale === 'en' ? '/login' : `/${locale}/login`
-      return NextResponse.redirect(new URL(loginPath, request.url))
+      return applyRefCookie(NextResponse.redirect(new URL(loginPath, request.url)), request)
     }
 
-    return response
+    return applyRefCookie(response, request)
   }
 
   // Redirect logged-in users away from login page
@@ -91,10 +104,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL(appPath, request.url))
     }
 
-    return response
+    return applyRefCookie(response, request)
   }
 
-  return intlResponse ?? NextResponse.next()
+  return applyRefCookie(intlResponse ?? NextResponse.next(), request)
 }
 
 export const config = {

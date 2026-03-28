@@ -79,6 +79,49 @@ export async function POST(request: Request) {
         stripe_customer_id: session.customer as string,
       }).eq('id', userId)
       console.log(`[webhook] checkout.completed user:${userId} price:${priceId} → tier:${tier}`)
+
+      // Handle referral conversion
+      const refCode = session.metadata?.ref_code as string | undefined
+      if (refCode) {
+        const { data: refCodeRow } = await supabase
+          .from('referral_codes')
+          .select('user_id')
+          .eq('code', refCode)
+          .single()
+
+        if (refCodeRow?.user_id) {
+          const referrerId = refCodeRow.user_id
+
+          // Log the conversion
+          await supabase.from('referrals').upsert({
+            referrer_id: referrerId,
+            referred_user_id: userId,
+            code: refCode,
+            status: 'converted',
+            reward_type: 'free_month',
+            converted_at: new Date().toISOString(),
+          }, { onConflict: 'referrer_id,referred_user_id' })
+
+          // Credit the referrer with 1 free month (applied on their next checkout or accumulates)
+          await supabase.rpc('increment_referral_credit', { p_user_id: referrerId, p_months: 1 })
+            .then(async ({ error }) => {
+              if (error) {
+                // Fallback: direct update if rpc doesn't exist
+                const { data: ref } = await supabase
+                  .from('profiles')
+                  .select('referral_credit_months')
+                  .eq('id', referrerId)
+                  .single()
+                await supabase
+                  .from('profiles')
+                  .update({ referral_credit_months: (ref?.referral_credit_months ?? 0) + 1 })
+                  .eq('id', referrerId)
+              }
+            })
+
+          console.log(`[webhook] referral converted: referrer:${referrerId} ← ref:${userId} code:${refCode}`)
+        }
+      }
     }
   }
 
