@@ -366,7 +366,7 @@ export default function LandingPage() {
               lineHeight: 1.7, marginBottom: '36px', maxWidth: '620px', margin: '0 auto 36px',
             }}>
               Daily AI stock picks, AI trading signals, crypto market analysis, and options picks with entry, stop &amp; target —
-              plus pre-market briefings and 18 investment frameworks. Free to start, no credit card required.
+              plus pre-market briefings and 19 investment frameworks. Free to start, no credit card required.
             </p>
 
             <div className="landing-hero-buttons" style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -478,7 +478,7 @@ export default function LandingPage() {
             </div>
             <div className="features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
               {[
-                { icon: '/icon-chat.svg', title: 'On-Demand AI Council Chat', desc: '18 investment frameworks ready to analyze any stock, crypto, or market condition. Ask anything — get structured, unbiased analysis in seconds.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
+                { icon: '/icon-chat.svg', title: 'On-Demand AI Council Chat', desc: '19 investment frameworks ready to analyze any stock, crypto, or market condition. Ask anything — get structured, unbiased analysis in seconds.', tag: 'All Plans', tagBg: '#dcfce7', tagColor: '#16a34a' },
                 { icon: '🌅', title: 'Pre-Market Briefing & EOD Summary', desc: 'Start every trading day with a full market snapshot — futures, key levels, macro risks, and what to watch. End the day with a full recap. Free tier gets a limited snapshot preview.', tag: 'Full on Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
@@ -669,7 +669,7 @@ export default function LandingPage() {
                 <button onClick={() => router.push('/login')} style={{ width: '100%', background: NAVY, border: 'none', borderRadius: '8px', padding: '10px', color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', marginBottom: '24px' }}>
                   Start Free Trial
                 </button>
-                {['Unlimited council queries', 'All 18 investment frameworks', 'Full stocks & crypto analysis', 'Full pre-market briefing daily', 'Full end-of-day recap daily', 'AI daily picks — stocks & crypto', 'Sector rotation, macro, volatility', 'Charts, calendars & screeners', 'Email alerts — 7 types', 'Portfolio & watchlist', 'PDF export & print'].map(f => (
+                {['Unlimited council queries', 'All 19 investment frameworks', 'Full stocks & crypto analysis', 'Full pre-market briefing daily', 'Full end-of-day recap daily', 'AI daily picks — stocks & crypto', 'Sector rotation, macro, volatility', 'Charts, calendars & screeners', 'Email alerts — 7 types', 'Portfolio & watchlist', 'PDF export & print'].map(f => (
                   <div key={f} style={{ display: 'flex', gap: '8px', fontSize: '14px', color: TEXT, marginBottom: '10px' }}>
                     <span style={{ color: '#16a34a', fontWeight: 700, flexShrink: 0 }}>✓</span>{f}
                   </div>
