@@ -2,7 +2,7 @@
 // and returns it as a formatted context block for Claude
 
 import { getTopMovers } from '@/lib/alpha-vantage'
-import { getQuote, getProfile, getMetrics, getEarningsCalendar, formatEarningsCalendar, getMarketNews, getCompanyNews } from '@/lib/finnhub'
+import { getQuote, getProfile, getMetrics, getTechnicalSnapshot, getEarningsCalendar, formatEarningsCalendar, getMarketNews, getCompanyNews } from '@/lib/finnhub'
 import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth } from '@/lib/fred'
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
@@ -10,6 +10,17 @@ import { runFullCouncilScan, runFrameworkScan, formatScanResults } from '@/lib/s
 import { getOnChainSnapshot, formatOnChainForCouncil } from '@/lib/glassnode'
 import { getCoinMetricsSnapshot, formatCoinMetricsForCouncil } from '@/lib/coinmetrics'
 import { getExpirations, getChain, roundToATM, midPrice } from '@/lib/tradier'
+import { getFundingRate } from '@/lib/binance'
+import { computeStockSignal, computeCryptoSignal, formatSignalBlock, type Signal } from '@/lib/signal-engine'
+
+// CoinGecko ID → Binance/exchange symbol (for funding rate lookup)
+const COIN_ID_TO_SYMBOL: Record<string, string> = {
+  bitcoin: 'BTC', ethereum: 'ETH', solana: 'SOL', ripple: 'XRP',
+  cardano: 'ADA', dogecoin: 'DOGE', 'avalanche-2': 'AVAX', polkadot: 'DOT',
+  chainlink: 'LINK', 'matic-network': 'MATIC', arbitrum: 'ARB', optimism: 'OP',
+  'binancecoin': 'BNB', near: 'NEAR', cosmos: 'ATOM', litecoin: 'LTC',
+  uniswap: 'UNI', 'injective-protocol': 'INJ', aptos: 'APT', sui: 'SUI',
+}
 
 // Words that look like tickers but aren't — skip these
 const NOT_TICKERS = new Set([
@@ -195,6 +206,78 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
 
   const sections: string[] = []
   const tasks: Promise<void>[] = []
+  const signalResults: Signal[] = []
+
+  // ── Signal Engine — stock signals (runs in parallel with other tasks) ─────────
+  // Skip index ETFs — signals only meaningful for individual stocks
+  const SKIP_SIGNAL = new Set(['SPY', 'QQQ', 'DIA', 'IWM', 'VIX', 'GLD', 'TLT'])
+  const signalTickers = tickers.filter(t => !SKIP_SIGNAL.has(t)).slice(0, 2)
+
+  if (signalTickers.length > 0) {
+    tasks.push(
+      (async () => {
+        await Promise.all(
+          signalTickers.map(async ticker => {
+            try {
+              const [snapshot, metrics] = await Promise.all([
+                getTechnicalSnapshot(ticker).catch(() => null),
+                getMetrics(ticker).catch(() => null),
+              ])
+              if (!snapshot) return
+              const shortInterestPct = metrics?.shortPercent
+                ?? metrics?.shortInterestPercentOutFloat
+                ?? null
+              const signal = computeStockSignal(ticker, {
+                aboveSma20: snapshot.aboveSma20,
+                aboveSma50: snapshot.aboveSma50,
+                aboveSma200: snapshot.aboveSma200,
+                rsi14: snapshot.rsi14,
+                macdHistogram: snapshot.macdHistogram,
+                volVsAvg: snapshot.volVsAvg,
+                shortInterestPct,
+                unusualCallFlow: false,
+                unusualPutFlow: false,
+                gexPositive: null,
+                vix: null,
+              })
+              signalResults.push(signal)
+            } catch { /* skip on error */ }
+          })
+        )
+      })()
+    )
+  }
+
+  // ── Signal Engine — crypto signals ───────────────────────────────────────────
+  if (wantsCrypto && cryptoIds.length > 0) {
+    tasks.push(
+      (async () => {
+        try {
+          const primaryId = cryptoIds[0]
+          const binanceSymbol = COIN_ID_TO_SYMBOL[primaryId] ?? primaryId.toUpperCase().slice(0, 6)
+
+          const [coinMetrics, fg, priceData, fundingRate] = await Promise.all([
+            getCoinMetricsSnapshot().catch(() => null),
+            getFearGreedIndex().catch(() => null),
+            getCryptoPrice(primaryId).catch(() => null),
+            getFundingRate(binanceSymbol).catch(() => null),
+          ])
+
+          const signal = computeCryptoSignal(binanceSymbol, {
+            mvrv: coinMetrics?.mvrv ?? null,
+            exchangeNetFlow: coinMetrics?.exchangeNetFlow ?? null,
+            fundingRate: fundingRate ?? null,
+            longLiqUsd: 0,
+            shortLiqUsd: 0,
+            fearGreed: fg?.value ?? 50,
+            priceChange24h: (priceData as any)?.priceChange24h ?? 0,
+            btcDominance: null,
+          })
+          signalResults.push(signal)
+        } catch { /* skip on error */ }
+      })()
+    )
+  }
 
   // ── Stock quotes & fundamentals (Finnhub — 60 calls/min, no daily cap) ───────
   if (tickers.length > 0) {
@@ -549,6 +632,10 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
   }
 
   await Promise.all(tasks)
+
+  // Prepend signal block if we computed any signals
+  const signalBlock = formatSignalBlock(signalResults)
+  if (signalBlock) sections.unshift(signalBlock)
 
   if (sections.length === 0) return ''
 
