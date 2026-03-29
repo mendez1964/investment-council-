@@ -11,6 +11,7 @@ import { getOnChainSnapshot, formatOnChainForCouncil } from '@/lib/glassnode'
 import { getCoinMetricsSnapshot, formatCoinMetricsForCouncil } from '@/lib/coinmetrics'
 import { getExpirations, getChain, roundToATM, midPrice } from '@/lib/tradier'
 import { getFundingRate } from '@/lib/binance'
+import { getDarkPoolData } from '@/lib/darkpool'
 import { computeStockSignal, computeCryptoSignal, formatSignalBlock, type Signal } from '@/lib/signal-engine'
 
 // CoinGecko ID → Binance/exchange symbol (for funding rate lookup)
@@ -219,9 +220,10 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
         await Promise.all(
           signalTickers.map(async ticker => {
             try {
-              const [snapshot, metrics] = await Promise.all([
+              const [snapshot, metrics, darkPool] = await Promise.all([
                 getTechnicalSnapshot(ticker).catch(() => null),
                 getMetrics(ticker).catch(() => null),
+                getDarkPoolData(ticker).catch(() => null),
               ])
               if (!snapshot) return
               const shortInterestPct = metrics?.shortPercent
@@ -239,6 +241,10 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
                 unusualPutFlow: false,
                 gexPositive: null,
                 vix: null,
+                darkPoolFlow: darkPool?.flow ?? null,
+                darkPoolBlockVsAvg: darkPool?.blockTradeVsAvg ?? null,
+                congressNetBias: darkPool?.congressNetBias ?? 'neutral',
+                darkPoolDrivers: darkPool?.drivers ?? [],
               })
               signalResults.push(signal)
             } catch { /* skip on error */ }

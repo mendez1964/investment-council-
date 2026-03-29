@@ -9,6 +9,7 @@ import { getCoinMetricsSnapshot } from '@/lib/coinmetrics'
 import { getFearGreedIndex, getBitcoinDominance, getCryptoPrice } from '@/lib/coingecko'
 import { getTechnicalSnapshot, getMetrics } from '@/lib/finnhub'
 import { getFundingRate } from '@/lib/binance'
+import { getDarkPoolData } from '@/lib/darkpool'
 import {
   computeCryptoSignal,
   computeStockSignal,
@@ -86,9 +87,10 @@ export async function GET(request: Request) {
 
     } else {
       // Stock signal
-      const [snapshot, metrics] = await Promise.all([
+      const [snapshot, metrics, darkPool] = await Promise.all([
         getTechnicalSnapshot(ticker).catch(() => null),
         getMetrics(ticker).catch(() => null),
+        getDarkPoolData(ticker).catch(() => null),
       ])
 
       if (!snapshot) {
@@ -110,10 +112,14 @@ export async function GET(request: Request) {
         macdHistogram: snapshot.macdHistogram,
         volVsAvg: snapshot.volVsAvg,
         shortInterestPct: shortInterestPct ?? null,
-        unusualCallFlow: false,   // Requires Tradier options chain — see /api/signals/options
+        unusualCallFlow: false,   // Requires Tradier options chain
         unusualPutFlow: false,
         gexPositive: null,
         vix: null,
+        darkPoolFlow: darkPool?.flow ?? null,
+        darkPoolBlockVsAvg: darkPool?.blockTradeVsAvg ?? null,
+        congressNetBias: darkPool?.congressNetBias ?? 'neutral',
+        darkPoolDrivers: darkPool?.drivers ?? [],
       })
     }
 

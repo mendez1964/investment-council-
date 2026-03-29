@@ -191,6 +191,11 @@ export interface StockSignalData {
   unusualPutFlow: boolean
   gexPositive: boolean | null
   vix: number | null
+  // Dark pool / smart money
+  darkPoolFlow: 'bullish' | 'bearish' | 'neutral' | null
+  darkPoolBlockVsAvg: number | null   // ratio vs 30-day avg block volume
+  congressNetBias: 'bullish' | 'bearish' | 'neutral'
+  darkPoolDrivers: string[]           // pre-computed plain-English drivers from darkpool.ts
 }
 
 export function computeStockSignal(ticker: string, data: StockSignalData): Signal {
@@ -313,6 +318,30 @@ export function computeStockSignal(ticker: string, data: StockSignalData): Signa
       score -= 8
       drivers.push(`VIX ${data.vix.toFixed(1)} — elevated fear, cautious positioning warranted`)
     }
+  }
+
+  // 9. Dark pool flow — weight ±20
+  // Block trade volume elevated = institutional accumulation off-exchange (bullish)
+  // Block trade volume collapsed = institutions distributing (bearish)
+  if (data.darkPoolFlow === 'bullish') {
+    const boost = data.darkPoolBlockVsAvg != null && data.darkPoolBlockVsAvg > 2.0 ? 20 : 12
+    score += boost
+    // drivers already provided by darkpool.ts — push them here
+    for (const d of data.darkPoolDrivers) drivers.push(d)
+  } else if (data.darkPoolFlow === 'bearish') {
+    const drag = data.darkPoolBlockVsAvg != null && data.darkPoolBlockVsAvg < 0.5 ? 20 : 12
+    score -= drag
+    for (const d of data.darkPoolDrivers) drivers.push(d)
+  } else if (data.darkPoolFlow === 'neutral' && data.darkPoolDrivers.length > 0) {
+    for (const d of data.darkPoolDrivers) drivers.push(d)
+  }
+
+  // 10. Congressional trades — weight ±10
+  // Politicians have historically outperformed the market; their buys are a meaningful signal
+  if (data.congressNetBias === 'bullish') {
+    score += 10
+  } else if (data.congressNetBias === 'bearish') {
+    score -= 10
   }
 
   // Direction
