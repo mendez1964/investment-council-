@@ -2,7 +2,7 @@
 // and returns it as a formatted context block for Claude
 
 import { getTopMovers } from '@/lib/alpha-vantage'
-import { getQuote, getProfile, getMetrics, getTechnicalSnapshot, getEarningsCalendar, formatEarningsCalendar, getMarketNews, getCompanyNews } from '@/lib/finnhub'
+import { getQuote, getProfile, getMetrics, getTechnicalSnapshot, getEarningsCalendar, formatEarningsCalendar, getMarketNews, getCompanyNews, getEarningsHistory, getPriceTarget, getInsiderSentiment } from '@/lib/finnhub'
 import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth, getDXY } from '@/lib/fred'
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
@@ -325,23 +325,26 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
             getQuote(ticker).catch(() => null),
             getProfile(ticker).catch(() => null),
             getMetrics(ticker).catch(() => null),
+            getEarningsHistory(ticker, 6).catch(() => []),
+            getPriceTarget(ticker).catch(() => null),
+            getInsiderSentiment(ticker).catch(() => null),
           ])
         )
       ).then(results => {
         const lines: string[] = []
-        results.forEach(([quote, profile, metrics], idx) => {
+        results.forEach(([quote, profile, metrics, earnings, priceTarget, insiderRaw], idx) => {
           const ticker = tickers[idx]
+
+          // Price + day range
           if (quote && quote.c) {
-            const price = quote.c.toFixed(2)
-            const change = (quote.d ?? 0).toFixed(2)
-            const changePct = (quote.dp ?? 0).toFixed(2)
-            const high = quote.h?.toFixed(2)
-            const low = quote.l?.toFixed(2)
-            lines.push(`${ticker}: $${price}  |  Change: ${change > 0 ? '+' : ''}${change} (${changePct}%)  |  Day Range: $${low}–$${high}`)
+            const change = (quote.d ?? 0)
+            lines.push(`${ticker}: $${quote.c.toFixed(2)}  |  ${change >= 0 ? '+' : ''}${change.toFixed(2)} (${(quote.dp ?? 0).toFixed(2)}%)  |  Day Range: $${quote.l?.toFixed(2)}–$${quote.h?.toFixed(2)}`)
           }
+
+          // Company profile + fundamentals
           if (profile && profile.name) {
             const mktCap = profile.marketCapitalization ? `$${(profile.marketCapitalization * 1e6).toLocaleString()}` : '—'
-            lines.push(`  ${profile.name} | ${profile.finnhubIndustry ?? profile.gsector ?? '—'} | Market Cap: ${mktCap}`)
+            lines.push(`  ${profile.name} | ${profile.finnhubIndustry ?? '—'} | Market Cap: ${mktCap}`)
           }
           if (metrics) {
             const pe = metrics['peBasicExclExtraTTM'] ?? metrics['peTTM'] ?? null
@@ -349,7 +352,37 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
             const high52 = metrics['52WeekHigh'] ?? null
             const low52 = metrics['52WeekLow'] ?? null
             if (pe || eps || high52) {
-              lines.push(`  P/E: ${pe?.toFixed(2) ?? '—'} | EPS: ${eps?.toFixed(2) ?? '—'} | 52wk: $${low52?.toFixed(2) ?? '—'}–$${high52?.toFixed(2) ?? '—'}`)
+              lines.push(`  P/E: ${pe?.toFixed(2) ?? '—'} | EPS TTM: ${eps?.toFixed(2) ?? '—'} | 52wk: $${low52?.toFixed(2) ?? '—'}–$${high52?.toFixed(2) ?? '—'}`)
+            }
+          }
+
+          // Earnings beat rate — last 6 quarters
+          const earningsArr = earnings as { date: string; epsEstimate: number | null; epsActual: number | null; beat: boolean | null }[]
+          if (earningsArr && earningsArr.length > 0) {
+            const withVerdict = earningsArr.filter(e => e.beat !== null)
+            const beats = withVerdict.filter(e => e.beat).length
+            const beatRate = withVerdict.length > 0 ? `${beats}/${withVerdict.length} beats (${Math.round(beats / withVerdict.length * 100)}%)` : null
+            const last = earningsArr[0]
+            const surprise = last?.epsActual != null && last?.epsEstimate != null && last.epsEstimate !== 0
+              ? `${((last.epsActual - last.epsEstimate) / Math.abs(last.epsEstimate) * 100).toFixed(1)}%`
+              : null
+            if (beatRate) lines.push(`  Earnings: ${beatRate} last ${withVerdict.length}Q${surprise ? ` | Last surprise: ${parseFloat(surprise) >= 0 ? '+' : ''}${surprise}` : ''}${last?.date ? ` (${last.date})` : ''}`)
+          }
+
+          // Analyst consensus + price target
+          if (priceTarget && priceTarget.targetMean) {
+            const rating = priceTarget.targetMean
+            lines.push(`  Analyst Target: $${rating.toFixed(2)} (High: $${priceTarget.targetHigh?.toFixed(2) ?? '—'} | Low: $${priceTarget.targetLow?.toFixed(2) ?? '—'}) — ${priceTarget.numberOfAnalysts ?? '?'} analysts`)
+          }
+
+          // Insider sentiment — net buying/selling (MSPR = monthly share purchase ratio)
+          if (insiderRaw?.data?.length > 0) {
+            const recent = (insiderRaw.data as any[]).slice(0, 3)
+            const netBuying = recent.reduce((sum: number, d: any) => sum + (d.change ?? 0), 0)
+            const mspr = recent.reduce((sum: number, d: any) => sum + (d.mspr ?? 0), 0) / recent.length
+            if (Math.abs(netBuying) > 0 || !isNaN(mspr)) {
+              const bias = mspr > 0.1 ? 'BULLISH (insiders net buying)' : mspr < -0.1 ? 'BEARISH (insiders net selling)' : 'Neutral'
+              lines.push(`  Insider Sentiment (3mo): ${bias} | MSPR: ${mspr.toFixed(3)} | Net shares: ${netBuying > 0 ? '+' : ''}${netBuying.toLocaleString()}`)
             }
           }
         })
