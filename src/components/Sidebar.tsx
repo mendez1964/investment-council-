@@ -15,6 +15,7 @@ export type SidebarItem = {
   label: string
   itemId?: string  // stable English key for icon lookup (when label is translated)
   prompt: string
+  promptSuffix?: string
   tier?: 'trader' | 'pro'  // minimum tier required
   icon?: string
   needsTicker?: boolean

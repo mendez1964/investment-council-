@@ -61,7 +61,7 @@ function detectFrameworks(content: string): { topic: string; label: string }[] {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; itemId?: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
+type SidebarItem = { label: string; itemId?: string; prompt: string; promptSuffix?: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 // Sidebar sections are defined inside the Home component (uses useTranslations hook)
@@ -165,12 +165,53 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
 - 3-5 things that actually shifted today — levels broken, narratives confirmed, risks rising/falling
 - Market posture going into tomorrow: Bullish / Neutral / Cautious / Bearish + one factual sentence (data-based)
 - One specific thing that could turn it bullish tomorrow, one that could turn it bearish` },
-        { itemId: 'Market Health', label: t('items.marketHealth'), prompt: 'Give me a professional market health assessment using the live data available. Cover: trend (SPY/QQQ above or below key MAs?), breadth signals, VIX level, and any notable divergences. Data and facts only — no opinions or advisor frameworks unless I ask.' },
+        { itemId: 'Market Health', label: t('items.marketHealth'), prompt: `Give me a professional market health assessment using the live data available.
+
+## MARKET HEALTH ASSESSMENT — [Today's Date]
+
+**1. TREND**
+SPY and QQQ: current price, direction (uptrend/downtrend/range-bound). Above or below 50-day and 200-day MA? Any death cross or golden cross?
+
+**2. BREADTH**
+Advance/decline signals, any notable sector divergences. Are small caps (IWM) confirming large caps or lagging?
+
+**3. VOLATILITY**
+VIX level and context — compressed, elevated, or spiking? What does the current vol regime mean for market stability?
+
+**4. RATES & MACRO OVERLAY**
+10-Year yield direction — tailwind or headwind for equities? Dollar (DXY) trend.
+
+**5. HEALTH VERDICT**
+Healthy bull / Extended but intact / Weakening / Deteriorating — one sentence with the primary reason.
+
+Data and facts only. Under 250 words.` },
         { itemId: 'Sector Rotation', label: t('items.sectorRotation'), prompt: 'Using the live sector data available, show me which sectors are leading and lagging right now. One table: Sector | ETF | Change % | Direction. Then 3-4 factual bullets on what the rotation pattern suggests about current risk appetite. Data only.' },
         { itemId: 'Macro Environment', label: t('items.macroEnvironment'), prompt: 'Give me a current macro environment snapshot using the live data available. Cover: Fed Funds Rate, CPI trend, 2Y and 10Y yields, yield curve shape, GDP trend, unemployment. Format as a table, then 2-3 factual bullets on what the numbers indicate. No advisor frameworks unless I ask.' },
         { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
         { itemId: 'Yield Curve', label: t('items.yieldCurve'), prompt: 'Give me the current yield curve snapshot using live data. Show key rates in a table, note whether the curve is normal, flat, or inverted, and what the current shape has historically preceded. Facts only.' },
-        { itemId: 'Volatility Check', label: t('items.volatilityCheck'), prompt: 'Give me a current volatility assessment using live data. Cover: VIX level and context (where is it vs 12-month range?), any notable options flow signals, and what the current vol regime means for position sizing. Data first.' },
+        { itemId: 'Volatility Check', label: t('items.volatilityCheck'), prompt: `Give me a current volatility assessment using live data.
+
+## VOLATILITY CHECK — [Today's Date]
+
+**1. VIX LEVEL**
+Current VIX reading. Context: is this low (<15), normal (15-20), elevated (20-30), or fear (>30)? What has VIX done in the last week — rising, falling, or stable?
+
+**2. VOL REGIME**
+Based on the VIX level, which regime are we in?
+- Low vol: favorable for premium selling, credit spreads, covered calls
+- Mid vol: balanced environment, both debit and credit strategies viable
+- High vol: premium buying has edge, reduce size, widen stops
+
+**3. OPTIONS STRATEGY IMPLICATIONS**
+What options strategies have edge in this vol environment? What to avoid?
+
+**4. POSITION SIZING IMPACT**
+At this vol level, should position sizes be standard, reduced, or aggressive? One concrete rule.
+
+**5. VOL VERDICT**
+One sentence — is current volatility an opportunity or a warning signal?
+
+Data first. Under 200 words.` },
         { itemId: 'Economic Calendar', label: t('items.econCalendar'), prompt: '', isEconCalendar: true },
         { itemId: 'News Feed', label: t('items.newsFeed'), prompt: '', isNews: true },
       ],
@@ -179,45 +220,596 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
       id: 'scans',
       title: t('sections.scans'),
       items: [
-        { itemId: 'Full Council Scan', label: t('items.fullCouncilScan'), prompt: 'Run the full council scan' },
-        { label: 'Tudor Jones', prompt: 'Run the Tudor Jones scan' },
-        { label: 'Livermore', prompt: 'Run the Livermore scan' },
-        { label: 'Buffett', prompt: 'Run the Buffett scan' },
-        { label: 'Lynch', prompt: 'Run the Lynch scan' },
-        { label: 'Graham', prompt: 'Run the Graham scan' },
-        { label: 'Grantham', prompt: 'Run the Grantham scan' },
-        { label: 'Dalio', prompt: 'Run the Dalio scan' },
-        { label: 'Burry', prompt: 'Run the Burry scan' },
-        { label: 'Roubini', prompt: 'Run the Roubini scan' },
+        { itemId: 'Full Council Scan', label: t('items.fullCouncilScan'), prompt: `Run the full council scan on the current market using live data.
+
+## FULL COUNCIL SCAN — [Today's Date]
+
+For each framework below, run a one-paragraph scan and give a VERDICT (Bullish / Cautious / Bearish / Neutral). Use live data from the feed — prices, yields, VIX, sector performance.
+
+**1. TUDOR JONES — Momentum & Macro**
+Trend direction, 200-MA posture, risk/reward asymmetry, macro positioning.
+
+**2. BUFFETT — Value & Quality**
+Market valuation (Buffett Indicator context), quality business environment, whether cash should be deployed or held.
+
+**3. DALIO — All-Weather & Debt Cycles**
+Where are we in the debt cycle? Are assets balanced across growth/inflation/deflation regimes?
+
+**4. GRAHAM — Deep Value & Safety**
+Is the market offering margin of safety? P/E levels, credit conditions, defensive positioning.
+
+**5. LYNCH — Growth at Reasonable Price**
+Consumer health, earnings growth environment, cyclical vs growth rotation.
+
+**6. GRANTHAM — Bubble & Mean Reversion**
+Valuation extremes, bubble risk, where to find value that has reverted.
+
+**7. BURRY — Contrarian & Risk**
+What is the market ignoring? Where is leverage concentrated? What could blow up?
+
+**8. ROUBINI — Macro Risk & Tail Events**
+Stagflation risk, geopolitical exposure, debt sustainability, systemic risks.
+
+**COUNCIL CONSENSUS**
+Tally of verdicts. Overall bias: Bullish / Cautious / Bearish. One sentence on the dominant theme.` },
+        { label: 'Tudor Jones', prompt: `Run the Tudor Jones scan on today's market.
+
+## TUDOR JONES SCAN
+
+**Framework:** Momentum, macro timing, 5:1 risk/reward, never fight the tape.
+
+**1. TREND CHECK**
+SPY, QQQ, IWM — above or below 200-day MA? Are they trending or range-bound? Volume confirming price?
+
+**2. MACRO POSTURE**
+Yield curve shape (use live rates). DXY direction — headwind or tailwind for risk? Fed trajectory.
+
+**3. MOMENTUM SIGNALS**
+Which sectors are leading? Where is relative strength concentrating? Any trend exhaustion signals?
+
+**4. TUDOR'S VERDICT**
+Aggressively long / Cautiously long / Neutral / Defensive — one sentence, data-backed.
+
+**5. TRADE FRAMEWORK**
+What would Tudor Jones be positioned in today, what is he avoiding, and what is the key level that changes the thesis?
+
+Facts and live data first. Under 300 words.` },
+        { label: 'Livermore', prompt: `Run the Jesse Livermore scan on today's market.
+
+## LIVERMORE SCAN
+
+**Framework:** Tape reading, price action, pivotal points, leading stocks, trend confirmation.
+
+**1. TAPE READING**
+What is the overall tape saying? Is price action confirming the trend or diverging? Are volume patterns healthy?
+
+**2. PIVOTAL POINTS**
+Key levels on SPY and QQQ — where are the pivotal points? Are we above or below them?
+
+**3. LEADING STOCKS**
+Which groups and individual names are leading the market higher or lower? Where is institutional money moving?
+
+**4. LINE OF LEAST RESISTANCE**
+Based on price action alone: is the path of least resistance up, down, or sideways?
+
+**5. LIVERMORE'S VERDICT**
+In position / Waiting for pivot / Out of the market — one sentence with the key reason.
+
+**6. WHAT TO WATCH**
+The one price level or signal that would change Livermore's positioning today.
+
+Under 300 words. Price action and data only.` },
+        { label: 'Buffett', prompt: `Run the Warren Buffett scan on today's market.
+
+## BUFFETT SCAN
+
+**Framework:** Business quality, margin of safety, long-term value, hold vs. deploy cash.
+
+**1. MARKET VALUATION**
+Using available data: is the market cheap, fair, or expensive? Buffett Indicator context (market cap to GDP). P/E context if available.
+
+**2. BUSINESS ENVIRONMENT**
+Interest rates (Fed Funds, 10Y yield from live feed) — do they support or undermine equity valuations? Is the economic moat environment healthy?
+
+**3. CASH DEPLOYMENT TEST**
+Would Buffett be deploying cash or sitting on it today? What conditions would need to change?
+
+**4. QUALITY SECTORS**
+Which sectors offer durable business models at reasonable prices in this environment?
+
+**5. BUFFETT'S VERDICT**
+Deploy / Hold cash / Selective deployment — one sentence with the key valuation reason.
+
+**6. WHAT HE'S WATCHING**
+The one macro or market signal Buffett would be watching most closely right now.
+
+Under 300 words. Facts and valuations first.` },
+        { label: 'Lynch', prompt: `Run the Peter Lynch scan on today's market.
+
+## LYNCH SCAN
+
+**Framework:** GARP (growth at reasonable price), know what you own, consumer health, PEG ratio thinking.
+
+**1. CONSUMER HEALTH**
+What does the economic data (unemployment, CPI from live feed) say about consumer strength? Cyclicals or defensives leading?
+
+**2. EARNINGS ENVIRONMENT**
+Is the market rewarding growth or punishing it? Which sectors show earnings momentum?
+
+**3. GARP OPPORTUNITIES**
+In this interest rate environment (use live yield data), where does growth at a reasonable price exist? What P/E and growth combinations make sense?
+
+**4. AVOID LIST**
+What is Lynch avoiding right now — what sectors or themes have valuations that don't match fundamentals?
+
+**5. LYNCH'S VERDICT**
+Broadly bullish / Selective / Cautious — one sentence with the key consumer/growth reason.
+
+**6. WHAT TO LOOK FOR**
+The one signal Lynch would want to see to become more or less aggressive.
+
+Under 300 words.` },
+        { label: 'Graham', prompt: `Run the Benjamin Graham scan on today's market.
+
+## GRAHAM SCAN
+
+**Framework:** Margin of safety, net asset value, defensive vs. enterprising investing, Mr. Market.
+
+**1. MARKET VALUATION**
+Using live data: are prices offering any margin of safety? P/E context vs. historical. Is Mr. Market fearful or euphoric (VIX, sentiment)?
+
+**2. CREDIT CONDITIONS**
+Interest rates (Fed Funds, yields from live feed) — are they punishing leveraged businesses? Is debt quality a concern?
+
+**3. DEFENSIVE POSTURE TEST**
+In this environment, would Graham recommend the defensive investor (60/40 posture) or the enterprising investor (active stock selection)?
+
+**4. SAFETY CHECKLIST**
+What passes Graham's safety test right now: adequate size, strong financial condition, dividend record, earnings stability?
+
+**5. GRAHAM'S VERDICT**
+Defensive / Selectively enterprising / Avoid equities broadly — one sentence with the margin-of-safety reason.
+
+**6. WHAT CHANGES THE PICTURE**
+The one valuation or credit signal that would make Graham more or less aggressive.
+
+Under 300 words.` },
+        { label: 'Grantham', prompt: `Run the Jeremy Grantham scan on today's market.
+
+## GRANTHAM SCAN
+
+**Framework:** Bubble identification, mean reversion, long-term valuation, tail risk, asset class rotation.
+
+**1. BUBBLE CHECK**
+Using available data: are any asset classes at valuation extremes? What has diverged most from historical mean?
+
+**2. MEAN REVERSION CANDIDATES**
+Which asset classes or sectors are most extended above or below long-term fair value? Where is reversion likely?
+
+**3. TAIL RISK ASSESSMENT**
+What systemic risks is the market underpricing right now? Credit, geopolitical, valuation compression.
+
+**4. SAFE HAVEN VALUE**
+Where does Grantham find genuine value in this environment — international equities, commodities, specific sectors?
+
+**5. GRANTHAM'S VERDICT**
+Significant risk / Caution warranted / Selective value / Broad opportunity — one sentence with the valuation anchor.
+
+**6. WHAT TO WATCH**
+The one signal that would confirm or deny the bubble thesis in today's market.
+
+Under 300 words.` },
+        { label: 'Dalio', prompt: `Run the Ray Dalio scan on today's market.
+
+## DALIO SCAN
+
+**Framework:** All-Weather (growth/inflation matrix), debt cycle, risk parity, paradigm shifts.
+
+**1. DEBT CYCLE POSITION**
+Where are we in the long-term debt cycle? What stage of the short-term business cycle? Use live yield data and Fed Funds rate.
+
+**2. GROWTH VS. INFLATION MATRIX**
+4-quadrant check: Rising growth + rising inflation / Rising growth + falling inflation / Falling growth + rising inflation / Falling growth + falling inflation. Which quadrant are we in and what performs best there?
+
+**3. ASSET BALANCE**
+In the current regime, which All-Weather assets are performing as expected? What is out of sync with the template?
+
+**4. PARADIGM SHIFT RISK**
+Is there a major paradigm shift underway (monetary regime change, reserve currency stress, capital flow reversal)?
+
+**5. DALIO'S VERDICT**
+All-Weather balanced / Tilt defensive / Tilt growth / Cash heavy — one sentence with the cycle-position reason.
+
+**6. KEY RISK**
+The one macro risk Dalio would be most focused on hedging against right now.
+
+Under 300 words.` },
+        { label: 'Burry', prompt: `Run the Michael Burry scan on today's market.
+
+## BURRY SCAN
+
+**Framework:** Deep contrarian, hidden leverage, index fund risk, credit stress, tail event identification.
+
+**1. WHAT THE MARKET IS IGNORING**
+Using live data: what stress signals are in the data that consensus is discounting? Yield curve, credit spreads, sector divergences.
+
+**2. LEVERAGE CONCENTRATION**
+Where is leverage most concentrated right now? What happens when it unwinds? Any index fund bubble dynamics?
+
+**3. CREDIT STRESS INDICATORS**
+Interest rates (live data) — what sectors or companies are most exposed to rate stress? Where does credit quality deteriorate first?
+
+**4. CONTRARIAN OPPORTUNITY**
+What is unloved, under-owned, and actually fundamentally sound in this environment?
+
+**5. BURRY'S VERDICT**
+Bracing for impact / Selectively short / Long specific value / Mixed — one sentence with the key hidden risk.
+
+**6. WHAT CHANGES EVERYTHING**
+The one event or data point that would trigger the scenario Burry is watching for.
+
+Under 300 words.` },
+        { label: 'Roubini', prompt: `Run the Nouriel Roubini scan on today's market.
+
+## ROUBINI SCAN
+
+**Framework:** Macro risk, stagflation, debt sustainability, geopolitical tail risk, systemic fragility.
+
+**1. STAGFLATION RISK**
+Using live data: CPI trend, Fed Funds rate, GDP context, unemployment. Are we headed toward stagflation (high inflation + slowing growth)?
+
+**2. DEBT SUSTAINABILITY**
+Government and corporate debt levels vs. current interest rates (live data). Where does debt service become problematic?
+
+**3. GEOPOLITICAL EXPOSURE**
+What geopolitical risks are currently underpriced by markets? Trade war, currency war, energy shock vectors.
+
+**4. SYSTEMIC FRAGILITY**
+Where are the fault lines in the financial system right now? Banking sector, real estate, credit markets, emerging markets?
+
+**5. ROUBINI'S VERDICT**
+Soft landing possible / Hard landing risk / Stagflation trap / Systemic crisis building — one sentence with the key macro risk driver.
+
+**6. WHAT TO HEDGE**
+The specific risk Roubini would be actively hedging against right now and how.
+
+Under 300 words.` },
       ],
     },
     {
       id: 'council',
       title: t('sections.council'),
       items: [
-        { itemId: 'Full Council View', label: t('items.fullCouncilView'), prompt: 'Give me the full council view on the current market.' },
-        { label: 'Buffett', prompt: 'What would Buffett say about the market right now?' },
-        { label: 'Dalio', prompt: 'What would Dalio say about the market right now?' },
-        { label: 'Soros', prompt: 'What would Soros say about the market right now?' },
-        { label: 'Tudor Jones', prompt: 'What would Tudor Jones say about the market right now?' },
-        { label: 'Lynch', prompt: 'What would Lynch say about the market right now?' },
-        { label: 'Livermore', prompt: 'What would Livermore say about the market right now?' },
-        { label: 'Graham', prompt: 'What would Graham say about the market right now?' },
-        { label: 'Damodaran', prompt: 'What would Damodaran say about the market right now?' },
-        { label: 'Burry', prompt: 'What would Burry say about the market right now?' },
-        { label: 'Roubini', prompt: 'What would Roubini say about the market right now?' },
-        { label: 'Grantham', prompt: 'What would Grantham say about the market right now?' },
+        { itemId: 'Full Council View', label: t('items.fullCouncilView'), prompt: `Give me the full council view on the current market using live data.
+
+## FULL COUNCIL VIEW — [Today's Date]
+
+Each member gets 2-3 sentences: what they see in this market, and their current stance. Use live data from the feed — prices, yields, VIX, sector performance. Be direct — no hedging or "might" language.
+
+**Warren Buffett** — Valuation & Quality
+**Ray Dalio** — Debt Cycles & All-Weather
+**George Soros** — Reflexivity & Macro
+**Paul Tudor Jones** — Momentum & Timing
+**Peter Lynch** — GARP & Consumer
+**Jesse Livermore** — Tape & Price Action
+**Benjamin Graham** — Margin of Safety
+**Aswath Damodaran** — Valuation & Fundamentals
+**Michael Burry** — Contrarian & Risk
+**Nouriel Roubini** — Macro Risk
+**Jeremy Grantham** — Bubbles & Mean Reversion
+
+**COUNCIL VOTE**
+One-line tally: X bullish / X cautious / X bearish. Dominant theme in one sentence.` },
+        { label: 'Buffett', prompt: `Give me Warren Buffett's current market view using live data.
+
+**BUFFETT'S LENS:** Long-term business value, margin of safety, moat strength, patience over activity.
+
+Using the live data available (prices, yields, VIX, economic indicators):
+
+**What he sees:** 2-3 sentences on current market valuation and business environment through Buffett's eyes.
+
+**What he's doing:** Deploying capital, holding cash, or waiting — and exactly why based on today's data.
+
+**What he'd buy:** If anything, which sector or type of business passes his quality + valuation test right now.
+
+**His warning:** The one thing about today's market that would make Buffett most cautious.
+
+**Bottom line:** One direct sentence — his overall stance and what triggers a change.
+
+Under 250 words. Facts and data first.` },
+        { label: 'Dalio', prompt: `Give me Ray Dalio's current market view using live data.
+
+**DALIO'S LENS:** Debt cycles, All-Weather balance, paradigm shifts, risk parity, global capital flows.
+
+Using the live data available (Fed Funds rate, yields, equity prices, economic indicators):
+
+**What he sees:** Where are we in the short and long-term debt cycles? Which quadrant of the growth/inflation matrix are we in?
+
+**All-Weather posture:** What should be overweight, underweight, or balanced right now based on the current regime?
+
+**Paradigm risk:** Is there a major paradigm shift underway that markets aren't pricing?
+
+**His warning:** The systemic risk Dalio is most focused on hedging right now.
+
+**Bottom line:** One direct sentence — his overall allocation posture and the key trigger to watch.
+
+Under 250 words. Cycle position and data first.` },
+        { label: 'Soros', prompt: `Give me George Soros' current market view using live data.
+
+**SOROS'S LENS:** Reflexivity (perception shapes fundamentals), macro dislocations, currency dynamics, boom/bust sequences.
+
+Using the live data available (DXY, yields, equity prices, volatility):
+
+**What he sees:** What reflexive cycle is currently operating in this market — where is perception diverging from fundamentals?
+
+**The dislocation:** What macro imbalance or currency dynamic is Soros watching that could trigger a reversal?
+
+**The trade:** If Soros were positioned today, what would the thesis be — currency, rates, equities, or a macro bet?
+
+**Boom or bust:** Are we in the boom phase or approaching the bust? What signals is he watching?
+
+**Bottom line:** One direct sentence — current positioning bias and what confirms or breaks the thesis.
+
+Under 250 words. Reflexivity and macro flow first.` },
+        { label: 'Tudor Jones', prompt: `Give me Paul Tudor Jones' current market view using live data.
+
+**TUDOR JONES'S LENS:** Macro momentum, 5:1 risk/reward, never fight the tape, protect capital first.
+
+Using the live data available (SPY, QQQ, yields, VIX, DXY):
+
+**What he sees:** Trend assessment — is price action bullish, bearish, or choppy? What is the tape saying?
+
+**Macro setup:** Yield curve posture, DXY direction, Fed trajectory — headwind or tailwind for equities?
+
+**Risk/Reward:** Where does Tudor see asymmetric 5:1 setups right now? What fails the R/R test?
+
+**Position size:** Given current VIX and trend clarity, is he running full size, reduced size, or flat?
+
+**Bottom line:** One direct sentence — current bias, size, and the one level that changes everything.
+
+Under 250 words. Tape and momentum first.` },
+        { label: 'Lynch', prompt: `Give me Peter Lynch's current market view using live data.
+
+**LYNCH'S LENS:** GARP (growth at reasonable price), know what you own, consumer health, PEG thinking, find 10-baggers.
+
+Using the live data available (prices, yields, economic indicators, sector performance):
+
+**What he sees:** Consumer health check — what do unemployment and CPI say about the everyday investor's world?
+
+**GARP screen:** In this interest rate environment, where does growth at a reasonable price exist? What sectors pass the PEG test?
+
+**What he'd own:** The type of business or sector that fits Lynch's checklist in today's environment.
+
+**What he'd avoid:** Where is the valuation story broken, or where is the business story not matching the price?
+
+**Bottom line:** One direct sentence — overall opportunity level and what he'd tell his neighbor to do.
+
+Under 250 words. Consumer and earnings first.` },
+        { label: 'Livermore', prompt: `Give me Jesse Livermore's current market view using live data.
+
+**LIVERMORE'S LENS:** Tape reading, pivotal points, line of least resistance, leading stocks, time your trades.
+
+Using the live data available (prices, volume, sector leaders/laggards):
+
+**The tape:** What is price action saying right now, stripped of opinion? Is the tape healthy, choppy, or warning?
+
+**Pivotal points:** What are the key levels on SPY and QQQ — above them, the path is up; below them, the path is down.
+
+**Leading stocks:** Which groups or names are showing the strongest or weakest tape? What is leadership telling us?
+
+**Line of least resistance:** Based purely on what the market is doing — up, down, or sideways?
+
+**Bottom line:** One direct sentence — Livermore's current stance and the one price signal that changes it.
+
+Under 250 words. Price action and levels first.` },
+        { label: 'Graham', prompt: `Give me Benjamin Graham's current market view using live data.
+
+**GRAHAM'S LENS:** Margin of safety, intrinsic value, Mr. Market's moods, defensive vs. enterprising investor.
+
+Using the live data available (prices, yields, VIX, economic indicators):
+
+**Mr. Market's mood:** Based on VIX and price action — is Mr. Market offering bargains out of fear or demanding premiums out of greed?
+
+**Valuation test:** Is the market currently cheap, fair, or expensive on a fundamental basis? What does the interest rate environment (live yields) do to fair value?
+
+**Margin of safety:** Are there areas where a genuine margin of safety exists, or is the market priced for perfection?
+
+**Defensive vs. Enterprising:** Should the average investor be in defensive mode (high quality, dividends) or can the enterprising investor find genuine bargains?
+
+**Bottom line:** One direct sentence — Graham's overall stance and what valuation level would change it.
+
+Under 250 words. Valuation and safety first.` },
+        { label: 'Damodaran', prompt: `Give me Aswath Damodaran's current market view using live data.
+
+**DAMODARAN'S LENS:** Intrinsic valuation, DCF, equity risk premium, narrative vs. numbers, corporate finance discipline.
+
+Using the live data available (yields, prices, economic indicators):
+
+**Equity risk premium:** Given current 10-year yield and market prices, is the implied equity risk premium adequate compensation for equity risk? High/Low vs. historical.
+
+**Discount rate impact:** What does the current interest rate environment (live Fed Funds and 10Y) do to DCF valuations across different growth profiles?
+
+**Narrative check:** What market narratives are currently supported by the numbers, and which are running on pure story?
+
+**Sector valuation:** Which sector is most fairly valued vs. most stretched on a fundamental DCF basis right now?
+
+**Bottom line:** One direct sentence — his implied expected return for equities and whether risk is adequately compensated.
+
+Under 250 words. Numbers and valuation models first.` },
+        { label: 'Burry', prompt: `Give me Michael Burry's current market view using live data.
+
+**BURRY'S LENS:** Deep contrarian, hidden leverage, consensus blind spots, credit stress, what nobody wants to see.
+
+Using the live data available (yields, prices, VIX, economic indicators):
+
+**What the market is missing:** The signal that consensus is discounting right now that Burry would be building a thesis around.
+
+**Leverage concentration:** Where is leverage most dangerous right now? What asset class or sector blows up when it unwinds?
+
+**Credit stress vector:** At current interest rates (live data), what borrowers or sectors are most at risk? Where does the crack appear first?
+
+**The contrarian bet:** What is so unloved and under-owned right now that it could be the right side of the trade?
+
+**Bottom line:** One direct sentence — his positioning thesis and the one catalyst that triggers the scenario.
+
+Under 250 words. Risk and hidden stress first.` },
+        { label: 'Roubini', prompt: `Give me Nouriel Roubini's current market view using live data.
+
+**ROUBINI'S LENS:** Macro risk, stagflation, debt traps, geopolitical tail risk, "Dr. Doom" realism.
+
+Using the live data available (CPI, Fed Funds, yields, GDP context):
+
+**Stagflation check:** Current inflation vs. growth signals — are we heading toward stagflation? What does today's data suggest?
+
+**Debt trap risk:** At current interest rates (live data), how sustainable is government and corporate debt? When does servicing cost become a crisis?
+
+**Geopolitical premium:** What risks are currently underpriced by markets that Roubini sees as real tail events?
+
+**Systemic fragility:** Where is the most dangerous fault line right now — banking sector, commercial real estate, EM exposure, currency stress?
+
+**Bottom line:** One direct sentence — probability of hard landing vs. soft landing and the key trigger to watch.
+
+Under 250 words. Macro risk and data first.` },
+        { label: 'Grantham', prompt: `Give me Jeremy Grantham's current market view using live data.
+
+**GRANTHAM'S LENS:** Bubble identification, mean reversion, long-term valuation, tail risk, generational calls.
+
+Using the live data available (prices, yields, VIX, economic indicators):
+
+**Bubble indicator:** Using available valuation context — is this a bubble, a frothy market, or is there genuine value? How far from historical mean?
+
+**Mean reversion target:** If markets revert to historical average valuations from current levels, what does that imply for returns over the next 3-5 years?
+
+**What is safe:** Where in this environment does Grantham find genuine long-term value — international equities, commodities, value sectors?
+
+**What to avoid:** What is most dangerously overvalued and most likely to revert painfully?
+
+**Bottom line:** One direct sentence — his expected long-term return for US equities and what he'd be positioned in instead.
+
+Under 250 words. Valuation extremes and mean reversion first.` },
       ],
     },
     {
       id: 'tools',
       title: t('sections.tools'),
       items: [
-        { itemId: 'Analyze a Setup', label: t('items.analyzeSetup'), prompt: 'Analyze this trade setup for ', needsTicker: true },
-        { itemId: 'Position Sizing', label: t('items.positionSizing'), prompt: 'Help me calculate position size. Walk me through the math — account size, risk per trade %, entry and stop levels. My account is $', needsTicker: true },
-        { itemId: 'Risk Assessment', label: t('items.riskAssessment'), prompt: 'Give me a professional risk assessment for ', needsTicker: true },
-        { itemId: 'Entry / Stop / Target', label: t('items.entryStopTarget'), prompt: 'Help me define entry, stop, and target levels for ', needsTicker: true },
-        { itemId: 'Hold or Cut', label: t('items.holdOrCut'), prompt: 'Help me think through whether to hold or cut my position in ', needsTicker: true },
+        { itemId: 'Analyze a Setup', label: t('items.analyzeSetup'), prompt: `Analyze this trade setup for `, needsTicker: true, promptSuffix: `
+
+Use the live data available for this ticker. Structure the analysis as follows:
+
+## TRADE SETUP ANALYSIS — [TICKER]
+
+**1. PRICE & TREND**
+Current price, key MAs (20/50/200-day if available), trend direction. Above or below key levels?
+
+**2. SIGNAL SUMMARY**
+If signal data is available: direction, confidence score, key drivers. If not, use what price action tells us.
+
+**3. SETUP QUALITY**
+What makes this setup valid or invalid? Entry trigger, confirmation needed, what invalidates the trade.
+
+**4. RISK / REWARD**
+Defined entry zone, stop level, first target, extended target. R/R ratio.
+
+**5. CATALYSTS & RISKS**
+Upcoming earnings, news, or data that affects timing. The one thing that could blow up this setup.
+
+**VERDICT:** Take it / Wait for confirmation / Avoid — one sentence with the key reason.
+
+Under 300 words. Data first.` },
+        { itemId: 'Position Sizing', label: t('items.positionSizing'), prompt: `Help me size a position. Here are my details:
+
+Account size: $[ENTER AMOUNT]
+Risk per trade: [ENTER % — e.g., 1% or 2%]
+Ticker: [ENTER TICKER]
+Entry price: $[ENTER PRICE]
+Stop loss: $[ENTER STOP]
+
+Walk me through the math step by step:
+
+1. **Dollar risk** = Account × Risk %
+2. **Risk per share** = Entry − Stop
+3. **Share count** = Dollar risk ÷ Risk per share
+4. **Position value** = Share count × Entry price
+5. **Portfolio weight** = Position value ÷ Account
+
+Then flag: Does this position size pass a concentration check? (Position value should typically be under 10% of account for single stocks.) If I haven't provided all the numbers above, ask me for what's missing before calculating.`, needsTicker: false },
+        { itemId: 'Risk Assessment', label: t('items.riskAssessment'), prompt: `Give me a professional risk assessment for `, needsTicker: true, promptSuffix: `
+
+Use live data from the feed if available. Structure as:
+
+## RISK ASSESSMENT — [TICKER]
+
+**1. DOWNSIDE SCENARIOS**
+- Base case downside (normal pullback): what level, what % loss
+- Bear case downside (thesis wrong): what level, what triggers it
+- Tail risk (worst case): what would cause a severe drawdown
+
+**2. KEY RISK FACTORS**
+3-5 specific risks: earnings miss, rate sensitivity, sector rotation, leverage, valuation premium, competition, regulatory. One sentence each.
+
+**3. POSITION SIZING IMPLICATION**
+Given these risks, what % of a portfolio is appropriate? High conviction, starter, or speculative sizing?
+
+**4. STOP LOSS LOGIC**
+What price level definitively breaks the thesis? Where is the technical and fundamental stop?
+
+**5. RISK/REWARD VERDICT**
+Is the current risk/reward attractive, neutral, or unfavorable? One sentence.
+
+Under 300 words.` },
+        { itemId: 'Entry / Stop / Target', label: t('items.entryStopTarget'), prompt: `Help me define entry, stop, and target levels for `, needsTicker: true, promptSuffix: `
+
+Use live data from the feed. Structure as:
+
+## ENTRY / STOP / TARGET — [TICKER]
+
+**CURRENT PRICE:** [from live data]
+
+**ENTRY ZONE**
+- Ideal entry: specific price or range
+- What confirms the entry is valid (price action, volume, indicator trigger)
+- Aggressive vs. conservative entry difference
+
+**STOP LOSS**
+- Technical stop: price level where the trade thesis is broken
+- Max allowable loss from entry (% and $)
+- What causes an early exit before the stop is hit
+
+**TARGETS**
+- Target 1 (first profit-taking level): price + rationale
+- Target 2 (extended target): price + rationale
+- Where to trail the stop once T1 is hit
+
+**R/R RATIO:** [calculated]
+
+**VERDICT:** One sentence — is the current setup worth the risk?
+
+Under 250 words.` },
+        { itemId: 'Hold or Cut', label: t('items.holdOrCut'), prompt: `Help me think through whether to hold or cut my position in `, needsTicker: true, promptSuffix: `
+
+Use live data from the feed. Structure as:
+
+## HOLD OR CUT DECISION — [TICKER]
+
+**1. ORIGINAL THESIS CHECK**
+What was the original reason to own this? Is that thesis still intact, weakened, or broken?
+
+**2. PRICE ACTION VERDICT**
+What is the current price action saying? Is the stock respecting key levels or breaking down?
+
+**3. HOLD CASE**
+The 2-3 strongest reasons to stay in the position. What would confirm the trade is working?
+
+**4. CUT CASE**
+The 2-3 strongest reasons to exit. What has changed or what level definitively breaks the trade?
+
+**5. PARTIAL EXIT OPTION**
+Is there a case to cut size (reduce exposure) rather than a binary hold/cut decision?
+
+**VERDICT:** Hold / Reduce / Cut — one direct sentence with the primary reason.
+
+Under 300 words. Data and facts first.` },
       ],
     },
     {
@@ -334,7 +926,7 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
   const pineCodeInjected = useRef(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const [tickerPopup, setTickerPopup] = useState<{ promptPrefix: string; placeholder: string } | null>(null)
+  const [tickerPopup, setTickerPopup] = useState<{ promptPrefix: string; placeholder: string; promptSuffix?: string } | null>(null)
   const [tickerInput, setTickerInput] = useState('')
   const tickerInputRef = useRef<HTMLInputElement>(null)
   const [showEarningsCalendar, setShowEarningsCalendar] = useState(false)
@@ -620,7 +1212,7 @@ Be direct and factual. Use numbers.`
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean, promptSuffix?: string) {
     if (isCalendar) {
       setShowEarningsCalendar(true)
       return
@@ -680,7 +1272,7 @@ Be direct and factual. Use numbers.`
       setCouncilChimeIn(false)
       setTimeout(() => analysisInputRef.current?.focus(), 50)
     } else if (needsTicker) {
-      setTickerPopup({ promptPrefix: prompt, placeholder: placeholder || 'Enter ticker or description...' })
+      setTickerPopup({ promptPrefix: prompt, placeholder: placeholder || 'Enter ticker or description...', promptSuffix })
       setTickerInput('')
       setTimeout(() => tickerInputRef.current?.focus(), 50)
     } else {
@@ -691,7 +1283,7 @@ Be direct and factual. Use numbers.`
 
   function submitTickerPopup() {
     if (!tickerPopup || !tickerInput.trim()) return
-    const fullPrompt = tickerPopup.promptPrefix + tickerInput.trim()
+    const fullPrompt = tickerPopup.promptPrefix + tickerInput.trim() + (tickerPopup.promptSuffix ?? '')
     setTickerPopup(null)
     setTickerInput('')
     setInput(fullPrompt)
@@ -869,7 +1461,7 @@ Be direct and factual. Use numbers.`
       showBriefingTeaser(item.itemId)
       return
     }
-    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch)
+    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch, item.promptSuffix)
     if (activeTab !== 'chat') setActiveTab('chat')
     setSidebarMobileOpen(false)
   }
