@@ -3,7 +3,7 @@
 
 import { getTopMovers } from '@/lib/alpha-vantage'
 import { getQuote, getProfile, getMetrics, getTechnicalSnapshot, getEarningsCalendar, formatEarningsCalendar, getMarketNews, getCompanyNews } from '@/lib/finnhub'
-import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth } from '@/lib/fred'
+import { getFedFundsRate, getCPIInflation, getYieldCurve, getUnemploymentRate, getGDPGrowth, getDXY } from '@/lib/fred'
 import { getCryptoPrice, getTop10ByCap, getFearGreedIndex, getBitcoinDominance } from '@/lib/coingecko'
 import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec-edgar'
 import { runFullCouncilScan, runFrameworkScan, formatScanResults } from '@/lib/scanner'
@@ -463,7 +463,8 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
         getYieldCurve().catch(() => null),
         getUnemploymentRate().catch(() => null),
         getGDPGrowth().catch(() => null),
-      ]).then(([fed, cpi, yc, unemp, gdp]) => {
+        getDXY().catch(() => null),
+      ]).then(([fed, cpi, yc, unemp, gdp, dxy]) => {
         const lines: string[] = []
         if (fed) lines.push(`Federal Funds Rate: ${fed.value}% (as of ${fed.date})`)
         if (cpi) lines.push(`CPI Index: ${cpi.value} (as of ${cpi.date})`)
@@ -473,7 +474,19 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
         }
         if (unemp) lines.push(`Unemployment Rate: ${unemp.value}% (as of ${unemp.date})`)
         if (gdp && gdp.annualizedGrowthRate) lines.push(`Real GDP Growth (annualized): ${gdp.annualizedGrowthRate} — latest quarter: ${gdp.latestQuarter?.date}`)
+        if (dxy?.value != null) lines.push(`U.S. Dollar Index (DXY): ${dxy.value.toFixed(2)}${dxy.changePct != null ? ` (${dxy.changePct > 0 ? '+' : ''}${dxy.changePct.toFixed(3)}% today)` : ''} — ${dxy.signal} · ${dxy.cryptoImpact}`)
         if (lines.length > 0) sections.push(`LIVE ECONOMIC DATA (FRED — Federal Reserve):\n${lines.join('\n')}`)
+      })
+    )
+  }
+
+  // ── DXY for crypto queries (dollar strength is a primary BTC driver) ──────────
+  if (wantsCrypto && !wantsEconomic) {
+    tasks.push(
+      getDXY().catch(() => null).then(dxy => {
+        if (dxy?.value != null) {
+          sections.push(`U.S. DOLLAR INDEX (DXY): ${dxy.value.toFixed(2)}${dxy.changePct != null ? ` (${dxy.changePct > 0 ? '+' : ''}${dxy.changePct.toFixed(3)}% today)` : ''} — ${dxy.signal} · ${dxy.cryptoImpact}`)
+        }
       })
     )
   }
@@ -500,6 +513,42 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
         if (dom?.btcDominance) lines.push(`BTC Dominance: ${dom.btcDominance}%  |  Total Market Cap: $${dom.totalMarketCapUsd?.toLocaleString()}`)
         if (lines.length > 0) sections.push(`LIVE CRYPTO DATA (CoinGecko — real-time):\n${lines.join('\n')}`)
       })
+    )
+  }
+
+  // ── BTC ETF flows (crypto queries — institutional demand signal) ─────────────
+  if (wantsCrypto) {
+    tasks.push(
+      (async () => {
+        try {
+          const BTC_ETFS = ['IBIT','FBTC','GBTC','ARKB','BITB']
+          const results = await Promise.all(
+            BTC_ETFS.map(async ticker => {
+              try {
+                const res = await fetch(
+                  `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=1d&interval=1d`,
+                  { next: { revalidate: 1800 }, headers: { 'User-Agent': 'Mozilla/5.0' } }
+                )
+                if (!res.ok) return null
+                const json = await res.json()
+                const meta = json?.chart?.result?.[0]?.meta
+                if (!meta) return null
+                const price = meta.regularMarketPrice ?? null
+                const prevClose = meta.previousClose ?? meta.chartPreviousClose ?? null
+                const changePct = price && prevClose ? ((price - prevClose) / prevClose * 100) : null
+                return { ticker, changePct }
+              } catch { return null }
+            })
+          )
+          const valid = results.filter(Boolean) as { ticker: string; changePct: number }[]
+          if (valid.length === 0) return
+          const inflows  = valid.filter(e => (e.changePct ?? 0) > 0.1)
+          const outflows = valid.filter(e => (e.changePct ?? 0) < -0.1)
+          const signal = inflows.length > outflows.length ? 'INFLOW (bullish institutional demand)' : outflows.length > inflows.length ? 'OUTFLOW (institutions reducing exposure)' : 'MIXED'
+          const perFund = valid.map(e => `${e.ticker}: ${(e.changePct ?? 0) > 0 ? '+' : ''}${(e.changePct ?? 0).toFixed(2)}%`).join(' | ')
+          sections.push(`SPOT BTC ETF FLOWS (Yahoo Finance — top 5 funds):\nAggregate Signal: ${signal}\nPer Fund: ${perFund}\nNote: Price change used as daily flow proxy — positive = net inflow day`)
+        } catch { /* skip */ }
+      })()
     )
   }
 

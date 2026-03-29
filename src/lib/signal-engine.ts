@@ -495,6 +495,12 @@ export function formatSignalBlock(signals: Signal[]): string {
     lines.push('')
     lines.push(`### ${s.ticker.toUpperCase()} SIGNAL: ${s.direction.replace('_', ' ')} | Confidence: ${s.confidence}%`)
     lines.push(`State: ${s.state}${s.squeeze_setup ? ' | SQUEEZE SETUP ACTIVE' : ''}`)
+    if (s.regime) {
+      lines.push(`Cycle Regime: ${s.regime} — ${s.regimeReason}`)
+    }
+    if (s.nupl != null) {
+      lines.push(`NUPL: ${(s.nupl * 100).toFixed(1)}% — ${interpretNUPL(s.nupl)}`)
+    }
     if (s.drivers.length > 0) {
       lines.push('Drivers:')
       s.drivers.slice(0, 5).forEach(d => lines.push(`  - ${d}`))
