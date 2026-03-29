@@ -61,7 +61,7 @@ function detectFrameworks(content: string): { topic: string; label: string }[] {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; itemId?: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
+type SidebarItem = { label: string; itemId?: string; prompt: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 // Sidebar sections are defined inside the Home component (uses useTranslations hook)
@@ -315,6 +315,7 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
       id: 'cryptodata',
       title: t('sections.cryptodata'),
       items: [
+        { itemId: 'Coin Research', label: 'Coin Research', prompt: '', isCryptoResearch: true },
         { itemId: 'Crypto Dashboard', label: t('items.cryptoDashboard'), prompt: '', isCryptoDashboard: true },
         { itemId: 'Crypto Prices', label: t('items.cryptoPrices'), prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
         { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
@@ -619,7 +620,7 @@ Be direct and factual. Use numbers.`
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean) {
     if (isCalendar) {
       setShowEarningsCalendar(true)
       return
@@ -658,6 +659,10 @@ Be direct and factual. Use numbers.`
     }
     if (isCryptoDashboard) {
       router.push('/crypto-dashboard')
+      return
+    }
+    if (isCryptoResearch) {
+      router.push('/crypto-research')
       return
     }
     if (isAlerts) {
@@ -864,7 +869,7 @@ Be direct and factual. Use numbers.`
       showBriefingTeaser(item.itemId)
       return
     }
-    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts)
+    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch)
     if (activeTab !== 'chat') setActiveTab('chat')
     setSidebarMobileOpen(false)
   }
