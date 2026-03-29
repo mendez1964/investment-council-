@@ -25,8 +25,8 @@
     "premarketBriefingDesc": "Daily AI briefing covering key levels, sector rotation, and market bias before the open.",
     "councilFrameworks": "18 Council Frameworks",
     "councilFrameworksDesc": "Ask Buffett, Dalio, Soros, and 15 other legendary investors what they'd do right now.",
-    "cryptoDashboard": "Crypto Dashboard",
-    "cryptoDashboardDesc": "BTC dominance, funding rates, altcoin season index, and on-chain metrics in real time.",
+    "cryptoDashboard": "BTC Dashboard",
+    "cryptoDashboardDesc": "BTC dominance, on-chain metrics, funding rates, altcoin season index, and market command center in real time.",
     "warOfAIs": "War of the AIs",
     "warOfAIsDesc": "Watch Claude vs ChatGPT vs Gemini compete daily. Live leaderboard and track record.",
     "emailAlerts": "Email Alerts",
@@ -271,7 +271,7 @@
       "onChainScan": "On-Chain Scan",
       "altcoinSeasonScan": "Altcoin Season Scan",
       "defiEcosystemScan": "DeFi Ecosystem Scan",
-      "cryptoDashboard": "Crypto Dashboard",
+      "cryptoDashboard": "BTC Dashboard",
       "cryptoPrices": "Crypto Prices",
       "cryptoNews": "Crypto News"
     }

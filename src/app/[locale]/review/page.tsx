@@ -6,7 +6,7 @@ import { useRouter } from '@/navigation'
 const YES_OPTIONS   = ['Yes', 'Somewhat', 'No']
 const DAILY_OPTIONS = ['Yes', 'Maybe', 'Not yet']
 const REC_OPTIONS   = ['Yes', 'Maybe', 'No']
-const FEATURES      = ['AI Picks', 'AI Chat', 'AI Battle', 'Options Picks', 'Market Guardian', 'Morning Briefing', 'Fear & Greed', 'Crypto Dashboard', 'Other']
+const FEATURES      = ['AI Picks', 'AI Chat', 'AI Battle', 'Options Picks', 'Market Guardian', 'Morning Briefing', 'Fear & Greed', 'BTC Dashboard', 'Other']
 
 function ChoiceButton({ label, selected, onClick, color = '#2563eb' }: { label: string; selected: boolean; onClick: () => void; color?: string }) {
   return (

@@ -90,7 +90,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'DeFi Ecosystem Scan': Layers,
   'Crypto Prices': TrendingUp,
   'Crypto News': Newspaper,
-  'Crypto Dashboard': BarChart2,
+  'BTC Dashboard': BarChart2,
   'Coin Research': Search,
   'Email Alerts': Bell,
 }

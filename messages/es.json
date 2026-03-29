@@ -25,7 +25,7 @@
     "premarketBriefingDesc": "Briefing diario de IA con niveles clave, rotación sectorial y sesgo de mercado antes de la apertura.",
     "councilFrameworks": "18 Marcos del Consejo",
     "councilFrameworksDesc": "Pregunta qué harían ahora Buffett, Dalio, Soros y otros 15 inversores legendarios.",
-    "cryptoDashboard": "Panel de Criptomonedas",
+    "cryptoDashboard": "Panel BTC",
     "cryptoDashboardDesc": "Dominancia de BTC, tasas de financiación, índice de temporada de altcoins y métricas on-chain en tiempo real.",
     "warOfAIs": "Guerra de las IAs",
     "warOfAIsDesc": "Sigue a Claude vs ChatGPT vs Gemini compitiendo cada día. Tabla de líderes en vivo y registro de resultados.",
@@ -271,7 +271,7 @@
       "onChainScan": "Escaneo On-Chain",
       "altcoinSeasonScan": "Escaneo Temporada Altcoins",
       "defiEcosystemScan": "Escaneo Ecosistema DeFi",
-      "cryptoDashboard": "Panel de Cripto",
+      "cryptoDashboard": "Panel BTC",
       "cryptoPrices": "Precios de Cripto",
       "cryptoNews": "Noticias de Cripto"
     }

@@ -21,7 +21,7 @@ const SECTIONS = [
       { label: 'Council Chat', href: '/app', desc: 'AI investment analysis with 18 expert frameworks' },
       { label: 'AI Daily Picks', href: '/app', desc: 'Stocks, crypto, and options picks generated each morning' },
       { label: 'War of the AIs', href: '/battle', desc: 'Daily AI model competition — Claude vs GPT vs Gemini vs Grok' },
-      { label: 'Crypto Dashboard', href: '/crypto-dashboard', desc: 'BTC dominance, altcoin season, funding rates, on-chain metrics' },
+      { label: 'BTC Dashboard', href: '/crypto-dashboard', desc: 'BTC dominance, on-chain metrics, altcoin season, funding rates, market command center' },
       { label: 'Market Movers', href: '/movers', desc: 'Top gainers, losers, and volume leaders' },
       { label: 'Economic Calendar', href: '/economic-calendar', desc: 'Upcoming Fed events, earnings, and macro releases' },
       { label: 'Fear & Greed Index', href: '/fear-greed', desc: 'Real-time market sentiment indicator' },

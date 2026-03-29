@@ -170,7 +170,7 @@ const slides = [
     ),
   },
   {
-    label: 'Crypto Dashboard',
+    label: 'BTC Dashboard',
     content: (
       <div style={{ background: '#0a0a0a', height: '100%', padding: '16px', display: 'flex', gap: '16px' }}>
         {/* Left: dominance */}
@@ -482,7 +482,7 @@ export default function LandingPage() {
                 { icon: '🌅', title: 'Pre-Market Briefing & EOD Summary', desc: 'Start every trading day with a full market snapshot — futures, key levels, macro risks, and what to watch. End the day with a full recap. Free tier gets a limited snapshot preview.', tag: 'Full on Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '📊', title: 'Options Morning Brief', desc: 'Daily briefing built specifically for options traders — VIX environment, best strategy type for today (credit vs debit, straddles), key risk events this week, put/call ratio, 0DTE conditions, and IV crush warnings. Delivered every morning before the open.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
                 { icon: '🤖', title: 'AI Daily Picks', desc: 'Stocks and crypto picks generated fresh each morning with entry price, bias, catalyst, and rationale. Track record builds over time.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
-                { icon: '📊', title: 'Crypto Dashboard', desc: 'BTC dominance gauge, altcoin season index, funding rates, on-chain health metrics, and top 10 prices — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
+                { icon: '📊', title: 'BTC Dashboard', desc: 'BTC dominance, on-chain health metrics, altcoin season index, funding rates, and market command center — all in one live view.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },
                 { icon: '🎯', title: 'Options Picks with Entry/Stop/Target', desc: 'Daily options trade ideas with full risk management — entry premium, stop loss %, take profit %, and complete rationale.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
                 { icon: '🛡️', title: 'IC Market Guardian', desc: 'AI scans all market news daily and alerts you only when something price-moving hits your holdings. In-app alerts + email delivery for Pro members.', tag: 'Pro Only', tagBg: GOLD_LIGHT, tagColor: '#92680a' },
                 { icon: '🔔', title: 'Email & SMS Alerts', desc: 'Morning briefings, EOD recaps, AI picks, options trades, fear & greed extremes, and Guardian news alerts delivered to your inbox or phone.', tag: 'Trader & Pro', tagBg: '#e8eef5', tagColor: NAVY },

@@ -184,7 +184,7 @@ export default function CryptoDashboardPage() {
           onMouseEnter={e => e.currentTarget.style.color = '#111'}
           onMouseLeave={e => e.currentTarget.style.color = '#555'}
         >← Back</button>
-        <div style={{ fontSize: '16px', fontWeight: 700 }}>₿ Crypto Dashboard</div>
+        <div style={{ fontSize: '16px', fontWeight: 700 }}>₿ BTC Dashboard</div>
         <div style={{ fontSize: '11px', color: '#9ca3af' }}>Live market intelligence · Updated every 5 min</div>
         {data?.dominance && (
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '16px', fontSize: '11px', color: '#6b7280' }}>

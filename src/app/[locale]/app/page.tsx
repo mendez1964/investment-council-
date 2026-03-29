@@ -316,7 +316,7 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 stories that moved 
       title: t('sections.cryptodata'),
       items: [
         { itemId: 'Coin Research', label: 'Coin Research', prompt: '', isCryptoResearch: true },
-        { itemId: 'Crypto Dashboard', label: t('items.cryptoDashboard'), prompt: '', isCryptoDashboard: true },
+        { itemId: 'BTC Dashboard', label: t('items.cryptoDashboard'), prompt: '', isCryptoDashboard: true },
         { itemId: 'Crypto Prices', label: t('items.cryptoPrices'), prompt: 'Give me current crypto prices, fear and greed index, and BTC dominance.' },
         { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
         { itemId: 'Crypto News', label: t('items.cryptoNews'), prompt: '', isNews: true },
