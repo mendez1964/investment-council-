@@ -98,6 +98,44 @@ export async function getUnemploymentRate() {
   }
 }
 
+// DXY — U.S. Dollar Index (Trade Weighted Broad Index vs major currencies)
+// FRED series: DTWEXBGS (daily, 1-day lag)
+// Rising DXY = dollar strength = headwind for BTC/crypto
+// Falling DXY = dollar weakness = tailwind for risk assets
+export async function getDXY() {
+  const obs = await getObservations('DTWEXBGS', 2)
+  const latest  = parseFloat(obs[0]?.value)
+  const previous = parseFloat(obs[1]?.value)
+  const change = (!isNaN(latest) && !isNaN(previous))
+    ? parseFloat((latest - previous).toFixed(3))
+    : null
+  const changePct = (!isNaN(latest) && !isNaN(previous) && previous !== 0)
+    ? parseFloat(((latest - previous) / previous * 100).toFixed(3))
+    : null
+  let signal = 'Neutral'
+  let cryptoImpact = 'Neutral for crypto'
+  if (!isNaN(latest)) {
+    if (latest > 106) { signal = 'Strong Dollar'; cryptoImpact = 'Bearish for crypto — dollar dominance suppresses risk assets' }
+    else if (latest > 103) { signal = 'Elevated Dollar'; cryptoImpact = 'Mild headwind for crypto' }
+    else if (latest < 99) { signal = 'Weak Dollar'; cryptoImpact = 'Bullish for crypto — dollar weakness boosts risk assets' }
+    else if (latest < 101) { signal = 'Soft Dollar'; cryptoImpact = 'Mild tailwind for crypto' }
+  }
+  if (changePct != null) {
+    if (changePct > 0.3) cryptoImpact += ' · Dollar rising fast — caution'
+    else if (changePct < -0.3) cryptoImpact += ' · Dollar falling fast — bullish momentum'
+  }
+  return {
+    seriesId: 'DTWEXBGS',
+    name: 'U.S. Dollar Index (DXY)',
+    value: !isNaN(latest) ? latest : null,
+    change,
+    changePct,
+    date: obs[0]?.date,
+    signal,
+    cryptoImpact,
+  }
+}
+
 // Real GDP — last 4 quarters to show trend
 export async function getGDPGrowth() {
   const obs = await getObservations('GDPC1', 4)

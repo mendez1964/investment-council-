@@ -56,6 +56,20 @@ interface DashboardData {
     short_24h: number
     total_24h: number
   } | null
+  dxy: {
+    value: number | null
+    change: number | null
+    changePct: number | null
+    signal: string
+    cryptoImpact: string
+  } | null
+  etf_flows: {
+    etfs: Array<{ ticker: string; name: string; price: number | null; changePct: number | null; volume: number | null; flow: string }>
+    totalInflow: number
+    totalOutflow: number
+    flowSignal: 'bullish' | 'bearish' | 'neutral'
+    flowSummary: string
+  } | null
   fetched_at: string
   cached: boolean
 }
@@ -459,7 +473,166 @@ export default function CryptoDashboardPage() {
               </div>
             </div>
 
-            {/* Row 3: Top 10 */}
+            {/* Row 3: DXY + ETF Flows */}
+            <div>
+              <SectionHeader title="MACRO & INSTITUTIONAL FLOWS" sub="Dollar strength and spot ETF demand — the two biggest external forces on BTC" />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+
+                {/* DXY */}
+                <Card>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '12px' }}>
+                    U.S. DOLLAR INDEX (DXY) <span style={{ fontWeight: 400, color: '#d1d5db' }}>· FRED</span>
+                  </div>
+                  {data?.dxy?.value != null ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+                        <div style={{ fontSize: '32px', fontWeight: 900, color: data.dxy.value > 103 ? '#dc2626' : data.dxy.value < 101 ? '#16a34a' : '#374151' }}>
+                          {data.dxy.value.toFixed(2)}
+                        </div>
+                        {data.dxy.changePct != null && (
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: data.dxy.changePct > 0 ? '#dc2626' : '#16a34a' }}>
+                            {data.dxy.changePct > 0 ? '+' : ''}{data.dxy.changePct.toFixed(3)}%
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 700, color: data.dxy.value > 103 ? '#dc2626' : data.dxy.value < 101 ? '#16a34a' : '#6b7280' }}>
+                        {data.dxy.signal}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6b7280', lineHeight: 1.5 }}>{data.dxy.cryptoImpact}</div>
+                      <div style={{ fontSize: '9px', color: '#d1d5db', marginTop: '4px', lineHeight: 1.4 }}>
+                        Rising DXY = dollar strength = headwind for BTC · Falling DXY = tailwind
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>DXY data unavailable</div>
+                  )}
+                </Card>
+
+                {/* BTC ETF Flows */}
+                <Card>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '4px' }}>
+                    SPOT BTC ETF FLOWS <span style={{ fontWeight: 400, color: '#d1d5db' }}>· 8 Funds · Daily</span>
+                  </div>
+                  {data?.etf_flows ? (
+                    <>
+                      {/* Flow signal summary */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', padding: '8px 12px', background: data.etf_flows.flowSignal === 'bullish' ? '#dcfce7' : data.etf_flows.flowSignal === 'bearish' ? '#fee2e2' : '#f9fafb', borderRadius: '8px' }}>
+                        <div style={{ fontSize: '16px' }}>{data.etf_flows.flowSignal === 'bullish' ? '🟢' : data.etf_flows.flowSignal === 'bearish' ? '🔴' : '⚪'}</div>
+                        <div style={{ fontSize: '11px', color: data.etf_flows.flowSignal === 'bullish' ? '#16a34a' : data.etf_flows.flowSignal === 'bearish' ? '#dc2626' : '#6b7280', fontWeight: 600, lineHeight: 1.4 }}>
+                          {data.etf_flows.flowSummary}
+                        </div>
+                      </div>
+                      {/* Per-ETF grid */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                        {data.etf_flows.etfs.map(etf => {
+                          const flowColor = etf.flow === 'inflow' ? '#16a34a' : etf.flow === 'outflow' ? '#dc2626' : '#9ca3af'
+                          const flowBg = etf.flow === 'inflow' ? '#dcfce7' : etf.flow === 'outflow' ? '#fee2e2' : '#f9fafb'
+                          return (
+                            <div key={etf.ticker} style={{ background: flowBg, borderRadius: '6px', padding: '7px 8px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: 800, color: '#111', marginBottom: '2px' }}>{etf.ticker}</div>
+                              <div style={{ fontSize: '9px', color: '#9ca3af', marginBottom: '4px' }}>{etf.name}</div>
+                              {etf.changePct != null ? (
+                                <div style={{ fontSize: '12px', fontWeight: 700, color: flowColor }}>
+                                  {etf.changePct > 0 ? '+' : ''}{etf.changePct.toFixed(2)}%
+                                </div>
+                              ) : (
+                                <div style={{ fontSize: '11px', color: '#d1d5db' }}>—</div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <div style={{ marginTop: '8px', fontSize: '9px', color: '#9ca3af' }}>
+                        Price change used as flow proxy · Green = inflow day · Red = outflow day
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#9ca3af' }}>ETF flow data unavailable</div>
+                  )}
+                </Card>
+              </div>
+            </div>
+
+            {/* Row 4: Investor Profile Action Guide */}
+            {btcSignal?.regime && (
+              <div>
+                <SectionHeader title="WHAT SHOULD YOU DO NOW?" sub="Regime-adjusted action guide by investor profile" />
+                <Card>
+                  {(() => {
+                    const regime = btcSignal.regime!
+                    const regimeColor = REGIME_COLORS[regime]
+                    const profiles = [
+                      {
+                        name: 'Long-Term Builder',
+                        icon: '🏗️',
+                        desc: 'DCA into BTC/ETH over time. Low frequency, high conviction.',
+                        action: regime === 'ACCUMULATE' ? 'Increase DCA amount — this is your best entry window.'
+                          : regime === 'HOLD' ? 'Continue your regular DCA. Stay the course.'
+                          : regime === 'REDUCE' ? 'Pause new buys. Let existing positions ride but take some off at key levels.'
+                          : 'Halt DCA. Protect capital. Re-enter when regime flips to ACCUMULATE.',
+                      },
+                      {
+                        name: 'BTC Maximalist',
+                        icon: '₿',
+                        desc: 'High BTC concentration. Holds through cycles.',
+                        action: regime === 'ACCUMULATE' ? 'Add aggressively — MVRV confirms undervaluation. This is the window.'
+                          : regime === 'HOLD' ? 'Full position. No action needed. Let it run.'
+                          : regime === 'REDUCE' ? 'Trim 20-25% of position. Move to stablecoin. Re-enter at lower levels.'
+                          : 'Reduce to 60% of target BTC allocation. Preserve capital for the next cycle.',
+                      },
+                      {
+                        name: 'Balanced Investor',
+                        icon: '⚖️',
+                        desc: '10-20% crypto in a diversified portfolio.',
+                        action: regime === 'ACCUMULATE' ? 'Move crypto allocation to upper end of range (20%). Rebalance toward BTC.'
+                          : regime === 'HOLD' ? 'Maintain target allocation. No rebalancing needed.'
+                          : regime === 'REDUCE' ? 'Trim back toward lower end (10-12%). Take profits systematically.'
+                          : 'Reduce to minimum crypto allocation (5-8%) or exit temporarily.',
+                      },
+                      {
+                        name: 'Altcoin Hunter',
+                        icon: '🎯',
+                        desc: 'Seeks outsized gains in high-conviction altcoins.',
+                        action: regime === 'ACCUMULATE' ? 'Build BTC/ETH base first. Alts will follow when BTC confirms.'
+                          : regime === 'HOLD' ? 'Rotate into high-quality alts. Check alt season index for timing.'
+                          : regime === 'REDUCE' ? 'Exit speculative alts first — they fall hardest. Hold BTC/ETH only.'
+                          : 'Exit all altcoins immediately. Cash or stablecoin only until regime improves.',
+                      },
+                    ]
+                    const actionColors = { ACCUMULATE: '#16a34a', HOLD: '#2563eb', REDUCE: '#f59e0b', DEFENSIVE: '#dc2626' }
+                    const actionBg = { ACCUMULATE: '#dcfce7', HOLD: '#dbeafe', REDUCE: '#fef9c3', DEFENSIVE: '#fee2e2' }
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', padding: '10px 14px', background: `${regimeColor}12`, borderRadius: '8px', border: `1px solid ${regimeColor}33` }}>
+                          <div style={{ fontSize: '22px', fontWeight: 900, color: regimeColor }}>{regime}</div>
+                          <div style={{ fontSize: '12px', color: '#6b7280' }}>{btcSignal.regimeReason}</div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                          {profiles.map(p => (
+                            <div key={p.name} style={{ border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+                              <div style={{ padding: '10px 12px', borderBottom: '1px solid #f0f0f0' }}>
+                                <div style={{ fontSize: '14px', marginBottom: '2px' }}>{p.icon}</div>
+                                <div style={{ fontSize: '11px', fontWeight: 800, color: '#111' }}>{p.name}</div>
+                                <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '2px', lineHeight: 1.4 }}>{p.desc}</div>
+                              </div>
+                              <div style={{ padding: '10px 12px', background: (actionBg as any)[regime] }}>
+                                <div style={{ fontSize: '9px', fontWeight: 700, color: (actionColors as any)[regime], marginBottom: '4px', letterSpacing: '0.05em' }}>ACTION</div>
+                                <div style={{ fontSize: '11px', color: '#374151', lineHeight: 1.5 }}>{p.action}</div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: '10px', fontSize: '9px', color: '#9ca3af', textAlign: 'center' }}>
+                          For educational purposes only · Not financial advice · Always do your own research
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </Card>
+              </div>
+            )}
+
+            {/* Row 5: Top 10 */}
             <div>
               <SectionHeader title="TOP 10 BY MARKET CAP" sub="Live prices · 24h performance" />
               <Card style={{ padding: '0', overflow: 'hidden' }}>

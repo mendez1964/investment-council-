@@ -1,5 +1,6 @@
 import { getTop10ByCap, getBitcoinDominance } from '@/lib/coingecko'
 import { getCoinMetricsSnapshot } from '@/lib/coinmetrics'
+import { getDXY } from '@/lib/fred'
 
 // Alt Season Index: % of top 50 coins that outperformed BTC over last 90 days
 // >75% = Alt Season, <25% = Bitcoin Season
@@ -138,6 +139,70 @@ function transformDominance(d: Awaited<ReturnType<typeof getBitcoinDominance>>) 
   }
 }
 
+// BTC ETF flows — Yahoo Finance (free, no key)
+// Shows daily price change + volume for each major spot BTC ETF
+const BTC_ETFS = [
+  { ticker: 'IBIT',  name: 'BlackRock',  label: 'IBIT' },
+  { ticker: 'FBTC',  name: 'Fidelity',   label: 'FBTC' },
+  { ticker: 'GBTC',  name: 'Grayscale',  label: 'GBTC' },
+  { ticker: 'ARKB',  name: 'ARK',        label: 'ARKB' },
+  { ticker: 'BITB',  name: 'Bitwise',    label: 'BITB' },
+  { ticker: 'HODL',  name: 'VanEck',     label: 'HODL' },
+  { ticker: 'BRRR',  name: 'Valkyrie',   label: 'BRRR' },
+  { ticker: 'EZBC',  name: 'Franklin',   label: 'EZBC' },
+]
+
+async function getBtcEtfFlows(): Promise<{
+  etfs: Array<{ ticker: string; name: string; price: number | null; changePct: number | null; volume: number | null; flow: 'inflow' | 'outflow' | 'neutral' }>
+  totalInflow: number   // count of ETFs with positive flow
+  totalOutflow: number  // count of ETFs with negative flow
+  flowSignal: 'bullish' | 'bearish' | 'neutral'
+  flowSummary: string
+}> {
+  const results = await Promise.all(
+    BTC_ETFS.map(async etf => {
+      try {
+        const res = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${etf.ticker}?range=1d&interval=1d`,
+          { next: { revalidate: 1800 }, headers: { 'User-Agent': 'Mozilla/5.0' } }
+        )
+        if (!res.ok) return { ...etf, price: null, changePct: null, volume: null, flow: 'neutral' as const }
+        const json = await res.json()
+        const meta = json?.chart?.result?.[0]?.meta
+        if (!meta) return { ...etf, price: null, changePct: null, volume: null, flow: 'neutral' as const }
+        const price = meta.regularMarketPrice ?? null
+        const prevClose = meta.previousClose ?? meta.chartPreviousClose ?? null
+        const volume = meta.regularMarketVolume ?? null
+        const changePct = price && prevClose ? parseFloat(((price - prevClose) / prevClose * 100).toFixed(2)) : null
+        const flow: 'inflow' | 'outflow' | 'neutral' = changePct == null ? 'neutral' : changePct > 0.1 ? 'inflow' : changePct < -0.1 ? 'outflow' : 'neutral'
+        return { ...etf, price, changePct, volume, flow }
+      } catch {
+        return { ...etf, price: null, changePct: null, volume: null, flow: 'neutral' as const }
+      }
+    })
+  )
+
+  const withData = results.filter(e => e.changePct != null)
+  const totalInflow  = withData.filter(e => e.flow === 'inflow').length
+  const totalOutflow = withData.filter(e => e.flow === 'outflow').length
+  let flowSignal: 'bullish' | 'bearish' | 'neutral' = 'neutral'
+  let flowSummary = 'Mixed ETF flows — no clear institutional direction'
+
+  if (withData.length > 0) {
+    if (totalInflow > totalOutflow * 1.5) {
+      flowSignal = 'bullish'
+      flowSummary = `${totalInflow}/${withData.length} BTC ETFs showing inflows — institutional demand building`
+    } else if (totalOutflow > totalInflow * 1.5) {
+      flowSignal = 'bearish'
+      flowSummary = `${totalOutflow}/${withData.length} BTC ETFs showing outflows — institutions reducing exposure`
+    } else {
+      flowSummary = `${totalInflow} inflow / ${totalOutflow} outflow — mixed institutional positioning`
+    }
+  }
+
+  return { etfs: results, totalInflow, totalOutflow, flowSignal, flowSummary }
+}
+
 let cache: { data: any; ts: number } | null = null
 const CACHE_MS = 5 * 60 * 1000
 
@@ -147,13 +212,15 @@ export async function GET() {
       return Response.json({ ...cache.data, cached: true })
     }
 
-    const [top10Raw, dominanceRaw, altSeason, fundingRates, onChainRaw, liquidations] = await Promise.allSettled([
+    const [top10Raw, dominanceRaw, altSeason, fundingRates, onChainRaw, liquidations, dxyRaw, etfFlowsRaw] = await Promise.allSettled([
       getTop10ByCap(),
       getBitcoinDominance(),
       getAltSeasonIndex(),
       getFundingRates(),
       getCoinMetricsSnapshot(),
       getLiquidations(),
+      getDXY(),
+      getBtcEtfFlows(),
     ])
 
     const result = {
@@ -163,6 +230,8 @@ export async function GET() {
       funding_rates: fundingRates.status === 'fulfilled' ? fundingRates.value : [],
       on_chain: onChainRaw.status === 'fulfilled' ? transformOnChain(onChainRaw.value) : null,
       liquidations: liquidations.status === 'fulfilled' ? liquidations.value : null,
+      dxy: dxyRaw.status === 'fulfilled' ? dxyRaw.value : null,
+      etf_flows: etfFlowsRaw.status === 'fulfilled' ? etfFlowsRaw.value : null,
       fetched_at: new Date().toISOString(),
       cached: false,
     }
