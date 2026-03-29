@@ -4,6 +4,7 @@
 
 export type SignalDirection = 'BULLISH' | 'WEAK_BULLISH' | 'NEUTRAL' | 'WEAK_BEARISH' | 'BEARISH'
 export type MarketState = 'Accumulation' | 'Distribution' | 'Expansion' | 'Exhaustion' | 'Neutral'
+export type RegimeLabel = 'ACCUMULATE' | 'HOLD' | 'REDUCE' | 'DEFENSIVE'
 
 export interface Signal {
   ticker: string
@@ -15,6 +16,95 @@ export interface Signal {
   summary: string          // one-line verdict
   squeeze_setup: boolean
   score: number            // raw score, useful for debugging
+  // Crypto cycle intelligence (null for stocks)
+  nupl: number | null      // Net Unrealized Profit/Loss: 1 - (1/MVRV). >0.75 = euphoria, <0 = capitulation
+  regime: RegimeLabel | null
+  regimeReason: string     // one-line plain English reason for the regime
+}
+
+// ── NUPL — Net Unrealized Profit/Loss ─────────────────────────────────────────
+// Formula: NUPL ≈ 1 - (1/MVRV)
+// This is mathematically exact: NUPL = (MarketCap - RealizedCap) / MarketCap = 1 - 1/MVRV
+// Zones: <0 Capitulation | 0–0.25 Hope | 0.25–0.5 Optimism | 0.5–0.75 Belief | >0.75 Euphoria
+
+export function computeNUPL(mvrv: number): number {
+  return parseFloat((1 - 1 / mvrv).toFixed(4))
+}
+
+export function interpretNUPL(nupl: number): string {
+  if (nupl > 0.75) return 'Euphoria — historically near cycle tops, extreme caution'
+  if (nupl > 0.5)  return 'Belief/Thrill — late bull market, profits elevated'
+  if (nupl > 0.25) return 'Optimism — mid-cycle bull market'
+  if (nupl > 0)    return 'Hope/Fear — early recovery, holders cautiously profitable'
+  return 'Capitulation — majority underwater, historically near cycle bottoms'
+}
+
+// ── Regime Signal ──────────────────────────────────────────────────────────────
+// ACCUMULATE — undervalued, fear in market, smart money buying
+// HOLD       — mid-cycle, stay positioned, no action needed
+// REDUCE     — overvalued, greed elevated, start taking profits
+// DEFENSIVE  — danger zone, preserve capital
+
+export function computeRegime(params: {
+  mvrv: number | null
+  nupl: number | null
+  fearGreed: number
+  exchangeNetFlow: number | null  // negative = outflows (bullish), positive = inflows (bearish)
+  fundingRate: number | null
+}): { regime: RegimeLabel; reason: string } {
+  const { mvrv, nupl, fearGreed, exchangeNetFlow, fundingRate } = params
+
+  // DEFENSIVE — multiple danger signals simultaneously
+  const mvrvDanger   = mvrv != null && mvrv > 3.5
+  const nuplDanger   = nupl != null && nupl > 0.70
+  const greedDanger  = fearGreed > 80
+  const flowDanger   = exchangeNetFlow != null && exchangeNetFlow > 3000
+  const fundingDanger = fundingRate != null && fundingRate > 0.08
+
+  if ((mvrvDanger && greedDanger) || (nuplDanger && greedDanger) || (mvrvDanger && nuplDanger) || (flowDanger && greedDanger) || (fundingDanger && greedDanger)) {
+    const reasons: string[] = []
+    if (mvrvDanger)  reasons.push(`MVRV ${mvrv!.toFixed(2)} (danger zone)`)
+    if (nuplDanger)  reasons.push(`NUPL ${(nupl! * 100).toFixed(0)}% (euphoria)`)
+    if (greedDanger) reasons.push(`Fear & Greed ${fearGreed} (extreme greed)`)
+    if (flowDanger)  reasons.push('heavy exchange inflows')
+    if (fundingDanger) reasons.push(`funding rate ${fundingRate!.toFixed(3)}% (longs overleveraged)`)
+    return { regime: 'DEFENSIVE', reason: `Preserve capital — ${reasons.slice(0, 2).join(', ')}` }
+  }
+
+  // REDUCE — elevated valuation + greed rising
+  const mvrvElevated  = mvrv != null && mvrv > 2.5
+  const nuplElevated  = nupl != null && nupl > 0.5
+  const greedElevated = fearGreed > 65
+  const flowBearish   = exchangeNetFlow != null && exchangeNetFlow > 1000
+
+  if ((mvrvElevated && greedElevated) || (nuplElevated && greedElevated) || (mvrvElevated && flowBearish)) {
+    const reasons: string[] = []
+    if (mvrvElevated)  reasons.push(`MVRV ${mvrv!.toFixed(2)} (elevated)`)
+    if (nuplElevated)  reasons.push(`NUPL ${(nupl! * 100).toFixed(0)}% (belief zone)`)
+    if (greedElevated) reasons.push(`Fear & Greed ${fearGreed} (greed)`)
+    return { regime: 'REDUCE', reason: `Start taking profits — ${reasons.slice(0, 2).join(', ')}` }
+  }
+
+  // ACCUMULATE — undervalued + fear
+  const mvrvLow      = mvrv != null && mvrv < 1.5
+  const nuplLow      = nupl != null && nupl < 0.25
+  const fearPresent  = fearGreed < 40
+  const flowBullish  = exchangeNetFlow != null && exchangeNetFlow < -1000
+
+  if ((mvrvLow && fearPresent) || (nuplLow && fearPresent) || (mvrvLow && flowBullish)) {
+    const reasons: string[] = []
+    if (mvrvLow)      reasons.push(`MVRV ${mvrv!.toFixed(2)} (undervalued)`)
+    if (nuplLow)      reasons.push(`NUPL ${(nupl! * 100).toFixed(0)}% (early cycle)`)
+    if (fearPresent)  reasons.push(`Fear & Greed ${fearGreed} (fear)`)
+    if (flowBullish)  reasons.push('strong exchange outflows')
+    return { regime: 'ACCUMULATE', reason: `Buy zone — ${reasons.slice(0, 2).join(', ')}` }
+  }
+
+  // HOLD — everything else (mid-cycle)
+  const reasons: string[] = []
+  if (mvrv != null) reasons.push(`MVRV ${mvrv.toFixed(2)} (mid-cycle)`)
+  if (fearGreed >= 40 && fearGreed <= 65) reasons.push(`Fear & Greed ${fearGreed} (neutral)`)
+  return { regime: 'HOLD', reason: `Stay positioned — ${reasons.slice(0, 2).join(', ') || 'mid-cycle conditions'}` }
 }
 
 // ── Crypto Signal ─────────────────────────────────────────────────────────────
@@ -171,10 +261,24 @@ export function computeCryptoSignal(ticker: string, data: CryptoSignalData): Sig
     state = 'Exhaustion'
   }
 
-  const topDriver = drivers[0] ?? 'Insufficient data for strong conviction'
-  const summary = `${ticker.toUpperCase()} — ${direction.replace('_', ' ')} (${confidence}% confidence). State: ${state}.${squeeze_setup ? ' SQUEEZE SETUP ACTIVE.' : ''} Key factor: ${topDriver}`
+  // NUPL + Regime
+  const nupl = data.mvrv != null ? computeNUPL(data.mvrv) : null
+  const { regime, reason: regimeReason } = computeRegime({
+    mvrv: data.mvrv,
+    nupl,
+    fearGreed: data.fearGreed,
+    exchangeNetFlow: data.exchangeNetFlow,
+    fundingRate: data.fundingRate,
+  })
 
-  return { ticker, assetType: 'crypto', direction, confidence, state, drivers, summary, squeeze_setup, score }
+  if (nupl != null) {
+    drivers.push(`NUPL ${(nupl * 100).toFixed(1)}% — ${interpretNUPL(nupl)}`)
+  }
+
+  const topDriver = drivers[0] ?? 'Insufficient data for strong conviction'
+  const summary = `${ticker.toUpperCase()} — ${direction.replace('_', ' ')} (${confidence}% confidence). Regime: ${regime}. State: ${state}.${squeeze_setup ? ' SQUEEZE SETUP ACTIVE.' : ''} Key factor: ${topDriver}`
+
+  return { ticker, assetType: 'crypto', direction, confidence, state, drivers, summary, squeeze_setup, score, nupl, regime, regimeReason }
 }
 
 // ── Stock Signal ──────────────────────────────────────────────────────────────
@@ -374,7 +478,7 @@ export function computeStockSignal(ticker: string, data: StockSignalData): Signa
   const topDriver = drivers[0] ?? 'Insufficient technical data for strong conviction'
   const summary = `${ticker.toUpperCase()} — ${direction.replace('_', ' ')} (${confidence}% confidence). State: ${state}.${squeeze_setup ? ' SQUEEZE SETUP ACTIVE.' : ''} Key factor: ${topDriver}`
 
-  return { ticker, assetType: 'stock', direction, confidence, state, drivers, summary, squeeze_setup, score }
+  return { ticker, assetType: 'stock', direction, confidence, state, drivers, summary, squeeze_setup, score, nupl: null, regime: null, regimeReason: '' }
 }
 
 // ── Format for Claude context ─────────────────────────────────────────────────

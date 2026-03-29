@@ -11,6 +11,9 @@ interface SignalData {
   drivers: string[]
   squeeze_setup: boolean
   ticker: string
+  nupl: number | null
+  regime: 'ACCUMULATE' | 'HOLD' | 'REDUCE' | 'DEFENSIVE' | null
+  regimeReason: string
 }
 
 interface DashboardData {
@@ -141,6 +144,21 @@ const STATE_COLORS: Record<string, string> = {
   Neutral: '#6b7280',
 }
 
+const REGIME_COLORS: Record<string, string> = {
+  ACCUMULATE: '#16a34a',
+  HOLD:       '#2563eb',
+  REDUCE:     '#f59e0b',
+  DEFENSIVE:  '#dc2626',
+}
+
+const NUPL_LABEL = (n: number): string => {
+  if (n > 0.75) return 'Euphoria'
+  if (n > 0.5)  return 'Belief'
+  if (n > 0.25) return 'Optimism'
+  if (n > 0)    return 'Hope'
+  return 'Capitulation'
+}
+
 export default function CryptoDashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
@@ -204,19 +222,24 @@ export default function CryptoDashboardPage() {
 
             {/* Command Center — Signal Engine output */}
             {btcSignal && (() => {
-              const sigColor = SIGNAL_COLORS[btcSignal.direction] ?? '#6b7280'
-              const stateColor = STATE_COLORS[btcSignal.state] ?? '#6b7280'
+              const sigColor    = SIGNAL_COLORS[btcSignal.direction] ?? '#6b7280'
+              const stateColor  = STATE_COLORS[btcSignal.state] ?? '#6b7280'
+              const regimeColor = btcSignal.regime ? REGIME_COLORS[btcSignal.regime] : '#6b7280'
+              const nuplPct     = btcSignal.nupl != null ? (btcSignal.nupl * 100).toFixed(1) : null
+
               return (
                 <div style={{ background: '#0f172a', borderRadius: '12px', padding: '20px 24px', color: '#fff' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+
+                  {/* Header row */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                     <div>
                       <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', letterSpacing: '0.1em', marginBottom: '4px' }}>MARKET COMMAND CENTER</div>
-                      <div style={{ fontSize: '13px', color: '#94a3b8' }}>Intelligence layer — what the data means right now</div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>Intelligence layer — what the data means right now</div>
                     </div>
-                    <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                       <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '9px', color: '#64748b', marginBottom: '4px' }}>STATE</div>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: stateColor, background: `${stateColor}22`, borderRadius: '6px', padding: '3px 10px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: stateColor, background: `${stateColor}22`, borderRadius: '6px', padding: '3px 10px' }}>
                           {btcSignal.state}
                         </div>
                       </div>
@@ -228,12 +251,44 @@ export default function CryptoDashboardPage() {
                     </div>
                   </div>
 
+                  {/* Regime + NUPL row — the new headline */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+
+                    {/* Regime */}
+                    <div style={{ background: `${regimeColor}18`, border: `1px solid ${regimeColor}44`, borderRadius: '10px', padding: '14px 18px' }}>
+                      <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '6px' }}>CYCLE REGIME</div>
+                      <div style={{ fontSize: '26px', fontWeight: 900, color: regimeColor, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+                        {btcSignal.regime ?? '—'}
+                      </div>
+                      {btcSignal.regimeReason && (
+                        <div style={{ fontSize: '11px', color: '#94a3b8', lineHeight: 1.4 }}>{btcSignal.regimeReason}</div>
+                      )}
+                    </div>
+
+                    {/* NUPL */}
+                    <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '14px 18px' }}>
+                      <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.1em', marginBottom: '6px' }}>NUPL (NET UNREALIZED P&L)</div>
+                      {nuplPct != null ? (
+                        <>
+                          <div style={{ fontSize: '26px', fontWeight: 900, color: btcSignal.nupl! > 0.5 ? '#f59e0b' : btcSignal.nupl! < 0 ? '#dc2626' : '#16a34a', letterSpacing: '-0.02em', marginBottom: '4px' }}>
+                            {parseFloat(nuplPct) > 0 ? '+' : ''}{nuplPct}%
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                            {NUPL_LABEL(btcSignal.nupl!)} — {btcSignal.nupl! > 0.5 ? 'holders in significant profit' : btcSignal.nupl! < 0 ? 'majority underwater' : 'holders modestly profitable'}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: '13px', color: '#475569' }}>Requires MVRV data</div>
+                      )}
+                    </div>
+                  </div>
+
                   {/* Signal verdict */}
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '28px', fontWeight: 900, color: sigColor, letterSpacing: '-0.02em' }}>
+                    <div style={{ fontSize: '24px', fontWeight: 900, color: sigColor, letterSpacing: '-0.02em' }}>
                       BTC: {btcSignal.direction.replace('_', ' ')}
                     </div>
-                    <div style={{ fontSize: '14px', color: '#64748b' }}>
+                    <div style={{ fontSize: '13px', color: '#64748b' }}>
                       {btcSignal.confidence}% confidence
                     </div>
                   </div>
@@ -242,10 +297,10 @@ export default function CryptoDashboardPage() {
                   {btcSignal.drivers.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '2px' }}>SIGNAL DRIVERS</div>
-                      {btcSignal.drivers.slice(0, 4).map((d, i) => (
+                      {btcSignal.drivers.slice(0, 5).map((d, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                           <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: sigColor, marginTop: '5px', flexShrink: 0 }} />
-                          <div style={{ fontSize: '12px', color: '#cbd5e1', lineHeight: 1.5 }}>{d}</div>
+                          <div style={{ fontSize: '11px', color: '#cbd5e1', lineHeight: 1.5 }}>{d}</div>
                         </div>
                       ))}
                     </div>
