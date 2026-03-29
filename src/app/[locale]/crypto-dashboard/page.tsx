@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { trackPageView } from '@/lib/analytics'
 
+interface SignalData {
+  direction: 'BULLISH' | 'WEAK_BULLISH' | 'NEUTRAL' | 'WEAK_BEARISH' | 'BEARISH'
+  confidence: number
+  state: string
+  drivers: string[]
+  squeeze_setup: boolean
+  ticker: string
+}
+
 interface DashboardData {
   top10: Array<{
     id: string
@@ -116,10 +125,27 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
   )
 }
 
+const SIGNAL_COLORS: Record<string, string> = {
+  BULLISH: '#16a34a',
+  WEAK_BULLISH: '#84cc16',
+  NEUTRAL: '#6b7280',
+  WEAK_BEARISH: '#f59e0b',
+  BEARISH: '#dc2626',
+}
+
+const STATE_COLORS: Record<string, string> = {
+  Accumulation: '#2563eb',
+  Distribution: '#f59e0b',
+  Expansion: '#16a34a',
+  Exhaustion: '#dc2626',
+  Neutral: '#6b7280',
+}
+
 export default function CryptoDashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [btcSignal, setBtcSignal] = useState<SignalData | null>(null)
 
   useEffect(() => { trackPageView('/crypto-dashboard') }, [])
 
@@ -128,6 +154,13 @@ export default function CryptoDashboardPage() {
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/signals?ticker=BTC&type=crypto')
+      .then(r => r.json())
+      .then(d => { if (d.signal) setBtcSignal(d.signal) })
+      .catch(() => {})
   }, [])
 
   const altSeason = data?.alt_season
@@ -168,6 +201,58 @@ export default function CryptoDashboardPage() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+
+            {/* Command Center — Signal Engine output */}
+            {btcSignal && (() => {
+              const sigColor = SIGNAL_COLORS[btcSignal.direction] ?? '#6b7280'
+              const stateColor = STATE_COLORS[btcSignal.state] ?? '#6b7280'
+              return (
+                <div style={{ background: '#0f172a', borderRadius: '12px', padding: '20px 24px', color: '#fff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', letterSpacing: '0.1em', marginBottom: '4px' }}>MARKET COMMAND CENTER</div>
+                      <div style={{ fontSize: '13px', color: '#94a3b8' }}>Intelligence layer — what the data means right now</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontSize: '9px', color: '#64748b', marginBottom: '4px' }}>STATE</div>
+                        <div style={{ fontSize: '12px', fontWeight: 700, color: stateColor, background: `${stateColor}22`, borderRadius: '6px', padding: '3px 10px' }}>
+                          {btcSignal.state}
+                        </div>
+                      </div>
+                      {btcSignal.squeeze_setup && (
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#f59e0b', background: '#f59e0b22', borderRadius: '6px', padding: '4px 12px', border: '1px solid #f59e0b44' }}>
+                          SQUEEZE SETUP
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Signal verdict */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '28px', fontWeight: 900, color: sigColor, letterSpacing: '-0.02em' }}>
+                      BTC: {btcSignal.direction.replace('_', ' ')}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#64748b' }}>
+                      {btcSignal.confidence}% confidence
+                    </div>
+                  </div>
+
+                  {/* Drivers */}
+                  {btcSignal.drivers.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.08em', marginBottom: '2px' }}>SIGNAL DRIVERS</div>
+                      {btcSignal.drivers.slice(0, 4).map((d, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: sigColor, marginTop: '5px', flexShrink: 0 }} />
+                          <div style={{ fontSize: '12px', color: '#cbd5e1', lineHeight: 1.5 }}>{d}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Row 1: Dominance + Alt Season + Market Signal */}
             <div>
