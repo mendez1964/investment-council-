@@ -90,6 +90,7 @@ export default function Home() {
       title: t('sections.analyze'),
       items: [
         { itemId: 'Analyze a Stock / ETF', label: t('items.analyzeStock'), prompt: '', isAnalysis: 'stock' },
+        { itemId: 'Reports', label: 'Reports', prompt: '', isReports: true },
       ],
     },
     {
@@ -811,7 +812,6 @@ Is there a case to cut size (reduce exposure) rather than a binary hold/cut deci
 **VERDICT:** Hold / Reduce / Cut — one direct sentence with the primary reason.
 
 Under 300 words. Data and facts first.` },
-        { itemId: 'Reports', label: 'Reports', prompt: '', isReports: true },
       ],
     },
     {
@@ -860,6 +860,7 @@ Under 300 words. Data and facts first.` },
       title: t('sections.analyzecrypto'),
       items: [
         { itemId: 'Analyze a Crypto', label: t('items.analyzeCrypto'), prompt: '', isAnalysis: 'crypto' },
+        { itemId: 'Reports', label: 'Reports', prompt: '', isReports: true },
       ],
     },
     {
