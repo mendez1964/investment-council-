@@ -619,7 +619,7 @@ export default function ReportsPage() {
       if (showTickerInput && specificTickers.trim()) {
         sources.push(`Specific tickers: ${specificTickers.trim()}`)
       }
-      const res = await fetch('/api/reports/build', {
+      const res = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: reportName, description: reportDescription, dataSources: sources }),
