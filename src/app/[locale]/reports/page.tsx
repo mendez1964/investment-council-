@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useLocale } from 'next-intl'
-import { useRouter } from '@/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserSupabaseClient } from '@/lib/supabase-browser'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -519,14 +519,339 @@ function getCategoryStyle(category: string) {
   return CATEGORY_COLORS[category] ?? CATEGORY_COLORS['Custom']
 }
 
-// ── Grouped predefined reports ────────────────────────────────────────────────
+// ── Crypto predefined reports ─────────────────────────────────────────────────
 
-const CATEGORIES = ['Market Intelligence', 'Positioning & Flow', 'Portfolio & Strategy', 'Income & Macro']
+const CRYPTO_PREDEFINED_REPORTS: PredefinedReport[] = [
+  {
+    id: 'weekly-crypto-recap',
+    name: 'Weekly Crypto Recap',
+    category: 'Market Overview',
+    description: 'Full week in crypto — BTC/ETH performance, top movers, sentiment shift, what changed',
+    prompt: `Generate a comprehensive weekly crypto market recap.
 
-function groupByCategory(reports: PredefinedReport[]) {
+## WEEKLY CRYPTO RECAP — Week of [Date]
+
+**1. BTC & ETH PERFORMANCE**
+Table: Asset | Week Change % | Key level held or broken | Trend. Use live data if available.
+
+**2. ALTCOIN SCORECARD**
+Top 3 gainers and top 3 losers among major altcoins this week. 1 sentence on what the rotation pattern signals.
+
+**3. THE 3 BIGGEST STORIES**
+Three things that defined this week's crypto action. Each: what happened, why it mattered, what changed in the market.
+
+**4. ON-CHAIN CHANGES**
+What shifted in the on-chain data this week — exchange flows, whale activity, funding rates, any notable MVRV or sentiment change?
+
+**5. SETUP GOING INTO NEXT WEEK**
+Market posture (bullish/cautious/bearish), 3 key levels to watch on BTC and ETH, and the one catalyst that could change everything.
+
+Under 400 words. Data first.`
+  },
+  {
+    id: 'stablecoin-flow-report',
+    name: 'Stablecoin Flow Report',
+    category: 'On-Chain Intelligence',
+    description: 'USDT/USDC supply changes, stablecoin dominance, what flows signal about buying power',
+    prompt: `Generate a stablecoin flow analysis report.
+
+## STABLECOIN FLOW REPORT — [Date]
+
+**1. STABLECOIN SUPPLY SNAPSHOT**
+Total stablecoin market cap context. USDT and USDC supply trend — growing, shrinking, or flat? What does supply growth signal about incoming buying power?
+
+**2. STABLECOIN DOMINANCE**
+Stablecoin dominance % of total crypto market cap. Rising = risk-off / falling = capital deploying into risk assets. Current direction and implication.
+
+**3. EXCHANGE STABLECOIN RESERVES**
+Are stablecoins accumulating on exchanges (buy pressure building) or leaving (already deployed)? What does the current level signal?
+
+**4. MINTING & BURNING ACTIVITY**
+Recent large USDT/USDC mints or burns. New mints = institutional money entering. Burns = capital exiting crypto.
+
+**5. SIGNAL**
+Stablecoin flow verdict: Bullish (dry powder accumulating) / Neutral / Bearish (capital leaving) — one sentence with the key data point.
+
+Under 300 words.`
+  },
+  {
+    id: 'whale-activity-report',
+    name: 'Whale Activity Report',
+    category: 'On-Chain Intelligence',
+    description: 'Large wallet movements, exchange inflows/outflows, accumulation vs distribution signals',
+    prompt: `Generate a whale activity and large wallet report.
+
+## WHALE ACTIVITY REPORT — [Date]
+
+**1. EXCHANGE FLOW SUMMARY**
+Net BTC flow to/from exchanges over last 7 days. Large inflows = potential sell pressure. Large outflows = accumulation / self-custody. Current net direction.
+
+**2. WHALE WALLET BEHAVIOR**
+Wallets holding 1,000+ BTC — net accumulation or distribution recently? What are the largest cohorts doing?
+
+**3. MINER ACTIVITY**
+Are miners currently holding or selling? Miner reserves trend. Miner selling pressure = potential headwind; accumulation = confidence in price.
+
+**4. LARGE TRANSACTION VOLUME**
+Unusual large transactions (>$1M) on-chain — are they exchange deposits (bearish) or wallet-to-wallet (neutral/bullish)?
+
+**5. SMART MONEY SIGNAL**
+Based on whale and large wallet behavior: are sophisticated players accumulating, distributing, or neutral right now?
+
+**WHALE VERDICT:** Accumulating / Neutral / Distributing — one sentence.
+
+Under 300 words.`
+  },
+  {
+    id: 'layer1-comparison',
+    name: 'Layer 1 Comparison Report',
+    category: 'Ecosystem Analysis',
+    description: 'ETH vs SOL vs AVAX vs BNB — performance, ecosystem health, developer activity',
+    prompt: `Generate a Layer 1 blockchain comparison report.
+
+## LAYER 1 COMPARISON REPORT — [Date]
+
+**1. PRICE PERFORMANCE**
+Table: Chain | Token | 7-Day % | 30-Day % | vs BTC. Cover ETH, SOL, AVAX, BNB, ADA.
+
+**2. NETWORK ACTIVITY**
+For each major L1: transaction volume trend, active addresses, gas/fee environment. Which chains are seeing growing vs. declining usage?
+
+**3. DEVELOPER ECOSYSTEM**
+Which L1s have the most active developer communities? Recent protocol launches, TVL trends, and ecosystem growth signals.
+
+**4. ETH vs. COMPETITORS**
+Is ETH gaining or losing market share vs. Solana and other L1s? ETH/SOL ratio trend. What drives the shift?
+
+**5. CAPITAL FLOW ROTATION**
+Where is crypto capital rotating within the L1 space? Which chain is winning the current cycle's developer and user attention?
+
+**L1 VERDICT:** Which L1 has the best risk/reward setup right now and why — one sentence.
+
+Under 350 words.`
+  },
+  {
+    id: 'defi-yield-report',
+    name: 'DeFi Yield Report',
+    category: 'Ecosystem Analysis',
+    description: 'Current yields across major DeFi protocols, risk-adjusted opportunities, TVL trends',
+    prompt: `Generate a DeFi yield and opportunity report.
+
+## DEFI YIELD REPORT — [Date]
+
+**1. DEFI MARKET OVERVIEW**
+Total DeFi TVL trend — growing, shrinking, or flat? What does TVL direction signal about DeFi health?
+
+**2. YIELD ENVIRONMENT**
+Current benchmark yields: stablecoin lending rates (USDC/USDT), ETH staking yield, BTC wrapped lending. Are DeFi yields competitive with TradFi rates?
+
+**3. TOP YIELD OPPORTUNITIES**
+3-5 current yield opportunities across risk tiers:
+- Low risk (stablecoin): protocol, APY, risk factors
+- Medium risk (single asset): protocol, APY, risk factors
+- Higher risk (LP/complex): protocol, APY, risk factors
+
+**4. PROTOCOL HEALTH CHECK**
+For major protocols (Aave, Compound, Curve, Uniswap): TVL trend, revenue, any security or governance concerns.
+
+**5. DEFI RISK FACTORS**
+What are the key risks in DeFi right now — smart contract exploits, oracle manipulation, liquidation cascades, regulatory pressure?
+
+**DEFI VERDICT:** Yield environment: Attractive / Fair / Compressed — and whether now is a good time to deploy capital.
+
+Under 350 words.`
+  },
+  {
+    id: 'crypto-regulatory-report',
+    name: 'Crypto Regulatory Report',
+    category: 'Market Overview',
+    description: 'Latest regulatory developments, enforcement actions, global policy changes and market impact',
+    prompt: `Generate a crypto regulatory landscape report.
+
+## CRYPTO REGULATORY REPORT — [Date]
+
+**1. RECENT REGULATORY ACTIONS**
+Top 3-5 regulatory developments from the past 2-4 weeks. For each: what happened, which jurisdiction, market impact.
+
+**2. US REGULATORY POSTURE**
+Current stance of SEC, CFTC, Treasury on crypto. Any pending legislation or enforcement actions that matter. Is US regulatory risk rising or falling?
+
+**3. GLOBAL REGULATORY MAP**
+Key international developments: EU (MiCA implementation), Asia (Japan, Hong Kong, Singapore), emerging markets. Who is crypto-friendly right now?
+
+**4. MARKET IMPACT ASSESSMENT**
+Which regulatory developments are bullish (clarity, approval, adoption) vs. bearish (restriction, enforcement, bans)? Net regulatory environment: positive or negative?
+
+**5. COMPLIANCE RISK SECTORS**
+Which parts of crypto face the most regulatory risk right now — exchanges, stablecoins, DeFi, NFTs, privacy coins?
+
+**REGULATORY VERDICT:** Improving / Neutral / Worsening — for crypto markets, with the single biggest near-term regulatory risk.
+
+Under 350 words.`
+  },
+  {
+    id: 'mining-economics-report',
+    name: 'Bitcoin Mining Economics',
+    category: 'On-Chain Intelligence',
+    description: 'Hash rate, mining profitability, miner revenue, are miners selling or accumulating',
+    prompt: `Generate a Bitcoin mining economics report.
+
+## BITCOIN MINING ECONOMICS REPORT — [Date]
+
+**1. HASH RATE & SECURITY**
+Current network hash rate and trend (all-time high, growing, or declining?). What does hash rate signal about miner confidence in BTC price?
+
+**2. MINING PROFITABILITY**
+Current miner revenue per EH/s. Post-halving profitability context — are miners profitable at current BTC price? Break-even price estimate for average miner.
+
+**3. MINER BEHAVIOR**
+Are miners currently accumulating BTC or selling? Miner reserve trend. Miner-to-exchange flows — high selling pressure or hodling?
+
+**4. DIFFICULTY ADJUSTMENT**
+Recent difficulty adjustments — up or down? What does it signal about miner activity and network health?
+
+**5. HALVING CYCLE CONTEXT**
+Where are we in the halving cycle? How does current miner economics compare to similar points in previous cycles?
+
+**MINER VERDICT:** Miners are: Accumulating (bullish) / Neutral / Distributing (headwind) — one sentence with key data.
+
+Under 300 words.`
+  },
+  {
+    id: 'liquidation-map-report',
+    name: 'Liquidation Map Report',
+    category: 'Derivatives & Positioning',
+    description: 'Key BTC and ETH liquidation clusters, what happens if price hits those levels',
+    prompt: `Generate a crypto liquidation map analysis report.
+
+## LIQUIDATION MAP REPORT — [Date]
+
+**1. CURRENT BTC LIQUIDATION CLUSTERS**
+Key price levels where significant long liquidations are concentrated below spot. Key levels where short liquidations cluster above spot. What happens to price if those levels are hit?
+
+**2. CURRENT ETH LIQUIDATION CLUSTERS**
+Same analysis for Ethereum — key long liquidation levels below and short squeeze levels above.
+
+**3. LEVERAGE ENVIRONMENT**
+Is the market currently over-leveraged long, over-leveraged short, or balanced? What does open interest tell us about the current risk of a cascade?
+
+**4. LIQUIDATION CASCADE RISK**
+If BTC drops to [key support level]: estimated liquidations triggered, secondary effect on altcoins, risk of cascade vs. absorption.
+
+**5. TRADING IMPLICATION**
+Based on liquidation map: which direction has the easier path right now? Where are the liquidity pools that market makers are likely targeting?
+
+**LIQUIDATION SIGNAL:** Long squeeze risk / Short squeeze setup / Balanced — one sentence with key level to watch.
+
+Under 300 words.`
+  },
+  {
+    id: 'weekly-crypto-trading-plan',
+    name: 'Weekly Crypto Trading Plan',
+    category: 'Strategy',
+    description: 'Week-ahead crypto plan — bias, key BTC/ETH levels, setups, and risk rules',
+    prompt: `Generate a weekly crypto trading plan for the week ahead.
+
+## WEEKLY CRYPTO TRADING PLAN — Week of [Date]
+
+**1. MARKET BIAS**
+Overall crypto market bias: Bullish / Cautious / Bearish — one sentence, data-backed. The key BTC level that confirms or breaks this bias.
+
+**2. KEY LEVELS**
+Table: Asset | Key Support | Key Resistance | Bias. Cover BTC, ETH, and SOL minimum.
+
+**3. MACRO EVENTS THIS WEEK**
+Any macro events (Fed speakers, CPI, jobs data) that will impact crypto? For each: expected outcome and crypto impact if it surprises.
+
+**4. SETUPS TO WATCH**
+2-3 specific crypto setups worth monitoring this week. For each: asset, setup type, entry trigger, invalidation level.
+
+**5. RISK RULES FOR THIS WEEK**
+Based on current funding rates and volatility: recommended position size (full/half/quarter), stop approach, hold duration.
+
+**6. WHAT TO AVOID**
+Specific assets, sectors (DeFi/L2/meme coins), or conditions to stay away from this week.
+
+**WEEK RATING:** Favorable / Neutral / Challenging for crypto traders.
+
+Under 400 words.`
+  },
+  {
+    id: 'perpetuals-basis-report',
+    name: 'Perpetuals & Basis Report',
+    category: 'Derivatives & Positioning',
+    description: 'Funding rates, spot-perp basis, carry trade conditions, leverage positioning',
+    prompt: `Generate a perpetual futures and basis analysis report.
+
+## PERPETUALS & BASIS REPORT — [Date]
+
+**1. FUNDING RATE SNAPSHOT**
+Current funding rates for BTC and ETH perpetuals. Positive = longs paying shorts (market bullish/overheated). Negative = shorts paying longs (market bearish/underhedged). Context vs. last 30 days.
+
+**2. ANNUALIZED FUNDING YIELD**
+At current funding rate, what is the annualized yield for a cash-and-carry (long spot / short perp) position? Is this attractive vs. stablecoin yields?
+
+**3. BASIS TRADE CONDITIONS**
+Spot-to-futures basis on major exchanges. Is the basis in contango (futures premium) or backwardation (futures discount)? What does it signal?
+
+**4. OPEN INTEREST TREND**
+OI rising + price rising = healthy / OI rising + price falling = bearish divergence / OI falling = deleveraging. Current pattern for BTC and ETH.
+
+**5. CARRY TRADE OPPORTUNITY**
+Is this a good environment for delta-neutral carry strategies? Risk/reward of current cash-and-carry vs. risks (funding rate flip, liquidation).
+
+**DERIVATIVES SIGNAL:** Overleveraged long / Neutral / Overleveraged short — and whether carry trade is attractive right now.
+
+Under 350 words.`
+  },
+  {
+    id: 'crypto-portfolio-stress',
+    name: 'Crypto Portfolio Stress Test',
+    category: 'Strategy',
+    description: 'How a crypto portfolio holds up in bear, crash, and liquidity crisis scenarios',
+    prompt: `Generate a crypto portfolio stress test report.
+
+## CRYPTO PORTFOLIO STRESS TEST — [Date]
+
+Stress test a typical crypto portfolio (60% BTC / 25% ETH / 15% altcoins) against three scenarios.
+
+**SCENARIO 1: BTC CORRECTION (-30%)**
+- Trigger: macro risk-off, exchange outflow, sentiment reversal
+- BTC: -30% | ETH: estimated % | Altcoins: estimated % (altcoins typically fall 1.5-2x BTC)
+- Portfolio impact: estimated drawdown
+- Recovery playbook: what to do, what to buy
+
+**SCENARIO 2: BEAR MARKET (-70% from peak)**
+- Trigger: cycle top, regulatory shock, macro crisis
+- Historical parallel: 2018 or 2022 bear market
+- Portfolio impact: how a diversified crypto portfolio would fare
+- Survival strategy: position sizing, stable allocation, accumulation zones
+
+**SCENARIO 3: LIQUIDITY CRISIS (2020 March-style)**
+- Trigger: correlated selloff, forced deleveraging, exchange stress
+- Correlation breakdown: crypto sells with everything
+- What holds up (BTC vs. altcoins), what gets crushed
+- Defense: where to hold capital during a liquidity event
+
+**CURRENT RISK LEVEL**
+Based on today's funding rates, leverage, and market structure: which scenario is most probable and what probability?
+
+**STRESS TEST VERDICT:** Portfolio resilience: Strong / Adequate / Needs de-risking — with one specific action.
+
+Under 400 words.`
+  },
+]
+
+// ── Grouped predefined reports ─────────────────────────────────────────────────
+
+const STOCK_CATEGORIES = ['Market Intelligence', 'Positioning & Flow', 'Portfolio & Strategy', 'Income & Macro']
+const CRYPTO_CATEGORIES = ['Market Overview', 'On-Chain Intelligence', 'Ecosystem Analysis', 'Derivatives & Positioning', 'Strategy']
+
+function groupByCategory(reports: PredefinedReport[], categories: string[]) {
   const grouped: Record<string, PredefinedReport[]> = {}
-  for (const cat of CATEGORIES) {
-    grouped[cat] = reports.filter(r => r.category === cat)
+  for (const cat of categories) {
+    const items = reports.filter(r => r.category === cat)
+    if (items.length > 0) grouped[cat] = items
   }
   return grouped
 }
@@ -536,7 +861,12 @@ function groupByCategory(reports: PredefinedReport[]) {
 export default function ReportsPage() {
   const router = useRouter()
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const mode = searchParams?.get('mode') === 'crypto' ? 'crypto' : 'stocks'
   const supabase = createBrowserSupabaseClient()
+
+  const predefinedReports = mode === 'crypto' ? CRYPTO_PREDEFINED_REPORTS : PREDEFINED_REPORTS
+  const categories = mode === 'crypto' ? CRYPTO_CATEGORIES : STOCK_CATEGORIES
 
   const [activeTab, setActiveTab] = useState<'library' | 'my-reports'>('library')
   const [userReports, setUserReports] = useState<UserReport[]>([])
@@ -677,7 +1007,7 @@ export default function ReportsPage() {
     router.push(`/${locale}/app` as any)
   }
 
-  const grouped = groupByCategory(PREDEFINED_REPORTS)
+  const grouped = groupByCategory(predefinedReports, categories)
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -714,7 +1044,7 @@ export default function ReportsPage() {
             ← Back
           </button>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#e5e5e5', letterSpacing: '-0.01em' }}>
-            Reports
+            {mode === 'crypto' ? 'Crypto Reports' : 'Stock & Market Reports'}
           </h1>
         </div>
         <button
@@ -769,7 +1099,7 @@ export default function ReportsPage() {
         {/* ── Report Library ────────────────────────────────────── */}
         {activeTab === 'library' && (
           <div>
-            {CATEGORIES.map(cat => {
+            {categories.map(cat => {
               const reports = grouped[cat]
               if (!reports || reports.length === 0) return null
               const catStyle = getCategoryStyle(cat)

@@ -1228,7 +1228,7 @@ Be direct and factual. Use numbers.`
 
   function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean, promptSuffix?: string, isReports?: boolean) {
     if (isReports) {
-      router.push(`/${currentLocale}/reports` as any)
+      router.push(`/${currentLocale}/reports?mode=${sidebarMode}` as any)
       return
     }
     if (isCalendar) {
@@ -1465,7 +1465,7 @@ Be direct and factual. Use numbers.`
 
   function handleSidebarItemClick(item: SidebarItemType) {
     if ((item as any).isReports) {
-      router.push(`/${currentLocale}/reports` as any)
+      router.push(`/${currentLocale}/reports?mode=${sidebarMode}` as any)
       setSidebarMobileOpen(false)
       return
     }
