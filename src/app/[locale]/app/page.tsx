@@ -62,7 +62,7 @@ function detectFrameworks(content: string): { topic: string; label: string }[] {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; itemId?: string; prompt: string; promptSuffix?: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isAlerts?: boolean; tier?: 'trader' | 'pro' }
+type SidebarItem = { label: string; itemId?: string; prompt: string; promptSuffix?: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isAlerts?: boolean; isReports?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 // Sidebar sections are defined inside the Home component (uses useTranslations hook)
@@ -811,6 +811,7 @@ Is there a case to cut size (reduce exposure) rather than a binary hold/cut deci
 **VERDICT:** Hold / Reduce / Cut — one direct sentence with the primary reason.
 
 Under 300 words. Data and facts first.` },
+        { itemId: 'Reports', label: 'Reports', prompt: '', isReports: true },
       ],
     },
     {
@@ -978,6 +979,17 @@ Under 300 words. Data and facts first.` },
         }
       }
     })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Check for a pending report dispatched from the Reports page
+  useEffect(() => {
+    const pending = localStorage.getItem('ic_pending_report')
+    const pendingName = localStorage.getItem('ic_pending_report_name')
+    if (pending && pendingName) {
+      localStorage.removeItem('ic_pending_report')
+      localStorage.removeItem('ic_pending_report_name')
+      setTimeout(() => sendMessageWithText(pending, undefined, pendingName), 500)
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleLogout() {
@@ -1213,7 +1225,11 @@ Be direct and factual. Use numbers.`
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean, promptSuffix?: string) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean, promptSuffix?: string, isReports?: boolean) {
+    if (isReports) {
+      router.push(`/${currentLocale}/reports` as any)
+      return
+    }
     if (isCalendar) {
       setShowEarningsCalendar(true)
       return
@@ -1447,6 +1463,11 @@ Be direct and factual. Use numbers.`
   }
 
   function handleSidebarItemClick(item: SidebarItemType) {
+    if ((item as any).isReports) {
+      router.push(`/${currentLocale}/reports` as any)
+      setSidebarMobileOpen(false)
+      return
+    }
     if ((item as any).isWar) {
       router.push('/war')
       setSidebarMobileOpen(false)
@@ -1463,7 +1484,7 @@ Be direct and factual. Use numbers.`
       showBriefingTeaser(item.itemId)
       return
     }
-    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch, item.promptSuffix)
+    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch, item.promptSuffix, (item as any).isReports)
     if (activeTab !== 'chat') setActiveTab('chat')
     setSidebarMobileOpen(false)
   }

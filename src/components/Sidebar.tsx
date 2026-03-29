@@ -35,6 +35,7 @@ export type SidebarItem = {
   isCryptoDashboard?: boolean
   isCryptoResearch?: boolean
   isAlerts?: boolean
+  isReports?: boolean
 }
 
 export type SidebarSection = { id: string; title: string; items: SidebarItem[] }
@@ -94,6 +95,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'BTC Dashboard': BarChart2,
   'Coin Research': Search,
   'Email Alerts': Bell,
+  'Reports': FileText,
 }
 
 const PERSON_LABELS = new Set([
@@ -115,7 +117,7 @@ function isFeatureItem(item: SidebarItem) {
     item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks || item.isBattle ||
     item.isWar || item.isIPO || item.isNews || item.isChart || item.isEconCalendar ||
     item.isAnalysis || item.isCalculators || item.isPatterns || item.isCryptoDashboard ||
-    item.isCryptoResearch || item.isAlerts
+    item.isCryptoResearch || item.isAlerts || item.isReports
   )
 }
 
