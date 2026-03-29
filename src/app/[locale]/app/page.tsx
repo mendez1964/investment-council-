@@ -28,6 +28,7 @@ import ReviewPrompt from '@/components/ReviewPrompt'
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  displayLabel?: string  // short label shown in chat instead of full prompt text
 }
 
 // ── Training link detection ────────────────────────────────────────────────────
@@ -1277,20 +1278,21 @@ Be direct and factual. Use numbers.`
       setTimeout(() => tickerInputRef.current?.focus(), 50)
     } else {
       setInput(prompt)
-      setTimeout(() => sendMessageWithText(prompt), 50)
+      setTimeout(() => sendMessageWithText(prompt, undefined, placeholder), 50)
     }
   }
 
   function submitTickerPopup() {
     if (!tickerPopup || !tickerInput.trim()) return
     const fullPrompt = tickerPopup.promptPrefix + tickerInput.trim() + (tickerPopup.promptSuffix ?? '')
+    const label = tickerPopup.placeholder ? `${tickerPopup.placeholder} — ${tickerInput.trim().toUpperCase()}` : tickerInput.trim().toUpperCase()
     setTickerPopup(null)
     setTickerInput('')
     setInput(fullPrompt)
-    setTimeout(() => sendMessageWithText(fullPrompt), 50)
+    setTimeout(() => sendMessageWithText(fullPrompt, undefined, label), 50)
   }
 
-  async function sendMessageWithText(text: string, onComplete?: (response: string) => void) {
+  async function sendMessageWithText(text: string, onComplete?: (response: string) => void, displayLabel?: string) {
     let userMessage = text.trim()
     if (!userMessage || isLoading) return
 
@@ -1299,7 +1301,7 @@ Be direct and factual. Use numbers.`
       pineCodeInjected.current = true
     }
 
-    const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }]
+    const newMessages: Message[] = [...messages, { role: 'user', content: userMessage, ...(displayLabel ? { displayLabel } : {}) }]
     setMessages(newMessages)
     setInput('')
     setIsLoading(true)
@@ -2022,7 +2024,7 @@ Be direct and factual. Use numbers.`
                     )}
                     {msg.role === 'user' ? (
                       <div style={{ fontSize: '14px', lineHeight: 1.75, color: '#bbb', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                        {msg.content}
+                        {msg.displayLabel ?? msg.content}
                       </div>
                     ) : (
                       <div style={{ fontSize: '14px', wordBreak: 'break-word' }}>
