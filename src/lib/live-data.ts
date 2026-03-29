@@ -9,7 +9,7 @@ import { getLatestFilings, getInsiderTransactions, get8KEvents } from '@/lib/sec
 import { runFullCouncilScan, runFrameworkScan, formatScanResults } from '@/lib/scanner'
 import { getOnChainSnapshot, formatOnChainForCouncil } from '@/lib/glassnode'
 import { getCoinMetricsSnapshot, formatCoinMetricsForCouncil } from '@/lib/coinmetrics'
-import { getExpirations, getChain, roundToATM, midPrice } from '@/lib/tradier'
+import { getExpirations, getChain, roundToATM, midPrice, computeGEX, findUnusualFlow, pickExpiry } from '@/lib/tradier'
 import { getFundingRate } from '@/lib/binance'
 import { getDarkPoolData } from '@/lib/darkpool'
 import { computeStockSignal, computeCryptoSignal, formatSignalBlock, type Signal } from '@/lib/signal-engine'
@@ -217,18 +217,49 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
   if (signalTickers.length > 0) {
     tasks.push(
       (async () => {
+        // Fetch VIX once — shared across all stock signals
+        const vixQuote = await getQuote('^VIX').catch(() => null)
+        const vix: number | null = vixQuote?.c ?? null
+
+        const today = new Date().toISOString().split('T')[0]
+        // Weekly expiry ~2 weeks out — best liquidity for unusual flow detection
+        const weeklyTarget = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
         await Promise.all(
           signalTickers.map(async ticker => {
             try {
-              const [snapshot, metrics, darkPool] = await Promise.all([
+              const [snapshot, metrics, darkPool, expirations] = await Promise.all([
                 getTechnicalSnapshot(ticker).catch(() => null),
                 getMetrics(ticker).catch(() => null),
                 getDarkPoolData(ticker).catch(() => null),
+                getExpirations(ticker).catch(() => null),
               ])
               if (!snapshot) return
+
               const shortInterestPct = metrics?.shortPercent
                 ?? metrics?.shortInterestPercentOutFloat
                 ?? null
+
+              // Options chain for GEX + unusual flow
+              let gexPositive: boolean | null = null
+              let unusualCallFlow = false
+              let unusualPutFlow = false
+
+              if (expirations && expirations.length > 0) {
+                const expiry = pickExpiry(expirations, weeklyTarget) ?? expirations[0]
+                const chain = await getChain(ticker, expiry).catch(() => null)
+
+                if (chain) {
+                  const spot = snapshot.price ?? metrics?.['52WeekHigh'] ?? 100
+                  const gex = computeGEX(chain, spot)
+                  gexPositive = gex.regime === 'positive'
+
+                  const unusual = findUnusualFlow(chain, spot)
+                  unusualCallFlow = unusual.some(u => u.type === 'call')
+                  unusualPutFlow  = unusual.some(u => u.type === 'put')
+                }
+              }
+
               const signal = computeStockSignal(ticker, {
                 aboveSma20: snapshot.aboveSma20,
                 aboveSma50: snapshot.aboveSma50,
@@ -237,10 +268,10 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
                 macdHistogram: snapshot.macdHistogram,
                 volVsAvg: snapshot.volVsAvg,
                 shortInterestPct,
-                unusualCallFlow: false,
-                unusualPutFlow: false,
-                gexPositive: null,
-                vix: null,
+                unusualCallFlow,
+                unusualPutFlow,
+                gexPositive,
+                vix,
                 darkPoolFlow: darkPool?.flow ?? null,
                 darkPoolBlockVsAvg: darkPool?.blockTradeVsAvg ?? null,
                 congressNetBias: darkPool?.congressNetBias ?? 'neutral',

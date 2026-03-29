@@ -7,9 +7,10 @@
 
 import { getCoinMetricsSnapshot } from '@/lib/coinmetrics'
 import { getFearGreedIndex, getBitcoinDominance, getCryptoPrice } from '@/lib/coingecko'
-import { getTechnicalSnapshot, getMetrics } from '@/lib/finnhub'
+import { getTechnicalSnapshot, getMetrics, getQuote } from '@/lib/finnhub'
 import { getFundingRate } from '@/lib/binance'
 import { getDarkPoolData } from '@/lib/darkpool'
+import { getExpirations, getChain, computeGEX, findUnusualFlow, pickExpiry } from '@/lib/tradier'
 import {
   computeCryptoSignal,
   computeStockSignal,
@@ -87,22 +88,45 @@ export async function GET(request: Request) {
 
     } else {
       // Stock signal
-      const [snapshot, metrics, darkPool] = await Promise.all([
+      const weeklyTarget = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+
+      const [snapshot, metrics, darkPool, vixQuote, expirations] = await Promise.all([
         getTechnicalSnapshot(ticker).catch(() => null),
         getMetrics(ticker).catch(() => null),
         getDarkPoolData(ticker).catch(() => null),
+        getQuote('^VIX').catch(() => null),
+        getExpirations(ticker).catch(() => null),
       ])
 
       if (!snapshot) {
         return Response.json({ error: 'No technical data available for this ticker' }, { status: 404 })
       }
 
-      // Short interest: try multiple field names Finnhub may return
       const shortInterestPct = metrics?.shortPercent
         ?? metrics?.shortInterestPercentOutFloat
         ?? (metrics?.shortInterest && metrics?.sharesOutstanding
           ? (metrics.shortInterest / metrics.sharesOutstanding) * 100
           : null)
+
+      const vix: number | null = vixQuote?.c ?? null
+
+      // Options chain — GEX + unusual flow
+      let gexPositive: boolean | null = null
+      let unusualCallFlow = false
+      let unusualPutFlow  = false
+
+      if (expirations && expirations.length > 0) {
+        const expiry = pickExpiry(expirations, weeklyTarget) ?? expirations[0]
+        const chain = await getChain(ticker, expiry).catch(() => null)
+        if (chain) {
+          const spot = snapshot.price
+          const gex = computeGEX(chain, spot)
+          gexPositive = gex.regime === 'positive'
+          const unusual = findUnusualFlow(chain, spot)
+          unusualCallFlow = unusual.some(u => u.type === 'call')
+          unusualPutFlow  = unusual.some(u => u.type === 'put')
+        }
+      }
 
       signal = computeStockSignal(ticker, {
         aboveSma20: snapshot.aboveSma20,
@@ -112,10 +136,10 @@ export async function GET(request: Request) {
         macdHistogram: snapshot.macdHistogram,
         volVsAvg: snapshot.volVsAvg,
         shortInterestPct: shortInterestPct ?? null,
-        unusualCallFlow: false,   // Requires Tradier options chain
-        unusualPutFlow: false,
-        gexPositive: null,
-        vix: null,
+        unusualCallFlow,
+        unusualPutFlow,
+        gexPositive,
+        vix,
         darkPoolFlow: darkPool?.flow ?? null,
         darkPoolBlockVsAvg: darkPool?.blockTradeVsAvg ?? null,
         congressNetBias: darkPool?.congressNetBias ?? 'neutral',
