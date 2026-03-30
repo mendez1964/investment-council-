@@ -37,6 +37,18 @@ const TOP10_COIN_IDS = new Set([
 // Direct ticker/name → CoinGecko ID map — bypasses search for known coins
 // This is the primary fix: case-insensitive ticker detection without depending on uppercase-only regex
 const COIN_ID_MAP: Record<string, string> = {
+  'xrp': 'ripple', 'ripple': 'ripple',
+  'ada': 'cardano', 'cardano': 'cardano',
+  'bnb': 'binancecoin', 'binance': 'binancecoin',
+  'doge': 'dogecoin', 'dogecoin': 'dogecoin',
+  'dot': 'polkadot', 'polkadot': 'polkadot',
+  'link': 'chainlink', 'chainlink': 'chainlink',
+  'avax': 'avalanche-2', 'avalanche': 'avalanche-2',
+  'matic': 'matic-network', 'polygon': 'matic-network',
+  'ltc': 'litecoin', 'litecoin': 'litecoin',
+  'xlm': 'stellar', 'stellar': 'stellar',
+  'atom': 'cosmos', 'cosmos': 'cosmos',
+  'near': 'near',
   'tao': 'bittensor', 'bittensor': 'bittensor',
   'inj': 'injective-protocol', 'injective': 'injective-protocol',
   'rndr': 'render-token', 'render': 'render-token',
@@ -346,7 +358,7 @@ export async function POST(request: Request) {
 
     // On-demand coin fetch — fires whenever a crypto keyword is mentioned, regardless of needsLiveData
     // needsLiveData misses questions like "Is TAO going higher?" which have no price/buy/analysis keywords
-    const wantsCrypto = /\b(crypto|coin|token|blockchain|defi|nft|web3|altcoin|bitcoin|btc|ethereum|eth|solana|sol|tao|bittensor|inj|injective|rndr|render|arb|arbitrum|op|optimism|tia|celestia|sei|sui|apt|aptos|kas|kaspa|fetch|wld|worldcoin|pepe|bonk|floki|jito|pyth|wormhole|jup|jupiter)\b/i.test(latestUserMessage)
+    const wantsCrypto = /\b(crypto|coin|token|blockchain|defi|nft|web3|altcoin|bitcoin|btc|ethereum|eth|solana|sol|xrp|ripple|ada|cardano|bnb|binance|doge|dogecoin|dot|polkadot|link|chainlink|avax|avalanche|matic|polygon|ltc|litecoin|xlm|stellar|atom|cosmos|algo|algorand|near|icp|tao|bittensor|inj|injective|rndr|render|arb|arbitrum|op|optimism|tia|celestia|sei|sui|apt|aptos|kas|kaspa|fetch|wld|worldcoin|pepe|bonk|floki|jito|pyth|wormhole|jup|jupiter)\b/i.test(latestUserMessage)
     if (wantsCrypto) {
       try {
         const coinData = await fetchCoinOnDemand(latestUserMessage)
