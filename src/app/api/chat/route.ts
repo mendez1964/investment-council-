@@ -477,10 +477,9 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
       }
     }
 
+    // If live data fetch failed, proceed anyway — Claude will note the gap and use training knowledge
     if (needsLiveData && !liveData.trim()) {
-      return streamText(
-        `**Report blocked — no live market data available**\n\nThe live market data feed returned nothing for this query. To avoid running a report on stale data, this request was not sent to the AI.\n\n**What to try:**\n- Wait a moment and try again\n- Check that the market data feed is connected\n- Try a different ticker or rephrase the query`
-      )
+      liveData = `[LIVE DATA UNAVAILABLE — data feed timed out. Use your training knowledge and clearly note that live prices/data could not be fetched for this response.]`
     }
 
     // Build shared content pieces
