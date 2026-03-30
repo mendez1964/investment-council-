@@ -19,23 +19,31 @@ export async function GET(request: Request) {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, tier, display_name')
+    .select('id, tier, display_name, trial_ends_at')
     .in('id', userIds)
 
-  const profileMap: Record<string, { tier: string; display_name: string | null }> = {}
+  const profileMap: Record<string, { tier: string; display_name: string | null; trial_ends_at: string | null }> = {}
   for (const p of profiles ?? []) {
-    profileMap[p.id] = { tier: p.tier, display_name: p.display_name }
+    profileMap[p.id] = { tier: p.tier, display_name: p.display_name, trial_ends_at: p.trial_ends_at ?? null }
   }
 
+  const now = Date.now()
+
   const users = usersData.users
-    .map(u => ({
-      id: u.id,
-      email: u.email ?? '',
-      display_name: profileMap[u.id]?.display_name ?? null,
-      tier: profileMap[u.id]?.tier ?? 'free',
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at ?? null,
-    }))
+    .map(u => {
+      const trialEndsAt = profileMap[u.id]?.trial_ends_at ?? null
+      const onTrial = trialEndsAt != null && new Date(trialEndsAt).getTime() > now
+      return {
+        id: u.id,
+        email: u.email ?? '',
+        display_name: profileMap[u.id]?.display_name ?? null,
+        tier: profileMap[u.id]?.tier ?? 'free',
+        trial_ends_at: trialEndsAt,
+        on_trial: onTrial,
+        created_at: u.created_at,
+        last_sign_in_at: u.last_sign_in_at ?? null,
+      }
+    })
     .sort((a, b) => {
       const aTime = a.last_sign_in_at ? new Date(a.last_sign_in_at).getTime() : 0
       const bTime = b.last_sign_in_at ? new Date(b.last_sign_in_at).getTime() : 0

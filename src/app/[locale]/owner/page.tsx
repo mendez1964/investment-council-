@@ -113,16 +113,17 @@ interface ManagedUser {
   admin_granted: boolean
 }
 
-const TIER_COLOR: Record<string, string> = { free: '#6b7280', trader: '#d97706', pro: '#7c3aed' }
-const TIER_BG: Record<string, string>    = { free: '#f3f4f6', trader: '#fffbeb', pro: '#f5f3ff' }
+const TIER_COLOR: Record<string, string> = { free: '#6b7280', trader: '#d97706', pro: '#7c3aed', trial: '#7c3aed' }
+const TIER_BG: Record<string, string>    = { free: '#f3f4f6', trader: '#fffbeb', pro: '#f5f3ff', trial: '#ede9fe' }
 
 function RecentLoginsPanel({ password }: { password: string }) {
   const [users, setUsers] = useState<Array<{
     id: string; email: string; display_name: string | null
-    tier: string; created_at: string; last_sign_in_at: string | null
+    tier: string; trial_ends_at: string | null; on_trial: boolean
+    created_at: string; last_sign_in_at: string | null
   }>>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<'all' | 'free' | 'trader' | 'pro'>('all')
+  const [filter, setFilter] = useState<'all' | 'free' | 'trader' | 'pro' | 'trial'>('all')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
@@ -133,7 +134,8 @@ function RecentLoginsPanel({ password }: { password: string }) {
   }, [])
 
   const filtered = users.filter(u => {
-    if (filter !== 'all' && u.tier !== filter) return false
+    if (filter === 'trial' && !u.on_trial) return false
+    if (filter !== 'all' && filter !== 'trial' && u.tier !== filter) return false
     if (search && !u.email.toLowerCase().includes(search.toLowerCase()) &&
         !(u.display_name ?? '').toLowerCase().includes(search.toLowerCase())) return false
     return true
@@ -165,7 +167,7 @@ function RecentLoginsPanel({ password }: { password: string }) {
             placeholder="Search email..."
             style={{ padding: '5px 10px', fontSize: '11px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'inherit', width: '160px' }}
           />
-          {(['all', 'free', 'trader', 'pro'] as const).map(t => (
+          {(['all', 'free', 'trader', 'pro', 'trial'] as const).map(t => (
             <button
               key={t}
               onClick={() => setFilter(t)}
@@ -203,9 +205,16 @@ function RecentLoginsPanel({ password }: { password: string }) {
                     <td style={{ padding: '7px 10px', color: '#374151', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
                     <td style={{ padding: '7px 10px', color: '#6b7280', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.display_name ?? <span style={{ color: '#d1d5db' }}>—</span>}</td>
                     <td style={{ padding: '7px 10px' }}>
-                      <span style={{ fontSize: '9px', fontWeight: 700, color: TIER_COLOR[u.tier] ?? '#6b7280', background: TIER_BG[u.tier] ?? '#f3f4f6', borderRadius: '3px', padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        {u.tier}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: TIER_COLOR[u.tier] ?? '#6b7280', background: TIER_BG[u.tier] ?? '#f3f4f6', borderRadius: '3px', padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          {u.tier}
+                        </span>
+                        {u.on_trial && (
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '3px', padding: '2px 6px', letterSpacing: '0.04em' }}>
+                            TRIAL · ends {new Date(u.trial_ends_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '7px 10px', color: u.last_sign_in_at ? '#374151' : '#d1d5db', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                       {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : 'never'}
