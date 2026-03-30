@@ -344,16 +344,18 @@ export async function POST(request: Request) {
     const needsLiveData = /\b(quote|price|stock|ticker|etf|crypto|btc|eth|sol|market|briefing|analysis|analyze|fundamentals|earnings|sector|movers|scan|report|watchlist|portfolio|nvda|aapl|tsla|spy|qqq|msft|amzn|googl|meta|nflx|option|call|put|strike|expiry|0dte|chain|delta|gamma|theta|implied|fall|drop|rise|surge|crash|rally|target|predict|forecast|outlook|direction|trend|support|resistance|level|short|long|bullish|bearish|buy|sell|trade|hold|move|how far|smci|pltr|crwd|coin|mstr|hood|sofi|rivn|arm)\b/i.test(latestUserMessage)
 
     let liveData = ''
-    try {
-      const isScan = /council\s*scan|full\s*scan|run\s*(all|the|council)?\s*scan|(tudor(\s+jones)?|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s+scan/i.test(latestUserMessage)
-      const timeoutMs = isScan ? 30000 : 8000
-      const timeout = new Promise<string>((_, reject) =>
-        setTimeout(() => reject(new Error('live-data timeout')), timeoutMs)
-      )
-      liveData = await Promise.race([fetchLiveData(latestUserMessage), timeout])
-      console.log('[live-data] fetched, length:', liveData.length)
-    } catch (err) {
-      console.error('[live-data] failed:', (err as Error).message)
+    if (needsLiveData) {
+      try {
+        const isScan = /council\s*scan|full\s*scan|run\s*(all|the|council)?\s*scan|(tudor(\s+jones)?|livermore|buffett|lynch|graham|grantham|dalio|burry|roubini)\s+scan/i.test(latestUserMessage)
+        const timeoutMs = isScan ? 30000 : 15000
+        const timeout = new Promise<string>((_, reject) =>
+          setTimeout(() => reject(new Error('live-data timeout')), timeoutMs)
+        )
+        liveData = await Promise.race([fetchLiveData(latestUserMessage), timeout])
+        console.log('[live-data] fetched, length:', liveData.length)
+      } catch (err) {
+        console.error('[live-data] failed:', (err as Error).message)
+      }
     }
 
     // On-demand coin fetch — fires whenever a crypto keyword is mentioned, regardless of needsLiveData
