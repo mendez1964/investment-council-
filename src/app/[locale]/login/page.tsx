@@ -13,6 +13,8 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [needsConfirmation, setNeedsConfirmation] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
 
   const supabase = createBrowserSupabaseClient()
 
@@ -20,12 +22,21 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setMessage('')
+    setNeedsConfirmation(false)
     setLoading(true)
 
     try {
       if (tab === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) { setError(error.message); return }
+        if (error) {
+          if (error.message.toLowerCase().includes('email not confirmed') || error.code === 'email_not_confirmed') {
+            setNeedsConfirmation(true)
+            setError('Your email address has not been confirmed yet. Please check your inbox and click the confirmation link.')
+          } else {
+            setError(error.message)
+          }
+          return
+        }
         router.push('/app')
         router.refresh()
       } else {
@@ -38,12 +49,21 @@ export default function LoginPage() {
           },
         })
         if (error) { setError(error.message); return }
-        setMessage('Check your email to confirm your account, then log in.')
+        setMessage('Account created! Check your inbox for a confirmation link, then log in here.')
         setTab('login')
       }
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleResendConfirmation() {
+    if (!email) { setError('Enter your email address above first.'); return }
+    setResendLoading(true)
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    setResendLoading(false)
+    if (error) setError(error.message)
+    else setMessage('Confirmation email resent — check your inbox.')
   }
 
   async function handleForgotPassword() {
@@ -211,6 +231,29 @@ export default function LoginPage() {
               {loading ? 'Please wait…' : tab === 'login' ? 'Log In' : 'Create Account'}
             </button>
           </form>
+
+          {needsConfirmation && (
+            <button
+              onClick={handleResendConfirmation}
+              disabled={resendLoading}
+              style={{
+                background: 'none',
+                border: '1px solid #1e2130',
+                borderRadius: '6px',
+                color: resendLoading ? '#4a5568' : '#7ec8a0',
+                fontSize: '12px',
+                cursor: resendLoading ? 'default' : 'pointer',
+                fontFamily: 'inherit',
+                marginTop: '10px',
+                padding: '8px 12px',
+                display: 'block',
+                width: '100%',
+                textAlign: 'center',
+              }}
+            >
+              {resendLoading ? 'Sending…' : 'Resend confirmation email'}
+            </button>
+          )}
 
           {tab === 'login' && (
             <button
