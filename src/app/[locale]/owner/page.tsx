@@ -780,24 +780,31 @@ function AffiliatesPanel({ password }: { password: string }) {
 
   async function load() {
     setLoading(true)
-    const res = await fetch('/api/owner/affiliates', { headers: { 'x-owner-password': password } })
-    if (res.ok) {
-      const data = await res.json()
-      setAffiliates(data.affiliates ?? [])
-      setReferrals(data.referrals ?? [])
+    try {
+      const res = await fetch('/api/owner/affiliates', { headers: { 'x-owner-password': password } })
+      if (res.ok) {
+        const data = await res.json()
+        setAffiliates(Array.isArray(data.affiliates) ? data.affiliates : [])
+        setReferrals(Array.isArray(data.referrals) ? data.referrals : [])
+      }
+    } catch {
+      // silently ignore
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load().catch(() => {}) }, [])
 
   async function markPaid(referralId: string) {
-    await fetch('/api/owner/affiliates', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
-      body: JSON.stringify({ referral_id: referralId }),
-    })
-    load()
+    try {
+      await fetch('/api/owner/affiliates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+        body: JSON.stringify({ referral_id: referralId }),
+      })
+      await load()
+    } catch {}
   }
 
   const totalReferrers  = affiliates.length
@@ -1052,13 +1059,15 @@ export default function OwnerPage() {
         setStats(await res.json())
         setLastUpdated(new Date())
       }
+    } catch {
+      // silently ignore — stats are optional
     } finally {
       setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    if (authed) loadStats()
+    if (authed) loadStats().catch(() => {})
   }, [authed, loadStats])
 
   function handleLogout() {
@@ -1424,15 +1433,17 @@ function SocialPanel({ password }: { password: string }) {
       })
       if (res.ok) {
         const data = await res.json()
-        setPosts(data.posts ?? [])
-        setSummary(data.summary ?? summary)
+        setPosts(Array.isArray(data.posts) ? data.posts : [])
+        if (data.summary) setSummary(data.summary)
       }
+    } catch {
+      // silently ignore
     } finally {
       setLoading(false)
     }
-  }, [filter, password, summary])
+  }, [filter, password]) // removed `summary` from deps — no need, we use functional update
 
-  useEffect(() => { loadPosts() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { loadPosts().catch(() => {}) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleGenerate() {
     setGenerating(true)
@@ -1456,42 +1467,50 @@ function SocialPanel({ password }: { password: string }) {
   }
 
   async function handleApprove(id: string) {
-    await fetch(`/api/admin/social/posts/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
-      body: JSON.stringify({ status: 'approved' }),
-    })
-    await loadPosts()
+    try {
+      await fetch(`/api/admin/social/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+        body: JSON.stringify({ status: 'approved' }),
+      })
+      await loadPosts()
+    } catch {}
   }
 
   async function handleReject(id: string) {
-    await fetch(`/api/admin/social/posts/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-owner-password': password },
-    })
-    await loadPosts()
+    try {
+      await fetch(`/api/admin/social/posts/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-owner-password': password },
+      })
+      await loadPosts()
+    } catch {}
   }
 
   async function handleSaveEdit(id: string) {
-    await fetch(`/api/admin/social/posts/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
-      body: JSON.stringify({ post_text: editText }),
-    })
-    setEditingId(null)
-    await loadPosts()
+    try {
+      await fetch(`/api/admin/social/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+        body: JSON.stringify({ post_text: editText }),
+      })
+      setEditingId(null)
+      await loadPosts()
+    } catch {}
   }
 
   async function handleSchedule(id: string) {
     if (!scheduleDate) return
-    await fetch(`/api/admin/social/posts/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
-      body: JSON.stringify({ status: 'scheduled', scheduled_at: new Date(scheduleDate).toISOString() }),
-    })
-    setSchedulingId(null)
-    setScheduleDate('')
-    await loadPosts()
+    try {
+      await fetch(`/api/admin/social/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-owner-password': password },
+        body: JSON.stringify({ status: 'scheduled', scheduled_at: new Date(scheduleDate).toISOString() }),
+      })
+      setSchedulingId(null)
+      setScheduleDate('')
+      await loadPosts()
+    } catch {}
   }
 
   async function handlePublishNow(id: string) {
@@ -1504,6 +1523,8 @@ function SocialPanel({ password }: { password: string }) {
       const data = await res.json()
       if (!res.ok) alert(`Publish failed: ${data.error}`)
       await loadPosts()
+    } catch {
+      // silently ignore
     } finally {
       setPublishingId(null)
     }
