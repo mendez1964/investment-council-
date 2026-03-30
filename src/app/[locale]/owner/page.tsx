@@ -116,15 +116,175 @@ interface ManagedUser {
 const TIER_COLOR: Record<string, string> = { free: '#6b7280', trader: '#d97706', pro: '#7c3aed', trial: '#7c3aed' }
 const TIER_BG: Record<string, string>    = { free: '#f3f4f6', trader: '#fffbeb', pro: '#f5f3ff', trial: '#ede9fe' }
 
+type LoginUser = {
+  id: string; email: string; display_name: string | null
+  tier: string; trial_ends_at: string | null; on_trial: boolean
+  last_active_at: string | null; created_at: string; last_sign_in_at: string | null
+}
+
+type ActivityData = {
+  profile: any
+  recentEvents: Array<{ event_type: string; page: string | null; feature: string | null; created_at: string }>
+  pageBreakdown: Array<{ page: string; count: number }>
+  featureBreakdown: Array<{ feature: string; count: number }>
+  totalEvents: number
+  firstSeen: string | null
+  lastSeen: string | null
+}
+
+function onlineStatus(lastActiveAt: string | null): { dot: string; label: string } {
+  if (!lastActiveAt) return { dot: '#d1d5db', label: 'never active' }
+  const mins = (Date.now() - new Date(lastActiveAt).getTime()) / 60000
+  if (mins < 5)  return { dot: '#16a34a', label: 'online now' }
+  if (mins < 30) return { dot: '#f59e0b', label: `${Math.floor(mins)}m ago` }
+  return { dot: '#d1d5db', label: '' }
+}
+
+function UserActivityModal({ user, password, onClose }: { user: LoginUser; password: string; onClose: () => void }) {
+  const [data, setData] = useState<ActivityData | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/owner/user/${user.id}/activity`, { headers: { 'x-owner-password': password } })
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [user.id, password])
+
+  function timeAgo(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+    if (mins < 2)   return 'just now'
+    if (mins < 60)  return `${mins}m ago`
+    if (hours < 24) return `${hours}h ago`
+    if (days < 30)  return `${days}d ago`
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  }
+
+  const status = onlineStatus(user.last_active_at)
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '48px', paddingBottom: '48px', overflowY: 'auto' }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ background: '#fff', borderRadius: '12px', width: '700px', maxWidth: '95vw', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', overflow: 'hidden' }}
+      >
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: status.dot, flexShrink: 0 }} />
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#111' }}>{user.email}</div>
+              {status.label && <div style={{ fontSize: '10px', color: status.dot === '#16a34a' ? '#16a34a' : '#9ca3af' }}>{status.label}</div>}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: TIER_COLOR[user.tier] ?? '#6b7280', background: TIER_BG[user.tier] ?? '#f3f4f6', borderRadius: '3px', padding: '2px 6px', textTransform: 'uppercase' }}>{user.tier}</span>
+              {user.on_trial && <span style={{ fontSize: '9px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '3px', padding: '2px 6px' }}>TRIAL · ends {new Date(user.trial_ends_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+              {user.display_name && <span style={{ fontSize: '10px', color: '#9ca3af' }}>{user.display_name}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9ca3af', padding: '4px 8px', borderRadius: '6px' }}>✕</button>
+        </div>
+
+        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {loading ? (
+            <div style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '40px 0' }}>Loading activity...</div>
+          ) : !data ? (
+            <div style={{ fontSize: '12px', color: '#dc2626', textAlign: 'center', padding: '40px 0' }}>Could not load activity data.</div>
+          ) : (
+            <>
+              {/* Stats row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                {[
+                  { label: 'Total Events', value: data.totalEvents },
+                  { label: 'First Seen',   value: data.firstSeen ? timeAgo(data.firstSeen) : '—' },
+                  { label: 'Last Seen',    value: data.lastSeen  ? timeAgo(data.lastSeen)  : '—' },
+                  { label: 'Joined',       value: new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) },
+                ].map(s => (
+                  <div key={s.label} style={{ background: '#f9fafb', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '9px', color: '#9ca3af', fontWeight: 700, letterSpacing: '0.06em', marginBottom: '4px' }}>{s.label.toUpperCase()}</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#111' }}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                {/* Pages visited */}
+                {data.pageBreakdown.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '8px' }}>PAGES VISITED</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {data.pageBreakdown.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                          <span style={{ color: '#374151', fontFamily: 'monospace' }}>{p.page}</span>
+                          <span style={{ color: '#9ca3af', fontWeight: 600, marginLeft: '8px', flexShrink: 0 }}>{p.count}×</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Features used */}
+                {data.featureBreakdown.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '8px' }}>FEATURES USED</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {data.featureBreakdown.map((f, i) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
+                          <span style={{ color: '#374151' }}>{f.feature}</span>
+                          <span style={{ color: '#9ca3af', fontWeight: 600, marginLeft: '8px', flexShrink: 0 }}>{f.count}×</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent activity timeline */}
+              {data.recentEvents.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '8px' }}>RECENT ACTIVITY</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '280px', overflowY: 'auto' }}>
+                    {data.recentEvents.map((e, i) => {
+                      const typeColor = e.event_type === 'page_view' ? '#2563eb' : e.event_type === 'feature_used' ? '#16a34a' : e.event_type === 'error' ? '#dc2626' : '#6b7280'
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '5px', background: i % 2 === 0 ? '#f9fafb' : 'transparent' }}>
+                          <span style={{ fontSize: '9px', fontWeight: 700, color: typeColor, minWidth: '70px', textTransform: 'uppercase' }}>{e.event_type.replace('_', ' ')}</span>
+                          <span style={{ fontSize: '11px', color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: e.event_type === 'page_view' ? 'monospace' : 'inherit' }}>
+                            {e.page ?? e.feature ?? '—'}
+                          </span>
+                          <span style={{ fontSize: '9px', color: '#9ca3af', flexShrink: 0 }}>{timeAgo(e.created_at)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {data.totalEvents === 0 && (
+                <div style={{ fontSize: '12px', color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>
+                  No tracked activity yet — user needs to log in after the tracking migration is applied.
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function RecentLoginsPanel({ password }: { password: string }) {
-  const [users, setUsers] = useState<Array<{
-    id: string; email: string; display_name: string | null
-    tier: string; trial_ends_at: string | null; on_trial: boolean
-    created_at: string; last_sign_in_at: string | null
-  }>>([])
+  const [users, setUsers] = useState<LoginUser[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<'all' | 'free' | 'trader' | 'pro' | 'trial'>('all')
   const [search, setSearch] = useState('')
+  const [selectedUser, setSelectedUser] = useState<LoginUser | null>(null)
 
   useEffect(() => {
     fetch('/api/owner/logins', { headers: { 'x-owner-password': password } })
@@ -154,82 +314,98 @@ function RecentLoginsPanel({ password }: { password: string }) {
   }
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#111' }}>User Logins</div>
-          <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>All accounts sorted by most recent login</div>
-        </div>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search email..."
-            style={{ padding: '5px 10px', fontSize: '11px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'inherit', width: '160px' }}
-          />
-          {(['all', 'free', 'trader', 'pro', 'trial'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setFilter(t)}
-              style={{
-                padding: '4px 10px', fontSize: '10px', fontWeight: 700, borderRadius: '5px', cursor: 'pointer', fontFamily: 'inherit',
-                border: `1px solid ${filter === t ? (t === 'all' ? '#111' : TIER_COLOR[t]) : '#e4e4e7'}`,
-                background: filter === t ? (t === 'all' ? '#111' : TIER_BG[t]) : 'transparent',
-                color: filter === t ? (t === 'all' ? '#fff' : TIER_COLOR[t]) : '#9ca3af',
-                textTransform: 'uppercase', letterSpacing: '0.06em',
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ fontSize: '11px', color: '#9ca3af', padding: '20px 0' }}>Loading...</div>
-      ) : (
-        <>
-          <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>{filtered.length} user{filtered.length !== 1 ? 's' : ''}</div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
-              <thead>
-                <tr>
-                  {['Email', 'Name', 'Tier', 'Last Login', 'Joined'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '5px 10px', color: '#9ca3af', fontWeight: 600, fontSize: '9px', letterSpacing: '0.07em', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map(u => (
-                  <tr key={u.id} style={{ borderBottom: '1px solid #fafafa' }}>
-                    <td style={{ padding: '7px 10px', color: '#374151', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.email}</td>
-                    <td style={{ padding: '7px 10px', color: '#6b7280', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.display_name ?? <span style={{ color: '#d1d5db' }}>—</span>}</td>
-                    <td style={{ padding: '7px 10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 700, color: TIER_COLOR[u.tier] ?? '#6b7280', background: TIER_BG[u.tier] ?? '#f3f4f6', borderRadius: '3px', padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                          {u.tier}
-                        </span>
-                        {u.on_trial && (
-                          <span style={{ fontSize: '9px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '3px', padding: '2px 6px', letterSpacing: '0.04em' }}>
-                            TRIAL · ends {new Date(u.trial_ends_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '7px 10px', color: u.last_sign_in_at ? '#374151' : '#d1d5db', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                      {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : 'never'}
-                    </td>
-                    <td style={{ padding: '7px 10px', color: '#9ca3af', whiteSpace: 'nowrap', fontSize: '10px' }}>
-                      {new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <>
+      {selectedUser && <UserActivityModal user={selectedUser} password={password} onClose={() => setSelectedUser(null)} />}
+      <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#111' }}>User Logins</div>
+            <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '2px' }}>Click any user to see their activity · sorted by most recent login</div>
           </div>
-        </>
-      )}
-    </div>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search email..."
+              style={{ padding: '5px 10px', fontSize: '11px', border: '1px solid #e4e4e7', borderRadius: '6px', outline: 'none', fontFamily: 'inherit', width: '160px' }}
+            />
+            {(['all', 'free', 'trader', 'pro', 'trial'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setFilter(t)}
+                style={{
+                  padding: '4px 10px', fontSize: '10px', fontWeight: 700, borderRadius: '5px', cursor: 'pointer', fontFamily: 'inherit',
+                  border: `1px solid ${filter === t ? (t === 'all' ? '#111' : TIER_COLOR[t]) : '#e4e4e7'}`,
+                  background: filter === t ? (t === 'all' ? '#111' : TIER_BG[t]) : 'transparent',
+                  color: filter === t ? (t === 'all' ? '#fff' : TIER_COLOR[t]) : '#9ca3af',
+                  textTransform: 'uppercase', letterSpacing: '0.06em',
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ fontSize: '11px', color: '#9ca3af', padding: '20px 0' }}>Loading...</div>
+        ) : (
+          <>
+            <div style={{ fontSize: '10px', color: '#9ca3af', marginBottom: '8px' }}>{filtered.length} user{filtered.length !== 1 ? 's' : ''}</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                <thead>
+                  <tr>
+                    {['', 'Email', 'Name', 'Tier', 'Last Login', 'Joined'].map(h => (
+                      <th key={h} style={{ textAlign: 'left', padding: '5px 10px', color: '#9ca3af', fontWeight: 600, fontSize: '9px', letterSpacing: '0.07em', borderBottom: '1px solid #f0f0f0' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(u => {
+                    const status = onlineStatus(u.last_active_at)
+                    return (
+                      <tr
+                        key={u.id}
+                        onClick={() => setSelectedUser(u)}
+                        style={{ borderBottom: '1px solid #fafafa', cursor: 'pointer' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = '#f9fafb')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        {/* Online dot */}
+                        <td style={{ padding: '7px 6px 7px 10px', width: '20px' }}>
+                          <div title={status.label} style={{ width: '7px', height: '7px', borderRadius: '50%', background: status.dot }} />
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#2563eb', fontWeight: 500, maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: '#bfdbfe' }}>{u.email}</td>
+                        <td style={{ padding: '7px 10px', color: '#6b7280', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.display_name ?? <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                        <td style={{ padding: '7px 10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '9px', fontWeight: 700, color: TIER_COLOR[u.tier] ?? '#6b7280', background: TIER_BG[u.tier] ?? '#f3f4f6', borderRadius: '3px', padding: '2px 6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                              {u.tier}
+                            </span>
+                            {u.on_trial && (
+                              <span style={{ fontSize: '9px', fontWeight: 700, color: '#7c3aed', background: '#ede9fe', borderRadius: '3px', padding: '2px 6px', letterSpacing: '0.04em' }}>
+                                TRIAL · ends {new Date(u.trial_ends_at!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '7px 10px', color: u.last_sign_in_at ? '#374151' : '#d1d5db', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                          {u.last_sign_in_at ? timeAgo(u.last_sign_in_at) : 'never'}
+                        </td>
+                        <td style={{ padding: '7px 10px', color: '#9ca3af', whiteSpace: 'nowrap', fontSize: '10px' }}>
+                          {new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   )
 }
 

@@ -19,12 +19,12 @@ export async function GET(request: Request) {
 
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('id, tier, display_name, trial_ends_at')
+    .select('id, tier, display_name, trial_ends_at, last_active_at')
     .in('id', userIds)
 
-  const profileMap: Record<string, { tier: string; display_name: string | null; trial_ends_at: string | null }> = {}
+  const profileMap: Record<string, { tier: string; display_name: string | null; trial_ends_at: string | null; last_active_at: string | null }> = {}
   for (const p of profiles ?? []) {
-    profileMap[p.id] = { tier: p.tier, display_name: p.display_name, trial_ends_at: p.trial_ends_at ?? null }
+    profileMap[p.id] = { tier: p.tier, display_name: p.display_name, trial_ends_at: p.trial_ends_at ?? null, last_active_at: p.last_active_at ?? null }
   }
 
   const now = Date.now()
@@ -40,6 +40,7 @@ export async function GET(request: Request) {
         tier: profileMap[u.id]?.tier ?? 'free',
         trial_ends_at: trialEndsAt,
         on_trial: onTrial,
+        last_active_at: profileMap[u.id]?.last_active_at ?? null,
         created_at: u.created_at,
         last_sign_in_at: u.last_sign_in_at ?? null,
       }

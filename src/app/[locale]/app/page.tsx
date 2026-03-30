@@ -23,6 +23,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import GuardianPanel from '@/components/GuardianPanel'
 import TradingPlanTab from '@/components/TradingPlanTab'
 import { Menu } from 'lucide-react'
+import { setAnalyticsUser } from '@/lib/analytics'
 import ReviewPrompt from '@/components/ReviewPrompt'
 
 interface Message {
@@ -967,6 +968,7 @@ Under 300 words. Data and facts first.` },
       const u = data.user ?? null
       setUser(u)
       if (u) {
+        setAnalyticsUser(u.id)
         const res = await fetch('/api/user/profile')
         if (res.ok) {
           const profile = await res.json()

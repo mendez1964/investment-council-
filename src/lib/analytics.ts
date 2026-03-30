@@ -11,6 +11,17 @@ function getSessionId(): string {
   return id
 }
 
+// Call once when the user is identified — all subsequent events will carry their ID
+export function setAnalyticsUser(userId: string) {
+  if (typeof window === 'undefined') return
+  sessionStorage.setItem('_ic_uid', userId)
+}
+
+function getAnalyticsUserId(): string | null {
+  if (typeof window === 'undefined') return null
+  return sessionStorage.getItem('_ic_uid') ?? null
+}
+
 export function trackEvent(
   eventType: string,
   options: {
@@ -27,6 +38,7 @@ export function trackEvent(
     feature: options.feature,
     metadata: options.metadata,
     session_id: getSessionId(),
+    user_id: getAnalyticsUserId(),
     duration_ms: options.durationMs,
   }
   // Fire and forget — don't await
