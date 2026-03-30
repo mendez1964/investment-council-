@@ -62,7 +62,7 @@ function detectFrameworks(content: string): { topic: string; label: string }[] {
 
 // ── Sidebar data ──────────────────────────────────────────────────────────────
 
-type SidebarItem = { label: string; itemId?: string; prompt: string; promptSuffix?: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isAlerts?: boolean; isReports?: boolean; tier?: 'trader' | 'pro' }
+type SidebarItem = { label: string; itemId?: string; prompt: string; promptSuffix?: string; icon?: string; needsTicker?: boolean; isAnalysis?: 'stock' | 'crypto'; isCalendar?: boolean; isMovers?: boolean; isFearGreed?: boolean; isAIPicks?: boolean; isBattle?: boolean; isWar?: boolean; isIPO?: boolean; isNews?: boolean; isChart?: boolean; isEconCalendar?: boolean; isCalculators?: boolean; isPatterns?: boolean; isCryptoDashboard?: boolean; isCryptoResearch?: boolean; isStockResearch?: boolean; isAlerts?: boolean; isReports?: boolean; tier?: 'trader' | 'pro' }
 type SidebarSection = { id: string; title: string; items: SidebarItem[] }
 
 // Sidebar sections are defined inside the Home component (uses useTranslations hook)
@@ -818,6 +818,7 @@ Under 300 words. Data and facts first.` },
       id: 'data',
       title: t('sections.data'),
       items: [
+        { itemId: 'Stock Research', label: 'Stock Research', prompt: '', isStockResearch: true },
         { itemId: 'Stock Quote', label: t('items.stockQuote'), prompt: 'Get me the current stock quote and fundamentals for ', needsTicker: true },
         { itemId: 'Insider Transactions', label: t('items.insiderTransactions'), prompt: 'Show me recent insider transactions for ', needsTicker: true },
         { itemId: '13F Holdings', label: t('items.holdingsF13'), prompt: 'Show me recent 13F hedge fund holdings for ', needsTicker: true },
@@ -1226,7 +1227,7 @@ Be direct and factual. Use numbers.`
     el.style.height = Math.min(el.scrollHeight, 200) + 'px'
   }
 
-  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean, promptSuffix?: string, isReports?: boolean) {
+  function handleToolbarSelect(prompt: string, needsTicker?: boolean, placeholder?: string, isAnalysis?: 'stock' | 'crypto', isCalendar?: boolean, isMovers?: boolean, isFearGreed?: boolean, isAIPicks?: boolean, isIPO?: boolean, isNews?: boolean, isChart?: boolean, isEconCalendar?: boolean, isCalculators?: boolean, isPatterns?: boolean, isCryptoDashboard?: boolean, isAlerts?: boolean, isCryptoResearch?: boolean, promptSuffix?: string, isReports?: boolean, isStockResearch?: boolean) {
     if (isReports) {
       router.push(`/${currentLocale}/reports?mode=${sidebarMode}` as any)
       return
@@ -1273,6 +1274,10 @@ Be direct and factual. Use numbers.`
     }
     if (isCryptoResearch) {
       router.push('/crypto-research')
+      return
+    }
+    if (isStockResearch) {
+      router.push('/stock-research')
       return
     }
     if (isAlerts) {
@@ -1485,7 +1490,7 @@ Be direct and factual. Use numbers.`
       showBriefingTeaser(item.itemId)
       return
     }
-    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch, item.promptSuffix, (item as any).isReports)
+    handleToolbarSelect(item.prompt, item.needsTicker, item.label, item.isAnalysis, item.isCalendar, item.isMovers, item.isFearGreed, item.isAIPicks, item.isIPO, item.isNews, item.isChart, item.isEconCalendar, item.isCalculators, item.isPatterns, item.isCryptoDashboard, item.isAlerts, item.isCryptoResearch, item.promptSuffix, (item as any).isReports, item.isStockResearch)
     if (activeTab !== 'chat') setActiveTab('chat')
     setSidebarMobileOpen(false)
   }

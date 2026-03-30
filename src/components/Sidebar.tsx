@@ -34,6 +34,7 @@ export type SidebarItem = {
   isPatterns?: boolean
   isCryptoDashboard?: boolean
   isCryptoResearch?: boolean
+  isStockResearch?: boolean
   isAlerts?: boolean
   isReports?: boolean
 }
@@ -94,6 +95,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'Crypto News': Newspaper,
   'BTC Dashboard': BarChart2,
   'Coin Research': Search,
+  'Stock Research': Search,
   'Email Alerts': Bell,
   'Reports': FileText,
 }
@@ -117,7 +119,7 @@ function isFeatureItem(item: SidebarItem) {
     item.isCalendar || item.isMovers || item.isFearGreed || item.isAIPicks || item.isBattle ||
     item.isWar || item.isIPO || item.isNews || item.isChart || item.isEconCalendar ||
     item.isAnalysis || item.isCalculators || item.isPatterns || item.isCryptoDashboard ||
-    item.isCryptoResearch || item.isAlerts || item.isReports
+    item.isCryptoResearch || item.isStockResearch || item.isAlerts || item.isReports
   )
 }
 
