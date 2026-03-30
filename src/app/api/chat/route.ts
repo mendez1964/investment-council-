@@ -34,60 +34,126 @@ const TOP10_COIN_IDS = new Set([
   'shiba-inu','polkadot','chainlink','uniswap','bitcoin-cash','litecoin','near',
 ])
 
-// Detect a specific coin mention and fetch its live data from CoinGecko on demand
+// Detect a specific coin mention and fetch comprehensive data from CoinGecko on demand
 async function fetchCoinOnDemand(message: string): Promise<string> {
   try {
-    // Extract candidate coin tickers/names — 2-8 char uppercase words or known names
     const upper = message.match(/\b([A-Z]{2,8})\b/g) ?? []
-    // Also extract lowercase coin name mentions
-    const nameMatch = message.match(/\b(bittensor|injective|render|arbitrum|optimism|celestia|sei|sui|aptos|kaspa|fetch\.?ai|worldcoin|manta|mantle|blur|gmx|pendle|aave|compound|maker|curve|convex|lido|rocket\s?pool|stacks|icp|filecoin|theta|hedera|vechain|algorand|flow|tezos|elrond|multiversx|kava|celo|harmony|zilliqa|ravencoin|decentraland|sandbox|axie|gala|illuvium|stepn|floki|pepe|bonk|wen|jito|pyth|wormhole|jupiter|tensor|magic\s?eden|drift|marinade|saber|raydium|orca)\b/i)?.[0]
+    const nameMatch = message.match(/\b(bittensor|injective|render|arbitrum|optimism|celestia|sei|sui|aptos|kaspa|fetch\.?ai|worldcoin|manta|mantle|blur|gmx|pendle|aave|compound|maker|curve|convex|lido|rocket\s?pool|stacks|icp|filecoin|theta|hedera|vechain|algorand|flow|tezos|elrond|multiversx|kava|celo|harmony|zilliqa|ravencoin|decentraland|sandbox|axie|gala|illuvium|stepn|floki|pepe|bonk|wen|jito|pyth|wormhole|jupiter|tensor|drift|marinade|raydium|orca)\b/i)?.[0]
 
     const candidates: string[] = []
     if (nameMatch) candidates.push(nameMatch.replace(/\s+/g, '-'))
-    // Add uppercase matches but skip common English words and stock-only terms
-    const SKIP = new Set(['THE','AND','FOR','NOT','BUT','ARE','YOU','ALL','CAN','HAS','HAD','ITS','HIS','HER','WHO','HOW','NOW','NEW','OLD','ONE','TWO','GET','SET','PUT','LET','SAY','USE','MAY','BIG','TOP','LOW','HIGH','LONG','CALL','PUTS','HOLD','SELL','BUY','SPY','QQQ','DIA','IWM','USD','EUR','GBP','JPY','API','CEO','CFO','SEC','FED','GDP','CPI','IPO','ETF','OTC','RSI','ATH','ATL','EMA','SMA','AUM','ROE','EPS','P/E','TVL','APY','APR'])
+    const SKIP = new Set(['THE','AND','FOR','NOT','BUT','ARE','YOU','ALL','CAN','HAS','HAD','ITS','HIS','HER','WHO','HOW','NOW','NEW','OLD','ONE','TWO','GET','SET','PUT','LET','SAY','USE','MAY','BIG','TOP','LOW','HIGH','LONG','CALL','PUTS','HOLD','SELL','BUY','SPY','QQQ','DIA','IWM','USD','EUR','GBP','JPY','API','CEO','CFO','SEC','FED','GDP','CPI','IPO','ETF','OTC','RSI','ATH','ATL','EMA','SMA','AUM','ROE','EPS','TVL','APY','APR','GIVE','WHAT','DOES','TELL','SHOW','LOOK','NEED','WANT','GOOD','BAD','BEST','NEXT','LAST','WEEK','YEAR','RISK','LOSS','GAIN','MOVE','PUMP','DUMP'])
     for (const t of upper) {
       if (!SKIP.has(t) && t.length >= 2 && t.length <= 8) candidates.push(t)
     }
 
     if (candidates.length === 0) return ''
 
-    // Try each candidate — return first successful coin fetch
     for (const candidate of candidates.slice(0, 4)) {
       try {
+        // Step 1: Find the coin ID via search
         const searchRes = await fetch(
           `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(candidate)}`,
-          { next: { revalidate: 60 } }
+          { next: { revalidate: 120 } }
         )
         if (!searchRes.ok) continue
         const searchData = await searchRes.json()
         const coin = searchData.coins?.[0]
         if (!coin || TOP10_COIN_IDS.has(coin.id)) continue
 
-        const marketRes = await fetch(
-          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${coin.id}&sparkline=false&price_change_percentage=24h,7d,30d`,
-          { next: { revalidate: 60 } }
+        // Step 2: Fetch full coin detail — price, market, fundamentals, community, developer
+        const detailRes = await fetch(
+          `https://api.coingecko.com/api/v3/coins/${coin.id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=true&sparkline=false`,
+          { next: { revalidate: 300 } }
         )
-        if (!marketRes.ok) continue
-        const [data] = await marketRes.json()
-        if (!data) continue
+        if (!detailRes.ok) continue
+        const d = await detailRes.json()
+        if (!d?.market_data) continue
 
-        const change24h = data.price_change_percentage_24h?.toFixed(2) ?? 'N/A'
-        const change7d  = data.price_change_percentage_7d_in_currency?.toFixed(2) ?? 'N/A'
-        const change30d = data.price_change_percentage_30d_in_currency?.toFixed(2) ?? 'N/A'
-        const mcap = data.market_cap ? `$${(data.market_cap / 1e9).toFixed(2)}B` : 'N/A'
-        const vol  = data.total_volume ? `$${(data.total_volume / 1e6).toFixed(0)}M` : 'N/A'
-        const ath   = data.ath ? `$${data.ath.toLocaleString()} (${data.ath_change_percentage?.toFixed(1)}% from ATH)` : 'N/A'
+        const md = d.market_data
+        const sym = d.symbol?.toUpperCase() ?? ''
 
-        return `\n\n## LIVE COIN DATA — ${data.name} (${data.symbol?.toUpperCase()})
-Price: $${data.current_price?.toLocaleString() ?? 'N/A'}
-24h Change: ${change24h}%
-7d Change: ${change7d}%
-30d Change: ${change30d}%
-Market Cap: ${mcap} | Rank: #${data.market_cap_rank ?? 'N/A'}
-24h Volume: ${vol}
-ATH: ${ath}
-Circulating Supply: ${data.circulating_supply ? data.circulating_supply.toLocaleString() : 'N/A'} ${data.symbol?.toUpperCase()}`
+        // Price & performance
+        const price    = md.current_price?.usd
+        const ch24h    = md.price_change_percentage_24h?.toFixed(2)
+        const ch7d     = md.price_change_percentage_7d?.toFixed(2)
+        const ch30d    = md.price_change_percentage_30d?.toFixed(2)
+        const ch1y     = md.price_change_percentage_1y?.toFixed(2)
+        const mcap     = md.market_cap?.usd
+        const fdv      = md.fully_diluted_valuation?.usd
+        const vol24h   = md.total_volume?.usd
+        const ath      = md.ath?.usd
+        const athChg   = md.ath_change_percentage?.usd?.toFixed(1)
+        const atl      = md.atl?.usd
+        const atlChg   = md.atl_change_percentage?.usd?.toFixed(1)
+        const hi24h    = md.high_24h?.usd
+        const lo24h    = md.low_24h?.usd
+
+        // Supply / tokenomics
+        const circSupply = md.circulating_supply
+        const totalSupply = md.total_supply
+        const maxSupply  = md.max_supply
+        const supplyPct  = circSupply && maxSupply ? ((circSupply / maxSupply) * 100).toFixed(1) : null
+
+        // FDV/MCap ratio — measures inflation risk (high ratio = lots of tokens yet to unlock)
+        const fdvMcapRatio = fdv && mcap ? (fdv / mcap).toFixed(2) : null
+
+        // Community
+        const twitterFollowers = d.community_data?.twitter_followers
+        const redditSubscribers = d.community_data?.reddit_subscribers
+        const sentiment = d.sentiment_votes_up_percentage?.toFixed(1)
+
+        // Developer activity
+        const githubStars   = d.developer_data?.stars
+        const githubForks   = d.developer_data?.forks
+        const commits4weeks = d.developer_data?.commit_count_4_weeks
+        const devScore      = d.developer_score?.toFixed(0)
+
+        // Categories & description
+        const categories = d.categories?.filter(Boolean).slice(0, 4).join(', ') ?? ''
+        const desc = d.description?.en
+          ? d.description.en.replace(/<[^>]+>/g, '').slice(0, 300).trim() + '...'
+          : ''
+
+        // Liquidity signal: volume-to-mcap ratio (>10% = liquid, <1% = illiquid)
+        const volMcapRatio = vol24h && mcap ? ((vol24h / mcap) * 100).toFixed(2) : null
+
+        const fmt = (n: number | undefined | null, decimals = 2) =>
+          n != null ? n.toLocaleString('en-US', { maximumFractionDigits: decimals }) : 'N/A'
+        const fmtB = (n: number | undefined | null) =>
+          n != null ? (n >= 1e9 ? `$${(n/1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(0)}M` : `$${fmt(n)}`) : 'N/A'
+
+        return `\n\n## COMPREHENSIVE COIN INTELLIGENCE — ${d.name} (${sym})
+Rank: #${d.market_cap_rank ?? 'N/A'} | Categories: ${categories || 'N/A'}
+
+### PRICE & PERFORMANCE
+Current Price: $${fmt(price)} | 24h Range: $${fmt(lo24h)} – $${fmt(hi24h)}
+24h: ${ch24h ?? 'N/A'}% | 7d: ${ch7d ?? 'N/A'}% | 30d: ${ch30d ?? 'N/A'}% | 1Y: ${ch1y ?? 'N/A'}%
+ATH: $${fmt(ath)} (${athChg ?? 'N/A'}% from ATH) | ATL: $${fmt(atl)} (+${atlChg ?? 'N/A'}% from ATL)
+
+### MARKET & LIQUIDITY
+Market Cap: ${fmtB(mcap)} | Fully Diluted Valuation: ${fmtB(fdv)}
+FDV/MCap Ratio: ${fdvMcapRatio ?? 'N/A'}x${fdvMcapRatio && parseFloat(fdvMcapRatio) > 3 ? ' ⚠ HIGH — significant token inflation risk' : fdvMcapRatio && parseFloat(fdvMcapRatio) < 1.5 ? ' ✓ LOW — most tokens already in circulation' : ''}
+24h Volume: ${fmtB(vol24h)} | Volume/MCap: ${volMcapRatio ?? 'N/A'}%${volMcapRatio && parseFloat(volMcapRatio) < 1 ? ' ⚠ LOW LIQUIDITY' : volMcapRatio && parseFloat(volMcapRatio) > 20 ? ' — HIGH activity' : ''}
+
+### TOKENOMICS & SUPPLY
+Circulating: ${circSupply ? circSupply.toLocaleString() : 'N/A'} ${sym}
+Total Supply: ${totalSupply ? totalSupply.toLocaleString() : 'N/A'} ${sym}
+Max Supply: ${maxSupply ? maxSupply.toLocaleString() : 'Unlimited'} ${sym}${supplyPct ? ` | ${supplyPct}% of max supply in circulation` : ''}
+
+### COMMUNITY & SENTIMENT
+Twitter Followers: ${twitterFollowers ? twitterFollowers.toLocaleString() : 'N/A'}
+Reddit Subscribers: ${redditSubscribers ? redditSubscribers.toLocaleString() : 'N/A'}
+Community Sentiment: ${sentiment ?? 'N/A'}% bullish
+
+### DEVELOPER ACTIVITY
+GitHub Stars: ${githubStars?.toLocaleString() ?? 'N/A'} | Forks: ${githubForks?.toLocaleString() ?? 'N/A'}
+Commits (last 4 weeks): ${commits4weeks ?? 'N/A'} | Developer Score: ${devScore ?? 'N/A'}/100${commits4weeks != null && commits4weeks < 5 ? ' ⚠ LOW dev activity' : commits4weeks != null && commits4weeks > 50 ? ' ✓ ACTIVE development' : ''}
+
+### PROJECT DESCRIPTION
+${desc || 'No description available.'}
+
+Use all of the above data to give a complete, informed analysis including: price momentum, valuation (FDV vs MCap), tokenomics risk, liquidity, community strength, developer health, and a clear recommendation with entry/risk/outlook.`
       } catch { continue }
     }
     return ''
