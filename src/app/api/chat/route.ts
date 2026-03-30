@@ -34,24 +34,77 @@ const TOP10_COIN_IDS = new Set([
   'shiba-inu','polkadot','chainlink','uniswap','bitcoin-cash','litecoin','near',
 ])
 
+// Direct ticker/name → CoinGecko ID map — bypasses search for known coins
+// This is the primary fix: case-insensitive ticker detection without depending on uppercase-only regex
+const COIN_ID_MAP: Record<string, string> = {
+  'tao': 'bittensor', 'bittensor': 'bittensor',
+  'inj': 'injective-protocol', 'injective': 'injective-protocol',
+  'rndr': 'render-token', 'render': 'render-token',
+  'arb': 'arbitrum', 'arbitrum': 'arbitrum',
+  'op': 'optimism', 'optimism': 'optimism',
+  'tia': 'celestia', 'celestia': 'celestia',
+  'sei': 'sei-network',
+  'sui': 'sui',
+  'apt': 'aptos', 'aptos': 'aptos',
+  'kas': 'kaspa', 'kaspa': 'kaspa',
+  'wld': 'worldcoin', 'worldcoin': 'worldcoin',
+  'jup': 'jupiter-exchange-solana', 'jupiter': 'jupiter-exchange-solana',
+  'jito': 'jito-governance-token',
+  'pyth': 'pyth-network',
+  'wif': 'dogwifcoin',
+  'bonk': 'bonk',
+  'pepe': 'pepe',
+  'floki': 'floki',
+  'gmx': 'gmx',
+  'pendle': 'pendle',
+  'aave': 'aave',
+  'mkr': 'maker', 'maker': 'maker',
+  'crv': 'curve-dao-token', 'curve': 'curve-dao-token',
+  'ldo': 'lido-dao', 'lido': 'lido-dao',
+  'stx': 'blockstack', 'stacks': 'blockstack',
+  'icp': 'internet-computer',
+  'fil': 'filecoin', 'filecoin': 'filecoin',
+  'hbar': 'hedera-hashgraph', 'hedera': 'hedera-hashgraph',
+  'vet': 'vechain', 'vechain': 'vechain',
+  'algo': 'algorand', 'algorand': 'algorand',
+  'xtz': 'tezos', 'tezos': 'tezos',
+  'mana': 'decentraland', 'decentraland': 'decentraland',
+  'sand': 'the-sandbox', 'sandbox': 'the-sandbox',
+  'axs': 'axie-infinity', 'axie': 'axie-infinity',
+  'gala': 'gala',
+  'blur': 'blur',
+}
+
 // Detect a specific coin mention and fetch comprehensive data from CoinGecko on demand
 async function fetchCoinOnDemand(message: string): Promise<string> {
   try {
-    const upper = message.match(/\b([A-Z]{2,8})\b/g) ?? []
-    const nameMatch = message.match(/\b(bittensor|injective|render|arbitrum|optimism|celestia|sei|sui|aptos|kaspa|fetch\.?ai|worldcoin|manta|mantle|blur|gmx|pendle|aave|compound|maker|curve|convex|lido|rocket\s?pool|stacks|icp|filecoin|theta|hedera|vechain|algorand|flow|tezos|elrond|multiversx|kava|celo|harmony|zilliqa|ravencoin|decentraland|sandbox|axie|gala|illuvium|stepn|floki|pepe|bonk|wen|jito|pyth|wormhole|jupiter|tensor|drift|marinade|raydium|orca)\b/i)?.[0]
+    // Check direct map first — works for any casing (tao, TAO, Tao)
+    const words = message.toLowerCase().match(/\b[a-z]{2,12}\b/g) ?? []
+    let directId: string | null = null
+    for (const w of words) {
+      if (COIN_ID_MAP[w] && !TOP10_COIN_IDS.has(COIN_ID_MAP[w])) {
+        directId = COIN_ID_MAP[w]
+        break
+      }
+    }
 
-    const candidates: string[] = []
-    if (nameMatch) candidates.push(nameMatch.replace(/\s+/g, '-'))
+    // Fall back to uppercase ticker extraction + CoinGecko search for unknown coins not in the map
+    const upper = message.match(/\b([A-Z]{2,8})\b/g) ?? []
     const SKIP = new Set(['THE','AND','FOR','NOT','BUT','ARE','YOU','ALL','CAN','HAS','HAD','ITS','HIS','HER','WHO','HOW','NOW','NEW','OLD','ONE','TWO','GET','SET','PUT','LET','SAY','USE','MAY','BIG','TOP','LOW','HIGH','LONG','CALL','PUTS','HOLD','SELL','BUY','SPY','QQQ','DIA','IWM','USD','EUR','GBP','JPY','API','CEO','CFO','SEC','FED','GDP','CPI','IPO','ETF','OTC','RSI','ATH','ATL','EMA','SMA','AUM','ROE','EPS','TVL','APY','APR','GIVE','WHAT','DOES','TELL','SHOW','LOOK','NEED','WANT','GOOD','BAD','BEST','NEXT','LAST','WEEK','YEAR','RISK','LOSS','GAIN','MOVE','PUMP','DUMP'])
+    const candidates: string[] = []
     for (const t of upper) {
       if (!SKIP.has(t) && t.length >= 2 && t.length <= 8) candidates.push(t)
     }
 
-    if (candidates.length === 0) return ''
+    if (!directId && candidates.length === 0) return ''
 
-    for (const candidate of candidates.slice(0, 4)) {
+    // Build ordered list of CoinGecko IDs to try: direct map first, then search-based
+    const idsToTry: string[] = []
+    if (directId) idsToTry.push(directId)
+
+    for (const candidate of candidates.slice(0, 3)) {
       try {
-        // Step 1: Find the coin ID via search
+        // Search for unknown coins not in the direct map
         const searchRes = await fetch(
           `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(candidate)}`,
           { next: { revalidate: 120 } }
@@ -59,14 +112,23 @@ async function fetchCoinOnDemand(message: string): Promise<string> {
         if (!searchRes.ok) continue
         const searchData = await searchRes.json()
         const coin = searchData.coins?.[0]
-        if (!coin || TOP10_COIN_IDS.has(coin.id)) continue
+        if (coin && !TOP10_COIN_IDS.has(coin.id) && !idsToTry.includes(coin.id)) {
+          idsToTry.push(coin.id)
+        }
+      } catch { /* ignore search errors */ }
+    }
 
-        // Step 2: Fetch full coin detail — price, market, fundamentals, community, developer
+    for (const coinId of idsToTry.slice(0, 2)) {
+      try {
+        // Fetch full coin detail — price, market, fundamentals, community, developer
         const detailRes = await fetch(
-          `https://api.coingecko.com/api/v3/coins/${coin.id}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=true&sparkline=false`,
+          `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=true&sparkline=false`,
           { next: { revalidate: 300 } }
         )
-        if (!detailRes.ok) continue
+        if (!detailRes.ok) {
+          console.error(`[coin-ondemand] CoinGecko ${coinId} returned ${detailRes.status}`)
+          continue
+        }
         const d = await detailRes.json()
         if (!d?.market_data) continue
 
