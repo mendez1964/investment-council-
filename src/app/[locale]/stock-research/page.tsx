@@ -448,7 +448,11 @@ export default function StockResearchPage() {
                 <div style={{ fontSize: '12px', color: '#9ca3af' }}>Get a full framework analysis with live data pre-loaded for {data.ticker}</div>
               </div>
               <button
-                onClick={() => router.push(`/app?q=Give+me+a+full+council+analysis+of+${data.ticker}`)}
+                onClick={() => {
+                  localStorage.setItem('ic_pending_report', `Give me a full council analysis of ${data.ticker}`)
+                  localStorage.setItem('ic_pending_report_name', `Council Analysis: ${data.ticker}`)
+                  router.push('/app')
+                }}
                 style={{
                   background: '#111', color: '#fff', border: 'none', borderRadius: '8px',
                   padding: '10px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
