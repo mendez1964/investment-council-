@@ -27,6 +27,75 @@ function streamText(text: string): Response {
   return new Response(stream, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
 }
 
+// CoinGecko IDs already covered by the top-10 live feed — skip re-fetching these
+const TOP10_COIN_IDS = new Set([
+  'bitcoin','ethereum','tether','binancecoin','solana','usd-coin','ripple',
+  'dogecoin','cardano','tron','staked-ether','wrapped-bitcoin','avalanche-2',
+  'shiba-inu','polkadot','chainlink','uniswap','bitcoin-cash','litecoin','near',
+])
+
+// Detect a specific coin mention and fetch its live data from CoinGecko on demand
+async function fetchCoinOnDemand(message: string): Promise<string> {
+  try {
+    // Extract candidate coin tickers/names — 2-8 char uppercase words or known names
+    const upper = message.match(/\b([A-Z]{2,8})\b/g) ?? []
+    // Also extract lowercase coin name mentions
+    const nameMatch = message.match(/\b(bittensor|injective|render|arbitrum|optimism|celestia|sei|sui|aptos|kaspa|fetch\.?ai|worldcoin|manta|mantle|blur|gmx|pendle|aave|compound|maker|curve|convex|lido|rocket\s?pool|stacks|icp|filecoin|theta|hedera|vechain|algorand|flow|tezos|elrond|multiversx|kava|celo|harmony|zilliqa|ravencoin|decentraland|sandbox|axie|gala|illuvium|stepn|floki|pepe|bonk|wen|jito|pyth|wormhole|jupiter|tensor|magic\s?eden|drift|marinade|saber|raydium|orca)\b/i)?.[0]
+
+    const candidates: string[] = []
+    if (nameMatch) candidates.push(nameMatch.replace(/\s+/g, '-'))
+    // Add uppercase matches but skip common English words and stock-only terms
+    const SKIP = new Set(['THE','AND','FOR','NOT','BUT','ARE','YOU','ALL','CAN','HAS','HAD','ITS','HIS','HER','WHO','HOW','NOW','NEW','OLD','ONE','TWO','GET','SET','PUT','LET','SAY','USE','MAY','BIG','TOP','LOW','HIGH','LONG','CALL','PUTS','HOLD','SELL','BUY','SPY','QQQ','DIA','IWM','USD','EUR','GBP','JPY','API','CEO','CFO','SEC','FED','GDP','CPI','IPO','ETF','OTC','RSI','ATH','ATL','EMA','SMA','AUM','ROE','EPS','P/E','TVL','APY','APR'])
+    for (const t of upper) {
+      if (!SKIP.has(t) && t.length >= 2 && t.length <= 8) candidates.push(t)
+    }
+
+    if (candidates.length === 0) return ''
+
+    // Try each candidate — return first successful coin fetch
+    for (const candidate of candidates.slice(0, 4)) {
+      try {
+        const searchRes = await fetch(
+          `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(candidate)}`,
+          { next: { revalidate: 60 } }
+        )
+        if (!searchRes.ok) continue
+        const searchData = await searchRes.json()
+        const coin = searchData.coins?.[0]
+        if (!coin || TOP10_COIN_IDS.has(coin.id)) continue
+
+        const marketRes = await fetch(
+          `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${coin.id}&sparkline=false&price_change_percentage=24h,7d,30d`,
+          { next: { revalidate: 60 } }
+        )
+        if (!marketRes.ok) continue
+        const [data] = await marketRes.json()
+        if (!data) continue
+
+        const change24h = data.price_change_percentage_24h?.toFixed(2) ?? 'N/A'
+        const change7d  = data.price_change_percentage_7d_in_currency?.toFixed(2) ?? 'N/A'
+        const change30d = data.price_change_percentage_30d_in_currency?.toFixed(2) ?? 'N/A'
+        const mcap = data.market_cap ? `$${(data.market_cap / 1e9).toFixed(2)}B` : 'N/A'
+        const vol  = data.total_volume ? `$${(data.total_volume / 1e6).toFixed(0)}M` : 'N/A'
+        const ath   = data.ath ? `$${data.ath.toLocaleString()} (${data.ath_change_percentage?.toFixed(1)}% from ATH)` : 'N/A'
+
+        return `\n\n## LIVE COIN DATA — ${data.name} (${data.symbol?.toUpperCase()})
+Price: $${data.current_price?.toLocaleString() ?? 'N/A'}
+24h Change: ${change24h}%
+7d Change: ${change7d}%
+30d Change: ${change30d}%
+Market Cap: ${mcap} | Rank: #${data.market_cap_rank ?? 'N/A'}
+24h Volume: ${vol}
+ATH: ${ath}
+Circulating Supply: ${data.circulating_supply ? data.circulating_supply.toLocaleString() : 'N/A'} ${data.symbol?.toUpperCase()}`
+      } catch { continue }
+    }
+    return ''
+  } catch {
+    return ''
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { messages, locale } = await request.json()
@@ -142,6 +211,20 @@ export async function POST(request: Request) {
       console.log('[live-data] fetched, length:', liveData.length)
     } catch (err) {
       console.error('[live-data] failed:', (err as Error).message)
+    }
+
+    // On-demand coin fetch — if user asks about a specific altcoin not in the top-10 feed
+    const wantsCrypto = /\b(crypto|coin|token|blockchain|defi|nft|web3|altcoin|bitcoin|btc|ethereum|eth|solana|sol|tao|bittensor|inj|injective|rndr|render|arb|arbitrum|op|optimism|tia|celestia|sei|sui|apt|aptos|kas|kaspa|fetch|wld|worldcoin|pepe|bonk|floki|jito|pyth|wormhole|jup|jupiter)\b/i.test(latestUserMessage)
+    if (wantsCrypto && needsLiveData) {
+      try {
+        const coinData = await fetchCoinOnDemand(latestUserMessage)
+        if (coinData) {
+          liveData += coinData
+          console.log('[coin-ondemand] injected specific coin data')
+        }
+      } catch (err) {
+        console.error('[coin-ondemand] failed:', (err as Error).message)
+      }
     }
 
     // Inject news context — always for any financial question, not just briefings
