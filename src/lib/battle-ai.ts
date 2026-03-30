@@ -652,8 +652,11 @@ async function generateWithChatGPT(category: string, liveData: string): Promise<
   const system = `${AI_PERSONAS.chatgpt}\n\nLIVE MARKET DATA:\n${liveData}`
   const user = CHATGPT_CATEGORY_INSTRUCTIONS[category]
   if (openaiClient) {
-    try { return await callOpenAICompat(openaiClient, 'gpt-4o', system, user) }
-    catch (e) { console.error('[chatgpt] API error, falling back to Claude:', e) }
+    try {
+      const result = await callOpenAICompat(openaiClient, 'gpt-4o', system, user)
+      if (result && result.trim().length > 10) return result
+      console.error('[chatgpt] empty response, falling back to Claude')
+    } catch (e) { console.error('[chatgpt] API error, falling back to Claude:', e) }
   }
   return callClaude(system, user)
 }
@@ -662,8 +665,11 @@ async function generateWithGemini(category: string, liveData: string): Promise<s
   const system = `${AI_PERSONAS.gemini}\n\nLIVE MARKET DATA:\n${liveData}`
   const user = GEMINI_CATEGORY_INSTRUCTIONS[category]
   if (geminiClient) {
-    try { return await callOpenAICompat(geminiClient, 'gemini-2.0-flash', system, user) }
-    catch (e) { console.error('[gemini] API error, falling back to Claude:', e) }
+    try {
+      const result = await callOpenAICompat(geminiClient, 'gemini-2.0-flash', system, user)
+      if (result && result.trim().length > 10) return result
+      console.error('[gemini] empty or too-short response, falling back to Claude')
+    } catch (e) { console.error('[gemini] API error, falling back to Claude:', e) }
   }
   return callClaude(system, user)
 }
@@ -672,8 +678,11 @@ async function generateWithGrok(category: string, liveData: string): Promise<str
   const system = `${AI_PERSONAS.grok}\n\nLIVE MARKET DATA:\n${liveData}`
   const user = GROK_CATEGORY_INSTRUCTIONS[category]
   if (xai) {
-    try { return await callOpenAICompat(xai, 'grok-2-latest', system, user) }
-    catch (e) { console.error('[grok] API error, falling back to Claude:', e) }
+    try {
+      const result = await callOpenAICompat(xai, 'grok-2-latest', system, user)
+      if (result && result.trim().length > 10) return result
+      console.error('[grok] empty response, falling back to Claude')
+    } catch (e) { console.error('[grok] API error, falling back to Claude:', e) }
   }
   return callClaude(system, user)
 }
