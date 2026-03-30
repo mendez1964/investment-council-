@@ -647,6 +647,12 @@ function ManageUsers({ password }: { password: string }) {
             </div>
           ) : (
             <>
+              {found.stripe_customer_id && (
+                <div style={{ fontSize: '10px', color: '#d97706', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '6px', padding: '6px 10px' }}>
+                  This user is on a Stripe trial. Granting admin access will override their trial and give them permanent IC access (Stripe billing stays intact).
+                </div>
+              )}
+
               {/* Grant tier row */}
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <div style={{ fontSize: '11px', color: '#374151', fontWeight: 600 }}>Grant tier:</div>
@@ -667,16 +673,15 @@ function ManageUsers({ password }: { password: string }) {
                 ))}
                 <button
                   onClick={handleGrant}
-                  disabled={saving || grantTier === found.tier}
+                  disabled={saving}
                   style={{
                     marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', border: 'none',
-                    background: grantTier === found.tier ? '#f0f0f0' : '#7c3aed',
-                    color: grantTier === found.tier ? '#9ca3af' : '#fff',
-                    fontSize: '12px', fontWeight: 700, cursor: saving || grantTier === found.tier ? 'default' : 'pointer',
+                    background: '#7c3aed', color: '#fff',
+                    fontSize: '12px', fontWeight: 700, cursor: saving ? 'default' : 'pointer',
                     fontFamily: 'inherit',
                   }}
                 >
-                  {saving ? 'Saving...' : grantTier === found.tier ? 'Already on this tier' : `Grant ${grantTier} access`}
+                  {saving ? 'Saving...' : `Grant ${grantTier} access`}
                 </button>
               </div>
 
