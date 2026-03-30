@@ -293,6 +293,85 @@ export async function POST(request: Request) {
       }
     }
 
+    // On-demand stock technical analysis — support/resistance, Fibonacci, pivots, MAs
+    // Fires when user asks about technicals for a specific ticker
+    const wantsTechnicals = /\b(support|resistance|fib|fibonacci|pivot|moving average|sma|ema|rsi|macd|bollinger|technical|setup|level|breakdown|breakout|oversold|overbought|trend|momentum|chart|pattern)\b/i.test(latestUserMessage)
+    if (wantsTechnicals && needsLiveData && !wantsCrypto) {
+      try {
+        // Extract stock ticker from message — 1-5 uppercase letters
+        const tickerMatch = latestUserMessage.match(/\b([A-Z]{1,5})\b/g)
+        const SKIP_WORDS = new Set(['THE','AND','FOR','NOT','ARE','YOU','ALL','CAN','GET','SET','BUY','SELL','HOLD','SPY','QQQ','ETF','RSI','SMA','EMA','ATH','ATL','MACD','USE','ITS','HIS','HOW','NOW','TOP','LOW','HIGH','LONG','USD','API','SEC','FED','GDP','CPI','IPO','OTC','AUM','ROE','EPS','TVL','APY','APR','BTC','ETH','SOL'])
+        const tickers = (tickerMatch ?? []).filter(t => !SKIP_WORDS.has(t) && t.length >= 2 && t.length <= 5)
+
+        if (tickers.length > 0) {
+          const { getTechnicalSnapshot, getPivotLevels } = await import('@/lib/finnhub')
+          const ticker = tickers[0]
+          const [snap, pivots] = await Promise.all([
+            getTechnicalSnapshot(ticker).catch(() => null),
+            getPivotLevels(ticker).catch(() => null),
+          ])
+
+          if (snap || pivots) {
+            const p = (n: number | null) => n != null ? `$${n.toFixed(2)}` : 'N/A'
+            const pct = (n: number | null) => n != null ? `${n.toFixed(2)}%` : 'N/A'
+
+            let techBlock = `\n\n## TECHNICAL ANALYSIS — ${ticker.toUpperCase()}\n`
+
+            if (snap) {
+              const maStatus = [
+                snap.sma20 != null ? `20-day SMA: $${snap.sma20.toFixed(2)} (price is ${snap.aboveSma20 ? 'ABOVE ✓' : 'BELOW ✗'})` : null,
+                snap.sma50 != null ? `50-day SMA: $${snap.sma50.toFixed(2)} (price is ${snap.aboveSma50 ? 'ABOVE ✓' : 'BELOW ✗'})` : null,
+                snap.sma200 != null ? `200-day SMA: $${snap.sma200.toFixed(2)} (price is ${snap.aboveSma200 ? 'ABOVE ✓' : 'BELOW ✗'})` : null,
+              ].filter(Boolean).join('\n')
+
+              techBlock += `
+### MOVING AVERAGES
+${maStatus}
+
+### MOMENTUM INDICATORS
+RSI (14): ${snap.rsi14 != null ? snap.rsi14.toFixed(1) : 'N/A'}${snap.rsi14 != null ? (snap.rsi14 > 70 ? ' — OVERBOUGHT ⚠' : snap.rsi14 < 30 ? ' — OVERSOLD ✓ potential reversal' : snap.rsi14 > 55 ? ' — Bullish momentum' : snap.rsi14 < 45 ? ' — Bearish momentum' : ' — Neutral') : ''}
+MACD Line: ${snap.macdLine?.toFixed(3) ?? 'N/A'} | Signal: ${snap.macdSignal?.toFixed(3) ?? 'N/A'} | Histogram: ${snap.macdHistogram?.toFixed(3) ?? 'N/A'}${snap.macdHistogram != null ? (snap.macdHistogram > 0 ? ' — Bullish momentum building' : ' — Bearish momentum') : ''}
+ATR (14-day): ${snap.atr14?.toFixed(2) ?? 'N/A'} — average daily range, use for stop sizing
+
+### BOLLINGER BANDS
+Upper: ${p(snap.bbUpper)} | Lower: ${p(snap.bbLower)}
+%B: ${pct(snap.bbPctB)}${snap.bbPctB != null ? (snap.bbPctB > 80 ? ' — Price near upper band, overbought' : snap.bbPctB < 20 ? ' — Price near lower band, oversold' : ' — Price within bands') : ''}
+
+### VOLUME
+Today vs 30-day avg: ${snap.volVsAvg != null ? `${snap.volVsAvg}x` : 'N/A'}${snap.volVsAvg != null ? (snap.volVsAvg > 2 ? ' — HIGH volume, strong conviction' : snap.volVsAvg < 0.5 ? ' — LOW volume, weak move' : ' — Normal volume') : ''}
+
+### TREND SUMMARY
+${snap.trendSignal}`
+            }
+
+            if (pivots) {
+              techBlock += `
+
+### PIVOT POINTS (Floor Trader Method — based on yesterday's session)
+Pivot Point: ${p(pivots.pp)}
+Resistance 1: ${p(pivots.r1)} | Resistance 2: ${p(pivots.r2)}
+Support 1: ${p(pivots.s1)} | Support 2: ${p(pivots.s2)}
+
+### 20-DAY SWING HIGH/LOW
+Swing High: ${p(pivots.swingHigh20)} — key resistance / stop above
+Swing Low: ${p(pivots.swingLow20)} — key support / stop below
+
+### FIBONACCI RETRACEMENTS (20-day swing high → swing low)
+38.2% retracement: ${p(pivots.fib382)}
+50.0% retracement: ${p(pivots.fib500)}
+61.8% retracement (golden ratio): ${p(pivots.fib618)}
+Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib382 ? ` — ${pivots.price < pivots.fib618 ? 'Below 61.8% Fib — deep retracement / potential base' : pivots.price < pivots.fib500 ? 'Between 50-61.8% Fib — mid-range retracement' : pivots.price < pivots.fib382 ? 'Between 38.2-50% Fib — shallow retracement, trend still intact' : 'Above 38.2% Fib — holding up well'}` : ''}`
+            }
+
+            liveData += techBlock
+            console.log(`[technicals-ondemand] injected for ${ticker}`)
+          }
+        }
+      } catch (err) {
+        console.error('[technicals-ondemand] failed:', (err as Error).message)
+      }
+    }
+
     // Inject news context — always for any financial question, not just briefings
     if (needsLiveData) {
       try {
