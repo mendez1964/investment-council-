@@ -723,7 +723,10 @@ export async function GET(request: Request) {
 
     const supabase = createServerSupabaseClient()
 
-    await evaluatePending(supabase)
+    // Only evaluate pending picks when called by the cron — never on a regular page load
+    const cronSecret = request.headers.get('x-cron-secret')
+    const validCron = cronSecret === (process.env.CRON_SECRET ?? 'ic-cron-2024')
+    if (validCron) await evaluatePending(supabase)
 
     // Fetch error check
     const { data: probe, error: fetchErr } = await supabase
@@ -758,10 +761,15 @@ export async function GET(request: Request) {
     if (dailyPicks.length < 5 && !isWeekendToday) {
       let liveData = ''
       try {
-        const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))
+        const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
         liveData = await Promise.race([fetchLiveData('pre-market briefing options volatility sector rotation market movers'), timeout])
       } catch {}
-      await generatePicks(supabase, today, getDailyExpiry(today), 5, 'daily', liveData)
+      try {
+        const genTimeout = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('generation timeout')), 55000))
+        await Promise.race([generatePicks(supabase, today, getDailyExpiry(today), 5, 'daily', liveData), genTimeout])
+      } catch (err) {
+        console.error('[ai-options] daily generation failed:', (err as Error).message)
+      }
       const { data: fresh } = await supabase
         .from('ai_options_picks').select('*').eq('pick_date', today)
         .order('confidence', { ascending: false })
@@ -779,10 +787,15 @@ export async function GET(request: Request) {
     if (weeklyPicks.length < 5 && isMondayToday) {
       let liveData = ''
       try {
-        const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))
+        const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
         liveData = await Promise.race([fetchLiveData('weekly market outlook sector rotation institutional flow options volatility'), timeout])
       } catch {}
-      await generatePicks(supabase, monday, getWeeklyExpiry(monday), 5, 'weekly', liveData)
+      try {
+        const genTimeout = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('generation timeout')), 55000))
+        await Promise.race([generatePicks(supabase, monday, getWeeklyExpiry(monday), 5, 'weekly', liveData), genTimeout])
+      } catch (err) {
+        console.error('[ai-options] weekly generation failed:', (err as Error).message)
+      }
       const { data: fresh } = await supabase
         .from('ai_options_picks').select('*').eq('pick_date', monday)
         .order('confidence', { ascending: false })
