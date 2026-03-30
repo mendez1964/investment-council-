@@ -344,9 +344,10 @@ export async function POST(request: Request) {
       console.error('[live-data] failed:', (err as Error).message)
     }
 
-    // On-demand coin fetch — if user asks about a specific altcoin not in the top-10 feed
+    // On-demand coin fetch — fires whenever a crypto keyword is mentioned, regardless of needsLiveData
+    // needsLiveData misses questions like "Is TAO going higher?" which have no price/buy/analysis keywords
     const wantsCrypto = /\b(crypto|coin|token|blockchain|defi|nft|web3|altcoin|bitcoin|btc|ethereum|eth|solana|sol|tao|bittensor|inj|injective|rndr|render|arb|arbitrum|op|optimism|tia|celestia|sei|sui|apt|aptos|kas|kaspa|fetch|wld|worldcoin|pepe|bonk|floki|jito|pyth|wormhole|jup|jupiter)\b/i.test(latestUserMessage)
-    if (wantsCrypto && needsLiveData) {
+    if (wantsCrypto) {
       try {
         const coinData = await fetchCoinOnDemand(latestUserMessage)
         if (coinData) {
