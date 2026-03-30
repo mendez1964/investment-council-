@@ -102,12 +102,15 @@ async function fetchCoinOnDemand(message: string): Promise<string> {
     const idsToTry: string[] = []
     if (directId) idsToTry.push(directId)
 
+    const cgKey = process.env.COINGECKO_API_KEY
+    const cgHeaders: HeadersInit = cgKey ? { 'x-cg-demo-api-key': cgKey } : {}
+
     for (const candidate of candidates.slice(0, 3)) {
       try {
         // Search for unknown coins not in the direct map
         const searchRes = await fetch(
           `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(candidate)}`,
-          { next: { revalidate: 120 } }
+          { headers: cgHeaders, cache: 'no-store' }
         )
         if (!searchRes.ok) continue
         const searchData = await searchRes.json()
@@ -123,7 +126,7 @@ async function fetchCoinOnDemand(message: string): Promise<string> {
         // Fetch full coin detail — price, market, fundamentals, community, developer
         const detailRes = await fetch(
           `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=true&developer_data=true&sparkline=false`,
-          { next: { revalidate: 300 } }
+          { headers: cgHeaders, cache: 'no-store' }
         )
         if (!detailRes.ok) {
           console.error(`[coin-ondemand] CoinGecko ${coinId} returned ${detailRes.status}`)
