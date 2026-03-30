@@ -100,12 +100,19 @@ async function fetchCoinOnDemand(message: string): Promise<string> {
       }
     }
 
-    // Fall back to uppercase ticker extraction + CoinGecko search for unknown coins not in the map
+    // Fall back to uppercase ticker extraction + any non-common word as potential coin name/ticker
     const upper = message.match(/\b([A-Z]{2,8})\b/g) ?? []
     const SKIP = new Set(['THE','AND','FOR','NOT','BUT','ARE','YOU','ALL','CAN','HAS','HAD','ITS','HIS','HER','WHO','HOW','NOW','NEW','OLD','ONE','TWO','GET','SET','PUT','LET','SAY','USE','MAY','BIG','TOP','LOW','HIGH','LONG','CALL','PUTS','HOLD','SELL','BUY','SPY','QQQ','DIA','IWM','USD','EUR','GBP','JPY','API','CEO','CFO','SEC','FED','GDP','CPI','IPO','ETF','OTC','RSI','ATH','ATL','EMA','SMA','AUM','ROE','EPS','TVL','APY','APR','GIVE','WHAT','DOES','TELL','SHOW','LOOK','NEED','WANT','GOOD','BAD','BEST','NEXT','LAST','WEEK','YEAR','RISK','LOSS','GAIN','MOVE','PUMP','DUMP'])
+    const SKIP_LOWER = new Set(['why','is','are','was','the','and','for','not','but','how','what','will','does','did','has','have','been','can','could','would','should','its','him','her','his','our','out','all','now','new','old','one','two','get','got','put','set','run','buy','sell','hold','top','low','high','long','short','fall','fell','drop','rise','pump','dump','move','went','going','today','this','that','with','from','they','them','just','even','make','like','some','many','much','over','also','then','than','when','where','who','which','after','about','into','only','such','more','most','last','next','week','year','day','good','bad','best','risk','give','tell','show','look','need','want','token','coin','crypto','price','market','trade'])
     const candidates: string[] = []
     for (const t of upper) {
       if (!SKIP.has(t) && t.length >= 2 && t.length <= 8) candidates.push(t)
+    }
+    // Also search lowercase words that look like coin names (not in skip list, 3+ chars)
+    if (!directId && candidates.length === 0) {
+      for (const w of words) {
+        if (w.length >= 3 && !SKIP_LOWER.has(w)) candidates.push(w)
+      }
     }
 
     if (!directId && candidates.length === 0) return ''
