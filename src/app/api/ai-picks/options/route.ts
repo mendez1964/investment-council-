@@ -808,9 +808,34 @@ export async function GET(request: Request) {
       .order('created_at', { ascending: false }).limit(500)
     const stats = calcOptionsStats(allPicks ?? [])
 
+    // Build history: past daily picks (last 7 days, excluding today)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sevenDaysAgoStr = toDateStr(sevenDaysAgo)
+    const { data: pastPicks } = await supabase
+      .from('ai_options_picks').select('*')
+      .gte('pick_date', sevenDaysAgoStr)
+      .lt('pick_date', today)
+      .order('pick_date', { ascending: false })
+      .order('confidence', { ascending: false })
+
+    const historyByDate: Record<string, any[]> = {}
+    for (const p of (pastPicks ?? [])) {
+      if (!historyByDate[p.pick_date]) historyByDate[p.pick_date] = []
+      historyByDate[p.pick_date].push(p)
+    }
+    const history = Object.entries(historyByDate)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, dayPicks]) => {
+        const ev = dayPicks.filter((p: any) => p.outcome === 'win' || p.outcome === 'loss')
+        const wins = ev.filter((p: any) => p.outcome === 'win').length
+        return { date, picks: dayPicks, wins, losses: ev.length - wins, total: ev.length, win_rate: ev.length > 0 ? Math.round((wins / ev.length) * 100) : null }
+      })
+
     return Response.json({
       picks,
       stats,
+      history,
       is_cached: true,
       generated_at: picks[0]?.created_at ?? '',
       daily_date: dailyPicks[0]?.pick_date ?? null,
@@ -818,6 +843,65 @@ export async function GET(request: Request) {
     })
   } catch (err) {
     console.error('[ai-options] error:', err)
+    return Response.json({ error: String(err) }, { status: 500 })
+  }
+}
+
+// POST — called by cron job at 7:30 AM ET weekdays
+export async function POST(request: Request) {
+  try {
+    const cronSecret = request.headers.get('x-cron-secret')
+    if (cronSecret !== (process.env.CRON_SECRET ?? 'ic-cron-2024')) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const today = toDateStr(new Date())
+    const monday = getMondayOfWeek(today)
+    const isMondayToday = monday === today
+    const isWeekendToday = isWeekend(today)
+
+    if (isWeekendToday) {
+      return Response.json({ skipped: true, reason: 'weekend' })
+    }
+
+    const supabase = createServerSupabaseClient()
+    await evaluatePending(supabase)
+
+    let liveData = ''
+    try {
+      const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
+      liveData = await Promise.race([fetchLiveData('pre-market briefing options volatility sector rotation market movers'), timeout])
+    } catch {}
+
+    // Always generate fresh daily picks
+    await supabase.from('ai_options_picks').delete().eq('pick_date', today).lte('expiry', today)
+    let dailyRows: any[] = []
+    try {
+      const genTimeout = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('generation timeout')), 55000))
+      dailyRows = await Promise.race([generatePicks(supabase, today, getDailyExpiry(today), 5, 'daily', liveData), genTimeout]) as any[]
+    } catch (err) {
+      console.error('[ai-options][cron] daily generation failed:', (err as Error).message)
+    }
+
+    // Generate weekly picks on Monday only
+    let weeklyRows: any[] = []
+    if (isMondayToday) {
+      let weeklyLiveData = ''
+      try {
+        const timeout = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 20000))
+        weeklyLiveData = await Promise.race([fetchLiveData('weekly market outlook sector rotation institutional flow options volatility'), timeout])
+      } catch {}
+      try {
+        const genTimeout = new Promise<void>((_, reject) => setTimeout(() => reject(new Error('generation timeout')), 55000))
+        weeklyRows = await Promise.race([generatePicks(supabase, monday, getWeeklyExpiry(monday), 5, 'weekly', weeklyLiveData), genTimeout]) as any[]
+      } catch (err) {
+        console.error('[ai-options][cron] weekly generation failed:', (err as Error).message)
+      }
+    }
+
+    return Response.json({ ok: true, daily: dailyRows.length, weekly: weeklyRows.length, date: today })
+  } catch (err) {
+    console.error('[ai-options][cron] error:', err)
     return Response.json({ error: String(err) }, { status: 500 })
   }
 }

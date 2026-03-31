@@ -79,6 +79,24 @@ interface OptionsStats {
   by_date: Array<{ date: string; wins: number; losses: number; total: number; win_rate: number; call_wins: number; call_total: number; put_wins: number; put_total: number }>
 }
 
+interface HistoryDay {
+  date: string
+  picks: Pick[]
+  wins: number
+  losses: number
+  total: number
+  win_rate: number | null
+}
+
+interface OptionsHistoryDay {
+  date: string
+  picks: OptionsPick[]
+  wins: number
+  losses: number
+  total: number
+  win_rate: number | null
+}
+
 interface APIResponse {
   picks: Pick[]
   stats: Stats
@@ -88,11 +106,13 @@ interface APIResponse {
   btc_change_pct?: number | null
   generated_at: string
   is_cached: boolean
+  history?: HistoryDay[]
 }
 
 interface OptionsAPIResponse {
   picks: OptionsPick[]
   stats: OptionsStats | null
+  history?: OptionsHistoryDay[]
   is_cached: boolean
   generated_at: string
   daily_date: string | null
@@ -1089,6 +1109,33 @@ export default function AIPicksPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Previous days options picks */}
+                  {(optionsData.history ?? []).length > 0 && (
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                        PREVIOUS DAYS
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {(optionsData.history ?? []).map(day => (
+                          <div key={day.date}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151' }}>{fmtDate(day.date)}</span>
+                              {day.total > 0 && (
+                                <span style={{ fontSize: '10px', color: day.win_rate != null && day.win_rate >= 50 ? '#16a34a' : '#dc2626', background: day.win_rate != null && day.win_rate >= 50 ? '#dcfce7' : '#fee2e2', borderRadius: '4px', padding: '1px 6px' }}>
+                                  {day.wins}W–{day.losses}L {day.win_rate != null ? `(${day.win_rate}%)` : ''}
+                                </span>
+                              )}
+                              {day.total === 0 && <span style={{ fontSize: '10px', color: '#9ca3af' }}>pending evaluation</span>}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px', opacity: 0.85 }}>
+                              {day.picks.map(pick => <OptionsPickCard key={pick.id} pick={pick} />)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })()
@@ -1105,10 +1152,49 @@ export default function AIPicksPage() {
                 No picks available — check back tomorrow
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: '8px' }}>
-                {(tab === 'stocks' ? stocks : cryptos).map(pick => (
-                  <PickCard key={pick.id} pick={pick} />
-                ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: '8px' }}>
+                  {(tab === 'stocks' ? stocks : cryptos).map(pick => (
+                    <PickCard key={pick.id} pick={pick} />
+                  ))}
+                </div>
+
+                {/* Previous Days History */}
+                {(() => {
+                  const historyDays = (data?.history ?? []).filter(d =>
+                    tab === 'stocks' ? d.picks.some(p => p.type === 'stock') : d.picks.some(p => p.type === 'crypto')
+                  )
+                  if (!historyDays.length) return null
+                  return (
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                        PREVIOUS DAYS
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        {historyDays.map(day => {
+                          const dayPicks = day.picks.filter(p => tab === 'stocks' ? p.type === 'stock' : p.type === 'crypto')
+                          return (
+                            <div key={day.date}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151' }}>{fmtDate(day.date)}</span>
+                                {day.total > 0 && (
+                                  <span style={{ fontSize: '10px', color: day.win_rate != null && day.win_rate >= 50 ? '#16a34a' : '#dc2626', background: day.win_rate != null && day.win_rate >= 50 ? '#dcfce7' : '#fee2e2', borderRadius: '4px', padding: '1px 6px' }}>
+                                    {day.wins}W–{day.losses}L {day.win_rate != null ? `(${day.win_rate}%)` : ''}
+                                  </span>
+                                )}
+                                {day.total === 0 && <span style={{ fontSize: '10px', color: '#9ca3af' }}>pending evaluation</span>}
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))', gap: '8px', opacity: 0.85 }}>
+                                {dayPicks.map(pick => <PickCard key={pick.id} pick={pick} />)}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
+
               </div>
             )
           )}

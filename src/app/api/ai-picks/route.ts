@@ -6,16 +6,11 @@ import { getCryptoPrice } from '@/lib/coingecko'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
 
-// Key stocks the AI picks from — pre-fetch real RSI + MAs so Factor 1 & 2 are scored from real data
-const PICKS_UNIVERSE = [
-  'SPY','QQQ','IWM',
-  'AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX',
-  'JPM','GS','BAC','XOM','GLD','TLT',
-  'COIN','PLTR','CRWD','PANW','UBER','SMCI','MSTR',
-]
+// Fixed 5-ticker universe — same as options for focused, high-quality picks
+const PICKS_UNIVERSE = ['SPY', 'QQQ', 'NVDA', 'AAPL']
 
 // Key tickers to also fetch analyst/fundamental/flow data for
-const ANALYST_UNIVERSE = ['SPY','QQQ','AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX','COIN','PLTR','CRWD','SMCI']
+const ANALYST_UNIVERSE = ['SPY', 'QQQ', 'AAPL', 'NVDA']
 
 async function fetchTechnicalContext(): Promise<string> {
   const [
@@ -317,13 +312,16 @@ STOCK SCORING → OUTPUT RULES:
 70-79 pts  → confidence 5-6, include only if catalyst score is ≥15
 <70 pts    → SKIP — do not include this stock, find a better one
 
+HARD UNIVERSE RESTRICTION — ONLY these 5 tickers, no exceptions:
+SPX (≈ SPY × 10.27), SPY, QQQ, AAPL, NVDA
+Do NOT pick IWM, sector ETFs (XLF, XLU, XLK, etc.), or any other ticker. ONLY these 5.
+
 STOCK HARD RULES:
-- Target exactly 10 stock picks — this is the goal every day. Only drop below 10 if the market genuinely cannot produce 10 picks scoring 70+, in which case return as many as qualify (minimum 7).
+- EXACTLY 5 picks — one for each ticker: SPX, SPY, QQQ, AAPL, NVDA. Always include all 5.
+- Choose bullish or bearish for each based on your IC scoring — pick the direction with higher evidence
 - Every rationale must mention the 2 strongest factors (e.g. "Above all MAs, RSI 58, tech sector leading")
-- Mix: at least 3 bullish AND at least 2 bearish picks (markets always have both directions)
-- No picks purely on name recognition — AAPL, TSLA, NVDA only if they score 70+
-- Preferred universe: SPY, QQQ, IWM components — liquid, real price action
-- EACH SYMBOL CAN ONLY APPEAR ONCE — never include the same ticker twice regardless of bias. Choose a different stock for the bearish slot.` : ''
+- SPX has no direct real-data feed — use SPY × 10.27 as price approximation for scoring
+- EACH SYMBOL APPEARS EXACTLY ONCE` : ''
 
   const cryptoSection = `
 ═══════════════════════════════════════════
@@ -421,7 +419,7 @@ Required JSON format:
 market_regime must be one of: "risk-on" | "neutral" | "caution" | "risk-off"
 scores: output the actual factor scores you assigned — these are shown to users so be accurate.
 
-${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only, no filler.' : doStocks ? 'Include 10 stock picks — quality only. Return empty array [] for crypto.' : 'Crypto runs 24/7. Include 8 crypto picks — quality only. Return empty array [] for stocks.'}`
+${doStocks && doCrypto ? 'Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA — all 5) AND 8 crypto picks.' : doStocks ? 'Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA). Return empty array [] for crypto.' : 'Crypto runs 24/7. Include 8 crypto picks — quality only. Return empty array [] for stocks.'}`
 
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -446,7 +444,7 @@ ${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only,
 
   const parsed = extractJSON(rawText)
 
-  const stocks: any[] = doStocks ? (parsed.stocks ?? []).slice(0, 10) : []
+  const stocks: any[] = doStocks ? (parsed.stocks ?? []).slice(0, 5) : []
   const crypto: any[] = doCrypto ? (parsed.crypto ?? []).slice(0, 10) : []
   const marketContext: string = parsed.market_context ?? ''
 
@@ -575,7 +573,7 @@ export async function GET(request: Request) {
     let isCached = false
     let generatedAt = ''
 
-    const expectedCount = mode === 'crypto' ? 4 : mode === 'stocks' ? 4 : (isWeekend(today) ? 3 : 5)
+    const expectedCount = mode === 'crypto' ? 4 : mode === 'stocks' ? 5 : (isWeekend(today) ? 4 : 9)
     if (picks.length >= expectedCount && !refresh) {
       isCached = true
       generatedAt = picks[0]?.created_at ?? ''
