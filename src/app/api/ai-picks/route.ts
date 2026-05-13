@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import { fetchATSignals } from '@/lib/agentic-trader'
 import { fetchLiveData } from '@/lib/live-data'
 import { getQuote, getTechnicalSnapshot, getPivotLevels, getPriceTarget, getRecommendations, getInsiderSentiment, getMetrics, getEarningsHistory, getIntradayCandles, computeVWAP } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
@@ -342,12 +343,27 @@ Score 10: At key support with bounce signal
 Score 5: Below MAs but catalyst very specific
 Score 0: Downtrend with no catalyst — skip
 
-FACTOR 3 — FUNDING RATE SIGNAL (0-20)
-Score 20: Funding rates NEGATIVE or near zero — shorts paying longs, potential squeeze, room to run upward
-Score 15: Funding rates slightly positive (0-0.01%) — healthy, not overleveraged
-Score 8: Funding rates elevated (0.01-0.05%) — longs paying, caution on new bullish entries
-Score 3: Funding rates very high (>0.05%) — heavily overleveraged longs, high crash risk
-Score 0: Post-liquidation cascade with no stabilization — skip
+FACTOR 3 — ON-CHAIN MARKET STRUCTURE (0-20)
+This factor is pre-scored from Agentic Trader's live data — do NOT invent these values.
+Use the AT signal for each coin from the AGENTIC TRADER MODEL SIGNALS section above.
+
+Funding rate scoring:
+Score 20: funding=bullish (rate negative or near zero) — shorts paying longs, room to run
+Score 15: funding=neutral (rate 0–0.01%) — healthy, not overleveraged
+Score 8:  funding=bearish (rate 0.01–0.05%) — longs paying, caution on bullish entries
+Score 3:  funding=bearish with high rate (>0.05%) — overleveraged longs, crash risk
+Score 0:  No AT signal available for this coin — score 10 as neutral
+
+OI modifier (add to funding score, cap Factor 3 at 20):
+OI rising + bullish signal: +2 (confirms trend)
+OI falling + bullish signal: -2 (trend weakening)
+OI rising + bearish signal: -2 (more shorts piling in)
+OI flat: +0
+
+AT confidence gate (applied BEFORE scoring):
+If lstm_confidence < 0.45: this coin may not be included as a bullish pick regardless of other factors
+If lstm_confidence >= 0.65: add +2 bonus to final ic_score (high model conviction)
+If no AT signal: treat as neutral, no gate applied
 
 FACTOR 4 — NARRATIVE STRENGTH (0-20)
 Score 20: Active dominant narrative — AI tokens, L2 ecosystem, RWA, Bitcoin ETF flows, DeFi revival, specific chain upgrade
@@ -372,6 +388,7 @@ CRYPTO SCORING → OUTPUT RULES:
 <65 pts   → SKIP
 
 CRYPTO HARD RULES:
+- AT MODEL GATE: If the AT signal for a coin shows lstm_confidence below 45%, do not include it as a bullish pick. You may use it as a bearish pick if other factors support it.
 - Target 8 crypto picks every day — you must always find 8 that score 65+. If the market is weak, include bearish picks to reach 8. Do not return fewer than 5.
 - BTC and ETH MUST be evaluated first — they set the regime for all others
 - No meme coins unless they have a genuine active narrative (not just "up today")
@@ -379,18 +396,28 @@ CRYPTO HARD RULES:
 - Mix bullish and bearish — if market is overextended, use bearish picks to fill the slate
 - EACH SYMBOL CAN ONLY APPEAR ONCE — never include the same ticker twice regardless of bias. If BTC is bullish, pick a different coin for the bearish slot.`
 
-  const prompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily picks. Score every candidate rigorously. Reject anything under 70.
+  // Shared system prompt with technical + live data context
+  const systemPrompt = `You are an expert trader applying the IC Formula rigorously. Score every pick against all 5 factors using the REAL technical indicator data provided. Reject anything under 70. Output only valid JSON.${technicalContext ? `\n\n${technicalContext}` : ''}${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`
+
+  let stocks: any[] = []
+  let crypto: any[] = []
+  let marketContext = ''
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
+
+  // ── Call 1: Stocks ─────────────────────────────────────────────────────────
+  if (doStocks) {
+    const stocksPrompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily stock picks. Score every candidate rigorously. Reject anything under 70.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
 ${newsContext}
-${doStocks ? stocksSection : ''}
-${doCrypto ? cryptoSection : ''}
+${stocksSection}
 
 Required JSON format:
 {
-  "market_context": "one sentence on current conditions + VIX level + BTC dominance direction",
+  "market_context": "one sentence on current conditions + VIX level",
   "market_regime": "risk-on",
-  "stocks": ${doStocks ? `[
+  "stocks": [
     {
       "symbol": "NVDA",
       "bias": "bullish",
@@ -401,8 +428,63 @@ Required JSON format:
       "catalyst": "AI infrastructure demand + XLK sector rotation inflow",
       "sector": "Technology"
     }
-  ]` : '[]'},
-  "crypto": ${doCrypto ? `[
+  ]
+}
+
+market_regime must be one of: "risk-on" | "neutral" | "caution" | "risk-off"
+scores: output the actual factor scores you assigned — these are shown to users so be accurate.
+Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA — all 5).`
+
+    const stocksResp = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: stocksPrompt }],
+    })
+
+    const stocksRaw = stocksResp.content[0].type === 'text' ? stocksResp.content[0].text : ''
+    console.log('[ai-picks] stocks response preview:', stocksRaw.slice(0, 150))
+    totalInputTokens += stocksResp.usage.input_tokens
+    totalOutputTokens += stocksResp.usage.output_tokens
+
+    const stocksParsed = extractJSON(stocksRaw)
+    stocks = (stocksParsed.stocks ?? []).slice(0, 5)
+    marketContext = stocksParsed.market_context ?? ''
+  }
+
+  // ── Call 2: Crypto ─────────────────────────────────────────────────────────
+  if (doCrypto) {
+    let atSignals: Record<string, any> = {}
+    try {
+      const signals = await fetchATSignals()
+      for (const s of signals) {
+        atSignals[s.symbol] = s
+      }
+    } catch {}
+
+    const atContext = Object.values(atSignals).length > 0
+      ? `\nAGENTIC TRADER MODEL SIGNALS (from LSTM trained on OKX perp data — use these to gate crypto picks):\n` +
+        Object.values(atSignals).map((s: any) => {
+          const conf = s.lstm_confidence != null ? (s.lstm_confidence * 100).toFixed(0) + '%' : 'N/A'
+          const parts = [`  ${s.symbol}: model=${s.lstm_signal ?? 'N/A'} confidence=${conf}`]
+          if (s.funding_bias != null) parts.push(`funding=${s.funding_bias}${s.funding_rate != null ? ` (${(s.funding_rate * 100).toFixed(4)}%)` : ''}`)
+          if (s.oi_trend != null) parts.push(`OI=${s.oi_trend}`)
+          return parts.join(' | ')
+        }).join('\n') +
+        `\n\nAT GATING RULE: If a coin appears above with confidence below 45%, do NOT include it as a bullish pick — mark it bearish or skip it. Coins with confidence 65%+ are high-priority candidates.\n`
+      : ''
+
+    const cryptoSystemPrompt = `${systemPrompt}${atContext}`
+
+    const cryptoPrompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily crypto picks. Score every candidate rigorously. Reject anything under 65.
+
+OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
+${newsContext}
+${cryptoSection}
+
+Required JSON format:
+{
+  "crypto": [
     {
       "symbol": "BTC",
       "coingecko_id": "bitcoin",
@@ -413,40 +495,37 @@ Required JSON format:
       "rationale": "BTC dominance rising, funding rates near zero, above 20+50-day MA",
       "catalyst": "ETF inflow acceleration + institutional accumulation signal"
     }
-  ]` : '[]'}
+  ]
 }
 
-market_regime must be one of: "risk-on" | "neutral" | "caution" | "risk-off"
-scores: output the actual factor scores you assigned — these are shown to users so be accurate.
+Include 8 crypto picks — quality only. Mix bullish and bearish as market conditions warrant. Do not return fewer than 5.`
 
-${doStocks && doCrypto ? 'Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA — all 5) AND 8 crypto picks.' : doStocks ? 'Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA). Return empty array [] for crypto.' : 'Crypto runs 24/7. Include 8 crypto picks — quality only. Return empty array [] for stocks.'}`
+    const cryptoResp = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 3000,
+      system: cryptoSystemPrompt,
+      messages: [{ role: 'user', content: cryptoPrompt }],
+    })
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 3500,
-    system: `You are an expert trader applying the IC Formula rigorously. Score every pick against all 5 factors using the REAL technical indicator data provided. Reject anything under 70. Output only valid JSON.${technicalContext ? `\n\n${technicalContext}` : ''}${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
-    messages: [{ role: 'user', content: prompt }],
-  })
+    const cryptoRaw = cryptoResp.content[0].type === 'text' ? cryptoResp.content[0].text : ''
+    console.log('[ai-picks] crypto response preview:', cryptoRaw.slice(0, 150))
+    totalInputTokens += cryptoResp.usage.input_tokens
+    totalOutputTokens += cryptoResp.usage.output_tokens
 
-  const rawText = response.content[0].type === 'text' ? response.content[0].text : ''
-  console.log('[ai-picks] response preview:', rawText.slice(0, 150))
+    const cryptoParsed = extractJSON(cryptoRaw)
+    crypto = (cryptoParsed.crypto ?? []).slice(0, 10)
+    // Use crypto's market context if stocks were skipped (e.g. weekend)
+    if (!marketContext) marketContext = cryptoParsed.market_context ?? ''
+  }
 
-  const inputTokens = response.usage.input_tokens
-  const outputTokens = response.usage.output_tokens
   await logApiUsage(supabase, {
     apiName: 'claude',
     endpoint: 'ai-picks-generate',
-    tokensInput: inputTokens,
-    tokensOutput: outputTokens,
-    costUsd: estimateClaudeCost(inputTokens, outputTokens),
+    tokensInput: totalInputTokens,
+    tokensOutput: totalOutputTokens,
+    costUsd: estimateClaudeCost(totalInputTokens, totalOutputTokens),
     success: true,
   })
-
-  const parsed = extractJSON(rawText)
-
-  const stocks: any[] = doStocks ? (parsed.stocks ?? []).slice(0, 5) : []
-  const crypto: any[] = doCrypto ? (parsed.crypto ?? []).slice(0, 10) : []
-  const marketContext: string = parsed.market_context ?? ''
 
   const stockPrices = await Promise.allSettled(stocks.map(p => getQuote(p.symbol).catch(() => null)))
   const cryptoPrices = await Promise.allSettled(
@@ -573,7 +652,7 @@ export async function GET(request: Request) {
     let isCached = false
     let generatedAt = ''
 
-    const expectedCount = mode === 'crypto' ? 4 : mode === 'stocks' ? 5 : (isWeekend(today) ? 4 : 9)
+    const expectedCount = mode === 'crypto' ? 4 : mode === 'stocks' ? 4 : (isWeekend(today) ? 3 : 15)
     if (picks.length >= expectedCount && !refresh) {
       isCached = true
       generatedAt = picks[0]?.created_at ?? ''

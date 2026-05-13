@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import { getSystemPrompt, getRelevantKnowledge, getRelevantPineKnowledge } from '@/lib/knowledge-base'
 import { fetchLiveData } from '@/lib/live-data'
+import { fetchATSignals, formatATSignalsForPrompt } from '@/lib/agentic-trader'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 
@@ -13,7 +14,7 @@ type AIProvider = 'claude' | 'chatgpt' | 'gemini' | 'grok'
 const OPENAI_CONFIGS: Record<string, { baseURL?: string; model: string; inputCostPer1M: number; outputCostPer1M: number }> = {
   chatgpt: { model: 'gpt-4o',           inputCostPer1M: 2.50,  outputCostPer1M: 10.00 },
   gemini:  { baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/', model: 'gemini-2.0-flash', inputCostPer1M: 0.075, outputCostPer1M: 0.30 },
-  grok:    { baseURL: 'https://api.x.ai/v1', model: 'grok-2-latest', inputCostPer1M: 2.00, outputCostPer1M: 10.00 },
+  grok:    { baseURL: 'https://api.x.ai/v1', model: 'grok-3', inputCostPer1M: 3.00, outputCostPer1M: 15.00 },
 }
 
 function streamText(text: string): Response {
@@ -377,6 +378,25 @@ export async function POST(request: Request) {
         }
       } catch (err) {
         console.error('[coin-ondemand] failed:', (err as Error).message)
+      }
+    }
+
+    // AT Signals — inject on-chain intelligence for crypto questions
+    const wantsATSignals = /\b(btc|eth|sol|bnb|xrp|ada|dot|link|avax|matic|doge|arb|op|inj|sui|near|hbar|atom|uni|aave|crypto|bitcoin|ethereum|funding|on.?chain|open.?interest|liquidation|lstm|funding.?rate)\b/i.test(latestUserMessage)
+    const sections: string[] = []
+    const tasks: Promise<void>[] = []
+    if (wantsATSignals) {
+      tasks.push(
+        fetchATSignals().then(signals => {
+          if (!signals.length) return
+          sections.push(formatATSignalsForPrompt(signals))
+        }).catch(() => {})
+      )
+    }
+    if (tasks.length) {
+      await Promise.all(tasks)
+      if (sections.length) {
+        liveData = sections.join('\n') + liveData
       }
     }
 
