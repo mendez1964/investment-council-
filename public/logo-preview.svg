@@ -1,0 +1,42 @@
+<svg width="640" height="200" viewBox="0 0 640 200" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Laurel wreath wrapping around bottom arc of circle -->
+  <!-- Circle center: (100,100), radius 42. Leaves placed at radius 57, from upper-left around bottom to upper-right -->
+  <g fill="#C9A34E">
+    <!-- θ=225° upper-left -->
+    <ellipse cx="59.7"  cy="59.7"  rx="13" ry="5" transform="rotate(315 59.7 59.7)"/>
+    <!-- θ=200° -->
+    <ellipse cx="47.4"  cy="80.8"  rx="13" ry="5" transform="rotate(290 47.4 80.8)"/>
+    <!-- θ=176° -->
+    <ellipse cx="43.1"  cy="104"   rx="13" ry="5" transform="rotate(266 43.1 104)"/>
+    <!-- θ=151° -->
+    <ellipse cx="50.1"  cy="127.6" rx="13" ry="5" transform="rotate(241 50.1 127.6)"/>
+    <!-- θ=127° -->
+    <ellipse cx="65.7"  cy="145.6" rx="13" ry="5" transform="rotate(217 65.7 145.6)"/>
+    <!-- θ=102° -->
+    <ellipse cx="87.9"  cy="155.7" rx="13" ry="5" transform="rotate(192 87.9 155.7)"/>
+    <!-- θ=78° -->
+    <ellipse cx="111.8" cy="155.8" rx="13" ry="5" transform="rotate(168 111.8 155.8)"/>
+    <!-- θ=53° -->
+    <ellipse cx="134.2" cy="145.6" rx="13" ry="5" transform="rotate(143 134.2 145.6)"/>
+    <!-- θ=29° -->
+    <ellipse cx="149.8" cy="127.2" rx="13" ry="5" transform="rotate(119 149.8 127.2)"/>
+    <!-- θ=4° -->
+    <ellipse cx="156.8" cy="104"   rx="13" ry="5" transform="rotate(94 156.8 104)"/>
+    <!-- θ=340° -->
+    <ellipse cx="153.6" cy="80.4"  rx="13" ry="5" transform="rotate(70 153.6 80.4)"/>
+    <!-- θ=315° upper-right -->
+    <ellipse cx="140.3" cy="59.7"  rx="13" ry="5" transform="rotate(45 140.3 59.7)"/>
+  </g>
+
+  <!-- Circle (drawn on top to cleanly cover any leaf overlap) -->
+  <circle cx="100" cy="100" r="44" fill="#0F2A44"/>
+
+  <!-- IC Letters -->
+  <text x="70" y="118" font-size="44" fill="white" font-family="Georgia, serif" font-weight="bold">IC</text>
+
+  <!-- Main Text -->
+  <text x="200" y="88"  font-family="Georgia, serif" font-size="38" fill="#0F2A44" font-weight="bold">Investment</text>
+  <text x="200" y="132" font-family="Georgia, serif" font-size="38" fill="#C9A34E" font-weight="bold">Council</text>
+
+</svg>

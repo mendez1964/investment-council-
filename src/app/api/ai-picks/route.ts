@@ -1,0 +1,680 @@
+import Anthropic from '@anthropic-ai/sdk'
+import { fetchLiveData } from '@/lib/live-data'
+import { getQuote, getTechnicalSnapshot, getPivotLevels, getPriceTarget, getRecommendations, getInsiderSentiment, getMetrics, getEarningsHistory, getIntradayCandles, computeVWAP } from '@/lib/finnhub'
+import { getCryptoPrice } from '@/lib/coingecko'
+// getCryptoPrice used for BTC benchmark in GET handler
+import { createServerSupabaseClient } from '@/lib/supabase'
+import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
+
+// Key stocks the AI picks from — pre-fetch real RSI + MAs so Factor 1 & 2 are scored from real data
+const PICKS_UNIVERSE = [
+  'SPY','QQQ','IWM',
+  'AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX',
+  'JPM','GS','BAC','XOM','GLD','TLT',
+  'COIN','PLTR','CRWD','PANW','UBER','SMCI','MSTR',
+]
+
+// Key tickers to also fetch analyst/fundamental/flow data for
+const ANALYST_UNIVERSE = ['SPY','QQQ','AAPL','NVDA','TSLA','META','AMZN','MSFT','GOOGL','AMD','NFLX','COIN','PLTR','CRWD','SMCI']
+
+async function fetchTechnicalContext(): Promise<string> {
+  const [
+    snapshotResults, pivotResults, vixResult,
+    quoteResults,   // pre-market gap + day range
+    metricsResults, // 52w high/low, short interest
+    earningsResults, // beat history
+    vwapResults,    // yesterday's VWAP
+    analystResults, insiderResults,
+  ] = await Promise.all([
+    Promise.allSettled(PICKS_UNIVERSE.map(t => getTechnicalSnapshot(t))),
+    Promise.allSettled(PICKS_UNIVERSE.map(t => getPivotLevels(t))),
+    getQuote('VIX').catch(() => null),
+    Promise.allSettled(PICKS_UNIVERSE.map(t => getQuote(t).catch(() => null))),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t => getMetrics(t).catch(() => null))),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t => getEarningsHistory(t, 8).catch(() => []))),
+    Promise.allSettled(PICKS_UNIVERSE.map(t =>
+      getIntradayCandles(t, 1, 1).then(c => computeVWAP(c)).catch(() => null)
+    )),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t =>
+      Promise.all([getPriceTarget(t).catch(() => null), getRecommendations(t).catch(() => null)])
+    )),
+    Promise.allSettled(ANALYST_UNIVERSE.map(t => getInsiderSentiment(t).catch(() => null))),
+  ])
+
+  // VIX
+  const vixLine = vixResult?.c != null
+    ? `\nVIX: ${vixResult.c.toFixed(2)}${vixResult.c < 18 ? ' — risk-on (Factor5=20)' : vixResult.c < 22 ? ' — neutral (Factor5=16)' : vixResult.c < 28 ? ' — elevated fear (Factor5=12)' : ' — risk-off (Factor5=6)'}\n`
+    : ''
+
+  const lines: string[] = []
+  snapshotResults.forEach((r, i) => {
+    if (r.status !== 'fulfilled' || !r.value) return
+    const s = r.value
+    const piv   = pivotResults[i].status === 'fulfilled' ? (pivotResults[i] as any).value : null
+    const q     = quoteResults[i].status === 'fulfilled'  ? (quoteResults[i] as any).value  : null
+    const vwap  = vwapResults[i].status  === 'fulfilled'  ? (vwapResults[i] as any).value   : null
+
+    let line = `${s.ticker}: $${s.price}`
+
+    // Pre-market gap
+    if (q?.dp != null) {
+      const gap = q.dp.toFixed(2)
+      const dir = q.dp > 0 ? '▲' : q.dp < 0 ? '▼' : '—'
+      line += ` ${dir}${gap}% premarket`
+    }
+
+    line += ` | ${s.trendSignal}`
+
+    // Yesterday's VWAP
+    if (vwap != null) {
+      const pos = s.price > vwap ? 'above' : 'below'
+      line += ` | VWAP(yest)=$${vwap} (${pos})`
+    }
+
+    if (piv) {
+      line += ` | PP=${piv.pp} R1=${piv.r1} R2=${piv.r2} S1=${piv.s1} S2=${piv.s2}`
+      line += ` | Fib(20d $${piv.swingLow20}–$${piv.swingHigh20}): 38.2%=$${piv.fib382} 50%=$${piv.fib500} 61.8%=$${piv.fib618}`
+    }
+
+    lines.push(line)
+  })
+
+  // Fundamental + analyst + insider lines
+  const fundamentalLines: string[] = []
+  metricsResults.forEach((mr, i) => {
+    const ticker = ANALYST_UNIVERSE[i]
+    const m = mr.status === 'fulfilled' ? mr.value : null
+    const parts: string[] = []
+
+    // 52-week high/low proximity
+    if (m?.['52WeekHigh'] && m?.['52WeekLow']) {
+      const h52 = m['52WeekHigh'], l52 = m['52WeekLow']
+      const snap = snapshotResults.find(sr => sr.status === 'fulfilled' && (sr as any).value?.ticker === ticker)
+      const price = snap?.status === 'fulfilled' ? (snap as any).value?.price : null
+      if (price) {
+        const fromHigh = (((price - h52) / h52) * 100).toFixed(1)
+        const fromLow  = (((price - l52) / l52) * 100).toFixed(1)
+        parts.push(`52w: H=$${h52}(${fromHigh}%) L=$${l52}(+${fromLow}%)`)
+      }
+    }
+
+    // Short interest
+    if (m?.shortInterestPercent != null) {
+      const si = parseFloat(m.shortInterestPercent).toFixed(1)
+      parts.push(`short%=${si}${parseFloat(si) > 15 ? ' (high — squeeze fuel)' : ''}`)
+    }
+
+    // Earnings beat rate
+    const er = earningsResults[i]
+    if (er?.status === 'fulfilled') {
+      const history = er.value as any[]
+      const withData = history.filter(e => e.beat !== null)
+      if (withData.length >= 2) {
+        const beats = withData.filter(e => e.beat).length
+        const beatPct = Math.round((beats / withData.length) * 100)
+        parts.push(`earnings beat ${beats}/${withData.length} qtrs (${beatPct}%)`)
+      }
+    }
+
+    // Analyst targets + recs
+    const ar = analystResults[i]
+    if (ar?.status === 'fulfilled') {
+      const [target, recs] = ar.value as any[]
+      if (target?.targetMean) {
+        const snap = snapshotResults.find(sr => sr.status === 'fulfilled' && (sr as any).value?.ticker === ticker)
+        const price = snap?.status === 'fulfilled' ? (snap as any).value?.price : null
+        const upside = price && target.targetMean > 0 ? ` (${(((target.targetMean - price) / price) * 100).toFixed(1)}% upside)` : ''
+        parts.push(`target $${target.targetMean}${upside}`)
+      }
+      if (recs?.[0]) {
+        const rec = recs[0]
+        const bull = (rec.strongBuy ?? 0) + (rec.buy ?? 0)
+        const bear = (rec.sell ?? 0) + (rec.strongSell ?? 0)
+        if (bull + bear + (rec.hold ?? 0) > 0) parts.push(`analysts: ${bull}B/${rec.hold ?? 0}H/${bear}S`)
+      }
+    }
+
+    // Insider sentiment
+    const ir = insiderResults[i]
+    if (ir?.status === 'fulfilled' && ir.value) {
+      const ins = ir.value as any
+      const data = Array.isArray(ins.data) ? ins.data : null
+      if (data?.length) {
+        const latest = data[data.length - 1]
+        if (latest?.change != null) parts.push(latest.change > 0 ? `insiders buying (+${latest.change})` : `insiders selling (${latest.change})`)
+      }
+    }
+
+    if (parts.length > 0) fundamentalLines.push(`  ${ticker}: ${parts.join(' | ')}`)
+  })
+
+  if (!lines.length) return ''
+
+  let out = `\nTECHNICAL INDICATORS — all computed from real data (score every factor from these exact values):\n`
+  out += `Each line: ticker | pre-market gap | MA/RSI/MACD/BB/ATR/Volume signals | yesterday VWAP | pivot levels | Fibonacci\n`
+  out += lines.join('\n')
+  out += vixLine
+  if (fundamentalLines.length > 0) {
+    out += `\nFUNDAMENTAL + ANALYST + INSIDER DATA (use for Factor 3/4 scoring):\n`
+    out += `(52w proximity: near ATH=momentum, near low=bounce | short%>15=squeeze fuel | beat rate=earnings reliability)\n`
+    out += fundamentalLines.join('\n') + '\n'
+  }
+  out += `\nPivot = floor trader daily pivots. Fibonacci = 20d swing retracements. VWAP = institutional mean price.\nS1/S2/fib = support zones. R1/R2 = resistance. Above VWAP = bullish bias. Below = bearish.\n`
+  return out
+}
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+const CRYPTO_ID_MAP: Record<string, string> = {
+  BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
+  XRP: 'ripple', ADA: 'cardano', AVAX: 'avalanche-2', DOT: 'polkadot',
+  MATIC: 'matic-network', LINK: 'chainlink', LTC: 'litecoin',
+  ATOM: 'cosmos', NEAR: 'near', ARB: 'arbitrum', OP: 'optimism',
+  INJ: 'injective-protocol', HBAR: 'hedera-hashgraph', DOGE: 'dogecoin',
+  SHIB: 'shiba-inu', UNI: 'uniswap', AAVE: 'aave', MKR: 'maker',
+  TON: 'the-open-network', TRX: 'tron', SUI: 'sui', APT: 'aptos',
+  FIL: 'filecoin', GRT: 'the-graph', PEPE: 'pepe', WIF: 'dogwifcoin',
+  BCH: 'bitcoin-cash', XLM: 'stellar', ICP: 'internet-computer',
+  IMX: 'immutable-x', RENDER: 'render-token', RNDR: 'render-token',
+  FET: 'fetch-ai', BONK: 'bonk', FLOKI: 'floki',
+}
+
+
+function extractJSON(text: string): any {
+  const cleaned = text.trim()
+  try { return JSON.parse(cleaned) } catch {}
+  const fence = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (fence) { try { return JSON.parse(fence[1].trim()) } catch {} }
+  const start = cleaned.indexOf('{')
+  const end = cleaned.lastIndexOf('}')
+  if (start !== -1 && end !== -1) { try { return JSON.parse(cleaned.slice(start, end + 1)) } catch {} }
+  throw new Error(`Could not parse JSON. Got: ${cleaned.slice(0, 200)}`)
+}
+
+async function evaluatePending(supabase: any) {
+  // Stocks: evaluate after 9 hours (picks at 7:30 AM ET, market closes 4:15 PM = 8.75h)
+  // Crypto: evaluate after 23 hours — crypto picks generate at 8 PM, stay open all day,
+  // evaluated by the next evening cron at 8 PM (23h later) before new picks are generated.
+  const stockCutoff  = new Date(Date.now() -  9 * 60 * 60 * 1000).toISOString()
+  const cryptoCutoff = new Date(Date.now() - 23 * 60 * 60 * 1000).toISOString()
+
+  const { data: stockPending } = await supabase
+    .from('ai_picks').select('*').eq('outcome', 'pending').eq('type', 'stock').lt('created_at', stockCutoff)
+  const { data: cryptoPending } = await supabase
+    .from('ai_picks').select('*').eq('outcome', 'pending').eq('type', 'crypto').lt('created_at', cryptoCutoff)
+
+  const pending = [...(stockPending ?? []), ...(cryptoPending ?? [])]
+  if (!pending?.length) return
+
+  await Promise.allSettled(pending.map(async (pick: any) => {
+    let currentPrice: number | null = null
+    try {
+      if (pick.type === 'stock') {
+        const q = await getQuote(pick.symbol)
+        currentPrice = q?.c ?? null
+      } else {
+        const coinId = pick.coingecko_id || CRYPTO_ID_MAP[pick.symbol?.toUpperCase()] || pick.symbol?.toLowerCase()
+        const p = await getCryptoPrice(coinId) as any
+        currentPrice = p?.price ?? null
+      }
+    } catch {}
+    if (currentPrice == null || !pick.entry_price) return
+    const priceChangePct = ((currentPrice - pick.entry_price) / pick.entry_price) * 100
+    const directionReturnPct = pick.bias === 'bullish' ? priceChangePct : -priceChangePct
+    await supabase.from('ai_picks').update({
+      outcome: directionReturnPct > 0 ? 'win' : 'loss',
+      exit_price: currentPrice,
+      price_change_pct: parseFloat(priceChangePct.toFixed(4)),
+      direction_return_pct: parseFloat(directionReturnPct.toFixed(4)),
+      evaluated_at: new Date().toISOString(),
+    }).eq('id', pick.id)
+  }))
+}
+
+function isWeekend(dateStr: string): boolean {
+  const day = new Date(dateStr + 'T12:00:00').getDay() // 0=Sun, 6=Sat
+  return day === 0 || day === 6
+}
+
+async function generatePicks(supabase: any, today: string, mode: 'all' | 'stocks' | 'crypto' = 'all') {
+  const weekend = isWeekend(today)
+  const doStocks = (mode === 'all' || mode === 'stocks') && !weekend
+  const doCrypto = mode === 'all' || mode === 'crypto'
+  const dataMsg = 'pre-market briefing sector rotation VIX fear greed bitcoin dominance funding rates ethereum solana market movers gainers losers economic macro'
+  let liveData = ''
+  let technicalContext = ''
+  try {
+    const [liveResult, techResult] = await Promise.allSettled([
+      Promise.race([fetchLiveData(dataMsg), new Promise<string>((_, reject) => setTimeout(() => reject(new Error('timeout')), 25000))]),
+      fetchTechnicalContext(),
+    ])
+    if (liveResult.status === 'fulfilled') liveData = liveResult.value
+    if (techResult.status === 'fulfilled') technicalContext = techResult.value
+  } catch {}
+
+  // Fetch today's high-impact news from the centralized pipeline
+  let newsContext = ''
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'
+    const newsRes = await fetch(`${baseUrl}/api/news/context?hours=24&limit=12&min_level=medium`)
+    if (newsRes.ok) {
+      const newsData = await newsRes.json()
+      const items: any[] = newsData.news ?? []
+      if (items.length > 0) {
+        const lines = items.map(n => {
+          const dir = n.impact_direction === 'positive' ? '▲' : n.impact_direction === 'negative' ? '▼' : '●'
+          const tickers = (n.affected_tickers ?? []).join(', ')
+          const est = n.price_impact_est ? ` · Est: ${n.price_impact_est}` : ''
+          return `• [${n.impact_level.toUpperCase()}] ${dir} ${tickers}: ${n.summary}${est}`
+        })
+        newsContext = `\nBREAKING NEWS CONTEXT — last 24h (use to sharpen picks and rationale):\n${lines.join('\n')}\n`
+      }
+    }
+  } catch {}
+
+  const stocksSection = doStocks ? `
+═══════════════════════════════════════════
+IC STOCK FORMULA — 5 FACTORS (each 0-20 pts)
+═══════════════════════════════════════════
+Evaluate EVERY candidate stock against all 5 factors. Only include picks scoring 70+.
+
+FACTOR 1 — TREND ALIGNMENT (0-20)
+Score 20: Price above 20, 50, AND 200-day MA (bullish) OR below all three (bearish)
+Score 15: Above/below 20+50-day MA
+Score 10: Above/below 20-day MA only — weak trend
+Score 5: Mixed MA signals — choppy
+Score 0: Trading against the primary trend — SKIP this pick
+
+FACTOR 2 — MOMENTUM QUALITY (0-20)
+Bullish: RSI 50-65 = 20pts (momentum sweet spot), RSI 65-72 = 14pts (extended but ok with catalyst), RSI >72 = 5pts (overbought risk), RSI <50 = 6pts (weak)
+Bearish: RSI 35-50 = 20pts, RSI 28-35 = 14pts, RSI <28 = 5pts (oversold bounce risk), RSI >50 = 6pts
+Volume confirmation: If today's volume is above 30-day average = +3 bonus pts
+
+FACTOR 3 — SECTOR FLOW (0-20)
+Score 20: Stock is in the #1 or #2 leading sector today with clear money inflow
+Score 15: In a strengthening sector, stock showing relative strength vs peers
+Score 10: Neutral sector but stock has strong individual catalyst
+Score 5: Sector slightly lagging, strong stock-specific story
+Score 0: In bottom 2 lagging sectors with no independent catalyst — use as bearish pick instead
+
+FACTOR 4 — CATALYST CLARITY (0-20)
+Score 20: Specific near-term catalyst — earnings beat, product launch, FDA approval, index add, analyst upgrade, technical breakout of major level with volume, or price bouncing off a key Fibonacci level (38.2%, 50%, 61.8%) or pivot support (S1/S2) with confirmation
+Score 15: Moderate catalyst — sector rotation event, ETF rebalance, peer momentum, or price approaching key pivot resistance (R1/R2) with momentum
+Score 10: Technical catalyst only — key support bounce, flag breakout, gap fill, or price testing PP (pivot point) level
+Score 5: Broad market/macro tailwind only
+Score 0: No identifiable catalyst — DO NOT include this pick. Vibes are not a catalyst.
+
+FACTOR 5 — MARKET REGIME FIT (0-20)
+Score 20: VIX <18 + SPY above 20-day MA = risk-on, favor bullish momentum plays
+Score 16: VIX 18-22, neutral regime — favor high-confidence picks only
+Score 12: VIX 22-28, elevated fear — only include if catalyst is very specific
+Score 6: VIX >28, risk-off — only bearish plays or defensive names
+Score 0: Pick goes against current regime (buying high-beta in VIX >28 = skip)
+
+STOCK SCORING → OUTPUT RULES:
+90-100 pts → confidence 9-10, include
+80-89 pts  → confidence 7-8, include
+70-79 pts  → confidence 5-6, include only if catalyst score is ≥15
+<70 pts    → SKIP — do not include this stock, find a better one
+
+STOCK HARD RULES:
+- Target exactly 10 stock picks — this is the goal every day. Only drop below 10 if the market genuinely cannot produce 10 picks scoring 70+, in which case return as many as qualify (minimum 7).
+- Every rationale must mention the 2 strongest factors (e.g. "Above all MAs, RSI 58, tech sector leading")
+- Mix: at least 3 bullish AND at least 2 bearish picks (markets always have both directions)
+- No picks purely on name recognition — AAPL, TSLA, NVDA only if they score 70+
+- Preferred universe: SPY, QQQ, IWM components — liquid, real price action
+- EACH SYMBOL CAN ONLY APPEAR ONCE — never include the same ticker twice regardless of bias. Choose a different stock for the bearish slot.` : ''
+
+  const cryptoSection = `
+═══════════════════════════════════════════
+IC CRYPTO FORMULA — 5 FACTORS (each 0-20 pts)
+═══════════════════════════════════════════
+Evaluate EVERY candidate crypto against all 5 factors. Only include picks scoring 70+.
+
+FACTOR 1 — BTC DOMINANCE ALIGNMENT (0-20)
+Score 20: BTC dominance RISING → favor BTC + large caps (ETH, BNB, SOL) — altcoins likely bleed
+Score 20: BTC dominance FALLING → favor mid/small caps with active narrative — altcoin season
+Score 12: BTC dominance flat → favor coins with independent catalysts
+Score 0: Pick directly contradicts dominance signal (buying random altcoins in rising dominance = skip)
+
+FACTOR 2 — PRICE MOMENTUM (0-20)
+Score 20: Price above 20 AND 50-day MA + BTC up >0.5% today (correlation tailwind)
+Score 15: Above 20-day MA, BTC neutral
+Score 10: At key support with bounce signal
+Score 5: Below MAs but catalyst very specific
+Score 0: Downtrend with no catalyst — skip
+
+FACTOR 3 — FUNDING RATE SIGNAL (0-20)
+Score 20: Funding rates NEGATIVE or near zero — shorts paying longs, potential squeeze, room to run upward
+Score 15: Funding rates slightly positive (0-0.01%) — healthy, not overleveraged
+Score 8: Funding rates elevated (0.01-0.05%) — longs paying, caution on new bullish entries
+Score 3: Funding rates very high (>0.05%) — heavily overleveraged longs, high crash risk
+Score 0: Post-liquidation cascade with no stabilization — skip
+
+FACTOR 4 — NARRATIVE STRENGTH (0-20)
+Score 20: Active dominant narrative — AI tokens, L2 ecosystem, RWA, Bitcoin ETF flows, DeFi revival, specific chain upgrade
+Score 15: Moderate narrative — sector rotation into the category, peer momentum
+Score 10: General crypto bull market tailwind only
+Score 5: Stale narrative, fading momentum
+Score 0: No narrative, no catalyst, pure speculation — DO NOT include
+
+FACTOR 5 — FEAR & GREED REGIME (0-20)
+Score 20: Fear & Greed 40-65 (neutral to greed) = healthy trending market, favor momentum longs
+Score 16: Fear & Greed 25-40 (fear) = potential bounce plays with specific catalyst
+Score 12: Fear & Greed 65-80 (greed) = still ok but tighten stops
+Score 5: Fear & Greed >80 (extreme greed) = avoid new longs, consider bearish plays
+Score 5: Fear & Greed <25 (extreme fear) = contrarian longs only with very strong on-chain backing
+Score 0: Extreme reading WITH no catalyst for reversal — skip
+
+CRYPTO SCORING → OUTPUT RULES:
+90-100 pts → confidence 9-10, include
+80-89 pts  → confidence 7-8, include
+70-79 pts  → confidence 5-6, include only if narrative score is ≥15
+65-69 pts  → confidence 4-5, include only if needed to reach minimum 8 picks
+<65 pts   → SKIP
+
+CRYPTO HARD RULES:
+- Target 8 crypto picks every day — you must always find 8 that score 65+. If the market is weak, include bearish picks to reach 8. Do not return fewer than 5.
+- BTC and ETH MUST be evaluated first — they set the regime for all others
+- No meme coins unless they have a genuine active narrative (not just "up today")
+- Every rationale must reference the 2 strongest factors
+- Mix bullish and bearish — if market is overextended, use bearish picks to fill the slate
+- EACH SYMBOL CAN ONLY APPEAR ONCE — never include the same ticker twice regardless of bias. If BTC is bullish, pick a different coin for the bearish slot.`
+
+  const prompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily picks. Score every candidate rigorously. Reject anything under 70.
+
+OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
+${newsContext}
+${doStocks ? stocksSection : ''}
+${doCrypto ? cryptoSection : ''}
+
+Required JSON format:
+{
+  "market_context": "one sentence on current conditions + VIX level + BTC dominance direction",
+  "market_regime": "risk-on",
+  "stocks": ${doStocks ? `[
+    {
+      "symbol": "NVDA",
+      "bias": "bullish",
+      "confidence": 8,
+      "ic_score": 84,
+      "scores": { "f1_trend": 18, "f2_momentum": 16, "f3_sector": 16, "f4_catalyst": 18, "f5_regime": 16 },
+      "rationale": "Above all 3 MAs, RSI 61, tech sector leading with strong volume",
+      "catalyst": "AI infrastructure demand + XLK sector rotation inflow",
+      "sector": "Technology"
+    }
+  ]` : '[]'},
+  "crypto": ${doCrypto ? `[
+    {
+      "symbol": "BTC",
+      "coingecko_id": "bitcoin",
+      "bias": "bullish",
+      "confidence": 9,
+      "ic_score": 88,
+      "scores": { "f1_trend": 20, "f2_momentum": 20, "f3_funding": 20, "f4_narrative": 16, "f5_regime": 12 },
+      "rationale": "BTC dominance rising, funding rates near zero, above 20+50-day MA",
+      "catalyst": "ETF inflow acceleration + institutional accumulation signal"
+    }
+  ]` : '[]'}
+}
+
+market_regime must be one of: "risk-on" | "neutral" | "caution" | "risk-off"
+scores: output the actual factor scores you assigned — these are shown to users so be accurate.
+
+${doStocks && doCrypto ? 'Include 10 stocks AND 8 crypto picks — quality only, no filler.' : doStocks ? 'Include 10 stock picks — quality only. Return empty array [] for crypto.' : 'Crypto runs 24/7. Include 8 crypto picks — quality only. Return empty array [] for stocks.'}`
+
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 3500,
+    system: `You are an expert trader applying the IC Formula rigorously. Score every pick against all 5 factors using the REAL technical indicator data provided. Reject anything under 70. Output only valid JSON.${technicalContext ? `\n\n${technicalContext}` : ''}${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
+    messages: [{ role: 'user', content: prompt }],
+  })
+
+  const rawText = response.content[0].type === 'text' ? response.content[0].text : ''
+  console.log('[ai-picks] response preview:', rawText.slice(0, 150))
+
+  const inputTokens = response.usage.input_tokens
+  const outputTokens = response.usage.output_tokens
+  await logApiUsage(supabase, {
+    apiName: 'claude',
+    endpoint: 'ai-picks-generate',
+    tokensInput: inputTokens,
+    tokensOutput: outputTokens,
+    costUsd: estimateClaudeCost(inputTokens, outputTokens),
+    success: true,
+  })
+
+  const parsed = extractJSON(rawText)
+
+  const stocks: any[] = doStocks ? (parsed.stocks ?? []).slice(0, 10) : []
+  const crypto: any[] = doCrypto ? (parsed.crypto ?? []).slice(0, 10) : []
+  const marketContext: string = parsed.market_context ?? ''
+
+  const stockPrices = await Promise.allSettled(stocks.map(p => getQuote(p.symbol).catch(() => null)))
+  const cryptoPrices = await Promise.allSettled(
+    crypto.map(p => {
+      const coinId = p.coingecko_id || CRYPTO_ID_MAP[p.symbol?.toUpperCase()] || p.symbol?.toLowerCase()
+      return getCryptoPrice(coinId).catch(() => null)
+    })
+  )
+
+  // Encode IC score + factor scores into rationale prefix so they persist without a DB migration
+  // Format: [IC:84|T:18|M:16|S:16|C:18|R:16] rationale text
+  function encodeRationale(pick: any): string {
+    const ic = pick.ic_score ?? ''
+    const s = pick.scores
+    if (s && ic) {
+      const parts = [
+        ic,
+        s.f1_trend ?? 0,
+        s.f2_momentum ?? 0,
+        s.f3_sector ?? s.f3_funding ?? 0,
+        s.f4_catalyst ?? s.f4_narrative ?? 0,
+        s.f5_regime ?? 0,
+      ]
+      return `[IC:${parts.join('|')}] ${pick.rationale ?? ''}`
+    }
+    if (ic) return `[IC:${ic}] ${pick.rationale ?? ''}`
+    return pick.rationale ?? ''
+  }
+
+  const rows: any[] = []
+  stocks.forEach((pick, i) => {
+    const q = stockPrices[i].status === 'fulfilled' ? (stockPrices[i] as any).value : null
+    rows.push({
+      pick_date: today, symbol: pick.symbol?.toUpperCase() ?? '', type: 'stock',
+      bias: pick.bias === 'bearish' ? 'bearish' : 'bullish',
+      entry_price: q?.c ?? null,
+      confidence: Math.min(10, Math.max(1, parseInt(pick.confidence) || 5)),
+      rationale: encodeRationale(pick), catalyst: pick.catalyst ?? '',
+      sector: pick.sector ?? '', coingecko_id: null,
+      market_context: marketContext, outcome: 'pending',
+    })
+  })
+  crypto.forEach((pick, i) => {
+    const p = cryptoPrices[i].status === 'fulfilled' ? (cryptoPrices[i] as any).value : null
+    rows.push({
+      pick_date: today, symbol: pick.symbol?.toUpperCase() ?? '', type: 'crypto',
+      bias: pick.bias === 'bearish' ? 'bearish' : 'bullish',
+      entry_price: (p as any)?.price ?? null,
+      confidence: Math.min(10, Math.max(1, parseInt(pick.confidence) || 5)),
+      rationale: encodeRationale(pick), catalyst: pick.catalyst ?? '',
+      sector: null,
+      coingecko_id: pick.coingecko_id || CRYPTO_ID_MAP[pick.symbol?.toUpperCase()] || pick.symbol?.toLowerCase(),
+      market_context: marketContext, outcome: 'pending',
+    })
+  })
+
+  if (rows.length > 0) {
+    const { error } = await supabase.from('ai_picks').insert(rows)
+    if (error) console.error('[ai-picks] insert error:', error)
+  }
+  return rows
+}
+
+function parseRegimeFromContext(ctx: string): string {
+  const lower = (ctx ?? '').toLowerCase()
+  if (/risk.off|vix\s*[>≥]\s*2[89]|vix\s*3\d|crash|panic/i.test(lower)) return 'risk-off'
+  if (/vix\s*[>≥]\s*2[2-7]|caution|elevated.fear|choppy/i.test(lower)) return 'caution'
+  if (/risk.on|vix\s*[<≤]\s*18|low.vix|bull.*trend|strong.uptrend/i.test(lower)) return 'risk-on'
+  return 'neutral'
+}
+
+function calcStats(picks: any[]) {
+  const ev = picks.filter(p => p.outcome === 'win' || p.outcome === 'loss')
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const wins = ev.filter(p => p.outcome === 'win')
+  const losses = ev.filter(p => p.outcome === 'loss')
+  const total = ev.length
+  const winRate = total > 0 ? (wins.length / total) * 100 : 0
+  const avgWin = wins.length > 0 ? wins.reduce((s, p) => s + (p.direction_return_pct ?? 0), 0) / wins.length : 0
+  const avgLoss = losses.length > 0 ? losses.reduce((s, p) => s + Math.abs(p.direction_return_pct ?? 0), 0) / losses.length : 0
+  let streakType: 'win' | 'loss' | null = null; let streakCount = 0
+  for (const p of ev) {
+    if (!streakType) { streakType = p.outcome; streakCount = 1 }
+    else if (p.outcome === streakType) streakCount++
+    else break
+  }
+  const se = ev.filter(p => p.type === 'stock'), ce = ev.filter(p => p.type === 'crypto')
+  const sorted = [...ev].sort((a, b) => (b.direction_return_pct ?? 0) - (a.direction_return_pct ?? 0))
+  return {
+    wins: wins.length, losses: losses.length, total, win_rate: winRate,
+    avg_win: avgWin, avg_loss: avgLoss, streak_type: streakType, streak_count: streakCount,
+    stock_wins: se.filter(p => p.outcome === 'win').length, stock_losses: se.filter(p => p.outcome === 'loss').length,
+    crypto_wins: ce.filter(p => p.outcome === 'win').length, crypto_losses: ce.filter(p => p.outcome === 'loss').length,
+    best: sorted[0] ? { symbol: sorted[0].symbol, return_pct: sorted[0].direction_return_pct } : null,
+    worst: sorted[sorted.length - 1] ? { symbol: sorted[sorted.length - 1].symbol, return_pct: sorted[sorted.length - 1].direction_return_pct } : null,
+    recent: ev.slice(0, 30).map(p => ({ outcome: p.outcome, return_pct: p.direction_return_pct })).reverse(),
+  }
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url)
+    const refresh = searchParams.get('refresh') === 'true'
+    const mode = (searchParams.get('type') ?? 'all') as 'all' | 'stocks' | 'crypto'
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+    const supabase = createServerSupabaseClient()
+
+    // Only evaluate pending picks when called by the cron — never on a regular page load
+    const cronSecret = request.headers.get('x-cron-secret')
+    const validCron = cronSecret === (process.env.CRON_SECRET ?? 'ic-cron-2024')
+    if (validCron) await evaluatePending(supabase)
+
+    // Check for today's picks (filter by type if requested)
+    let query = supabase.from('ai_picks').select('*').eq('pick_date', today)
+      .order('type').order('confidence', { ascending: false })
+    if (mode !== 'all') query = query.eq('type', mode === 'stocks' ? 'stock' : 'crypto')
+    const { data: todayPicks, error: fetchErr } = await query
+
+    if (fetchErr) throw new Error(`DB error: ${fetchErr.message}`)
+
+    let picks: any[] = todayPicks ?? []
+    let isCached = false
+    let generatedAt = ''
+
+    const expectedCount = mode === 'crypto' ? 4 : mode === 'stocks' ? 4 : (isWeekend(today) ? 3 : 5)
+    if (picks.length >= expectedCount && !refresh) {
+      isCached = true
+      generatedAt = picks[0]?.created_at ?? ''
+    } else {
+      if (refresh) {
+        // Only delete picks of the requested type
+        let del = supabase.from('ai_picks').delete().eq('pick_date', today)
+        if (mode !== 'all') del = del.eq('type', mode === 'stocks' ? 'stock' : 'crypto')
+        await del
+      }
+      picks = await generatePicks(supabase, today, mode)
+      generatedAt = new Date().toISOString()
+    }
+
+    // Re-fetch to get DB-assigned ids and created_at
+    if (!isCached) {
+      let freshQuery = supabase.from('ai_picks').select('*').eq('pick_date', today)
+        .order('type').order('confidence', { ascending: false })
+      if (mode !== 'all') freshQuery = freshQuery.eq('type', mode === 'stocks' ? 'stock' : 'crypto')
+      const { data: fresh } = await freshQuery
+      if (fresh?.length) picks = fresh
+    }
+
+    // For 'all' mode fetch, get both types from DB regardless of what was just generated
+    if (mode === 'all') {
+      const { data: allToday } = await supabase.from('ai_picks').select('*').eq('pick_date', today)
+        .order('type').order('confidence', { ascending: false })
+      if (allToday?.length) picks = allToday
+    }
+
+    const { data: allPicks } = await supabase.from('ai_picks').select('*').order('created_at', { ascending: false }).limit(500)
+    const stats = calcStats(allPicks ?? [])
+    const marketContext = picks[0]?.market_context ?? ''
+
+    // Build last 7 days history (excluding today)
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0]
+    const { data: historyPicks } = await supabase
+      .from('ai_picks').select('*')
+      .gte('pick_date', sevenDaysAgoStr)
+      .lt('pick_date', today)
+      .order('pick_date', { ascending: false })
+      .order('confidence', { ascending: false })
+
+    const historyByDate: Record<string, any[]> = {}
+    for (const p of (historyPicks ?? [])) {
+      if (!historyByDate[p.pick_date]) historyByDate[p.pick_date] = []
+      historyByDate[p.pick_date].push(p)
+    }
+    const history = Object.entries(historyByDate).map(([date, dayPicks]) => {
+      const ev = dayPicks.filter(p => p.outcome === 'win' || p.outcome === 'loss')
+      const wins = ev.filter(p => p.outcome === 'win').length
+      return {
+        date,
+        picks: dayPicks,
+        wins,
+        losses: ev.length - wins,
+        total: ev.length,
+        win_rate: ev.length > 0 ? Math.round((wins / ev.length) * 100) : null,
+      }
+    })
+
+    // Compute stop/target for each pick on the fly (no DB migration needed)
+    const picksWithLevels = picks.map((p: any) => {
+      if (!p.entry_price) return p
+      const conf = p.confidence ?? 5
+      const isCrypto = p.type === 'crypto'
+      let stopPct: number, targetPct: number
+      if (isCrypto) {
+        stopPct  = conf >= 9 ? 0.06 : conf >= 7 ? 0.08 : conf >= 5 ? 0.10 : 0.12
+        targetPct = conf >= 9 ? 0.12 : conf >= 7 ? 0.16 : conf >= 5 ? 0.20 : 0.24
+      } else {
+        stopPct  = conf >= 9 ? 0.035 : conf >= 7 ? 0.05 : conf >= 5 ? 0.065 : 0.08
+        targetPct = conf >= 9 ? 0.08  : conf >= 7 ? 0.12 : conf >= 5 ? 0.16  : 0.20
+      }
+      const stop_price  = p.bias === 'bullish' ? p.entry_price * (1 - stopPct)  : p.entry_price * (1 + stopPct)
+      const target_price = p.bias === 'bullish' ? p.entry_price * (1 + targetPct) : p.entry_price * (1 - targetPct)
+      return { ...p, stop_price: parseFloat(stop_price.toFixed(2)), target_price: parseFloat(target_price.toFixed(2)), stop_pct: stopPct, target_pct: targetPct }
+    })
+
+    // Fetch SPY + BTC daily change for benchmark
+    let spy_change_pct: number | null = null
+    let btc_change_pct: number | null = null
+    try {
+      const [spyQ, btcQ] = await Promise.allSettled([
+        getQuote('SPY'),
+        getCryptoPrice('bitcoin'),
+      ])
+      if (spyQ.status === 'fulfilled' && spyQ.value?.dp != null) spy_change_pct = parseFloat(spyQ.value.dp.toFixed(2))
+      if (btcQ.status === 'fulfilled' && (btcQ.value as any)?.change_pct_24h != null) btc_change_pct = parseFloat(((btcQ.value as any).change_pct_24h).toFixed(2))
+    } catch {}
+
+    // Parse market regime from first pick's market_context or AI-generated market_regime
+    const market_regime = picks[0]?.market_regime ?? parseRegimeFromContext(marketContext)
+
+    return Response.json({ picks: picksWithLevels, stats, market_context: marketContext, market_regime, spy_change_pct, btc_change_pct, generated_at: generatedAt, is_cached: isCached, history })
+  } catch (err) {
+    console.error('[ai-picks] error:', err)
+    return Response.json({ error: String(err) }, { status: 500 })
+  }
+}
