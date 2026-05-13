@@ -232,6 +232,20 @@ function isWeekend(dateStr: string): boolean {
   return day === 0 || day === 6
 }
 
+async function fetchSparkCryptoPicks(supabase: any): Promise<any[] | null> {
+  const today = new Date().toISOString().split('T')[0]
+  const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('ai_picks')
+    .select('*')
+    .eq('type', 'crypto')
+    .eq('pick_date', today)
+    .eq('source', 'spark')
+    .gte('created_at', twoHoursAgo)
+  if (error || !data || data.length < 3) return null
+  return data
+}
+
 async function generatePicks(supabase: any, today: string, mode: 'all' | 'stocks' | 'crypto' = 'all') {
   const weekend = isWeekend(today)
   const doStocks = (mode === 'all' || mode === 'stocks') && !weekend
@@ -454,6 +468,12 @@ Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA — all 5).`
 
   // ── Call 2: Crypto ─────────────────────────────────────────────────────────
   if (doCrypto) {
+    const sparkPicks = await fetchSparkCryptoPicks(supabase)
+    if (sparkPicks) {
+      console.log(`[ai-picks] Using ${sparkPicks.length} Spark picks for crypto — skipping Claude`)
+      return sparkPicks
+    }
+
     let atSignals: Record<string, any> = {}
     try {
       const signals = await fetchATSignals()
@@ -566,6 +586,7 @@ Include 8 crypto picks — quality only. Mix bullish and bearish as market condi
       rationale: encodeRationale(pick), catalyst: pick.catalyst ?? '',
       sector: pick.sector ?? '', coingecko_id: null,
       market_context: marketContext, outcome: 'pending',
+      source: 'claude',
     })
   })
   crypto.forEach((pick, i) => {
@@ -579,6 +600,7 @@ Include 8 crypto picks — quality only. Mix bullish and bearish as market condi
       sector: null,
       coingecko_id: pick.coingecko_id || CRYPTO_ID_MAP[pick.symbol?.toUpperCase()] || pick.symbol?.toLowerCase(),
       market_context: marketContext, outcome: 'pending',
+      source: 'claude',
     })
   })
 

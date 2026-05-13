@@ -156,6 +156,23 @@ export async function GET() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10)
 
+    // Fetch latest Spark run
+    const { data: sparkEvent } = await supabase
+      .from('spark_events')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    const sparkStatus = sparkEvent ? {
+      last_run: sparkEvent.created_at,
+      picks_count: sparkEvent.picks_count,
+      coins_processed: sparkEvent.coins_processed,
+      model: sparkEvent.model,
+      duration_seconds: sparkEvent.duration_seconds,
+      errors: sparkEvent.errors,
+    } : null
+
     return Response.json({
       today: {
         page_views: todayPageViews,
@@ -189,6 +206,7 @@ export async function GET() {
         sessions_today: uniqueSessions,
       },
       top_features_week: topFeaturesWeek,
+      spark: sparkStatus,
     })
   } catch (err) {
     console.error('[owner/stats]', err)

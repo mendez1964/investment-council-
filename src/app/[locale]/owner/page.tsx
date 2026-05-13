@@ -35,6 +35,14 @@ interface OwnerStats {
   api_costs: Array<{ api_name: string; calls: number; total_cost: number; avg_cost: number }>
   recent_events: Array<{ created_at: string; event_type: string; page: string | null; feature: string | null; session_id: string | null }>
   recent_errors: Array<{ created_at: string; feature: string | null; metadata: any }>
+  spark: {
+    last_run: string
+    picks_count: number
+    coins_processed: number
+    model: string
+    duration_seconds: number
+    errors: any
+  } | null
 }
 
 const PASSWORD_KEY = '_ic_owner'
@@ -99,6 +107,41 @@ function StatCard({ label, value, sub, color = '#111' }: { label: string; value:
       <div style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '6px' }}>{label}</div>
       <div style={{ fontSize: '28px', fontWeight: 800, color, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>{value}</div>
       {sub && <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '4px' }}>{sub}</div>}
+    </div>
+  )
+}
+
+function SparkCard({ spark }: { spark: any }) {
+  if (!spark) return (
+    <div style={{ background: '#111', border: '1px solid #222', borderRadius: '8px', padding: '12px 16px' }}>
+      <div style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em', marginBottom: '6px' }}>SPARK ENGINE</div>
+      <div style={{ fontSize: '12px', color: '#6b7280' }}>No runs recorded</div>
+    </div>
+  )
+
+  const lastRun = new Date(spark.last_run)
+  const minutesAgo = Math.floor((Date.now() - lastRun.getTime()) / 60000)
+  const hasErrors = spark.errors && spark.errors.length > 0
+  const statusColor = hasErrors ? '#ef4444' : spark.picks_count > 0 ? '#22c55e' : '#f59e0b'
+
+  return (
+    <div style={{ background: '#111', border: `1px solid ${statusColor}33`, borderRadius: '8px', padding: '12px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: statusColor }} />
+        <div style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.08em' }}>SPARK ENGINE</div>
+        <div style={{ fontSize: '9px', color: '#6b7280', marginLeft: 'auto' }}>{minutesAgo}m ago</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px' }}>
+        <div style={{ fontSize: '11px', color: '#e5e7eb' }}>{spark.picks_count} picks pushed</div>
+        <div style={{ fontSize: '11px', color: '#9ca3af' }}>{spark.coins_processed} coins checked</div>
+        <div style={{ fontSize: '10px', color: '#6b7280' }}>{spark.model}</div>
+        <div style={{ fontSize: '10px', color: '#6b7280' }}>{spark.duration_seconds}s</div>
+      </div>
+      {hasErrors && (
+        <div style={{ marginTop: '6px', fontSize: '10px', color: '#ef4444' }}>
+          {spark.errors.length} error(s): {spark.errors.map((e: any) => e.symbol).join(', ')}
+        </div>
+      )}
     </div>
   )
 }
@@ -1149,6 +1192,9 @@ export default function OwnerPage() {
                 <StatCard label="CLAUDE API CALLS" value={stats.week.claude_calls} color="#6d28d9" />
                 <StatCard label="EST. API COST" value={`$${stats.week.total_cost_usd.toFixed(4)}`} color="#d97706" />
                 <StatCard label="PICKS GENERATED" value={stats.week.picks_generated} color="#16a34a" />
+              </div>
+              <div style={{ marginTop: '12px' }}>
+                <SparkCard spark={stats?.spark} />
               </div>
             </div>
 
