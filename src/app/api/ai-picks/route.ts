@@ -1,11 +1,11 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { fetchATSignals } from '@/lib/agentic-trader'
 import { fetchLiveData } from '@/lib/live-data'
 import { getQuote, getTechnicalSnapshot, getPivotLevels, getPriceTarget, getRecommendations, getInsiderSentiment, getMetrics, getEarningsHistory, getIntradayCandles, computeVWAP } from '@/lib/finnhub'
 import { getCryptoPrice } from '@/lib/coingecko'
 // getCryptoPrice used for BTC benchmark in GET handler
 import { createServerSupabaseClient } from '@/lib/supabase'
-import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
+import { logApiUsage } from '@/lib/analytics'
 
 // Fixed 5-ticker universe — same as options for focused, high-quality picks
 const PICKS_UNIVERSE = ['SPY', 'QQQ', 'NVDA', 'AAPL']
@@ -159,7 +159,9 @@ async function fetchTechnicalContext(): Promise<string> {
   return out
 }
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const client = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 const CRYPTO_ID_MAP: Record<string, string> = {
   BTC: 'bitcoin', ETH: 'ethereum', SOL: 'solana', BNB: 'binancecoin',
@@ -449,17 +451,16 @@ market_regime must be one of: "risk-on" | "neutral" | "caution" | "risk-off"
 scores: output the actual factor scores you assigned — these are shown to users so be accurate.
 Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA — all 5).`
 
-    const stocksResp = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const stocksResp = await client.chat.completions.create({
+      model: OLLAMA_MODEL,
       max_tokens: 4000,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: stocksPrompt }],
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: stocksPrompt }],
     })
 
-    const stocksRaw = stocksResp.content[0].type === 'text' ? stocksResp.content[0].text : ''
+    const stocksRaw = stocksResp.choices[0]?.message?.content ?? ''
     console.log('[ai-picks] stocks response preview:', stocksRaw.slice(0, 150))
-    totalInputTokens += stocksResp.usage.input_tokens
-    totalOutputTokens += stocksResp.usage.output_tokens
+    totalInputTokens += stocksResp.usage?.prompt_tokens ?? 0
+    totalOutputTokens += stocksResp.usage?.completion_tokens ?? 0
 
     const stocksParsed = extractJSON(stocksRaw)
     stocks = (stocksParsed.stocks ?? []).slice(0, 5)
@@ -520,17 +521,16 @@ Required JSON format:
 
 Include 8 crypto picks — quality only. Mix bullish and bearish as market conditions warrant. Do not return fewer than 5.`
 
-    const cryptoResp = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const cryptoResp = await client.chat.completions.create({
+      model: OLLAMA_MODEL,
       max_tokens: 3000,
-      system: cryptoSystemPrompt,
-      messages: [{ role: 'user', content: cryptoPrompt }],
+      messages: [{ role: 'system', content: cryptoSystemPrompt }, { role: 'user', content: cryptoPrompt }],
     })
 
-    const cryptoRaw = cryptoResp.content[0].type === 'text' ? cryptoResp.content[0].text : ''
+    const cryptoRaw = cryptoResp.choices[0]?.message?.content ?? ''
     console.log('[ai-picks] crypto response preview:', cryptoRaw.slice(0, 150))
-    totalInputTokens += cryptoResp.usage.input_tokens
-    totalOutputTokens += cryptoResp.usage.output_tokens
+    totalInputTokens += cryptoResp.usage?.prompt_tokens ?? 0
+    totalOutputTokens += cryptoResp.usage?.completion_tokens ?? 0
 
     const cryptoParsed = extractJSON(cryptoRaw)
     crypto = (cryptoParsed.crypto ?? []).slice(0, 10)
@@ -543,7 +543,7 @@ Include 8 crypto picks — quality only. Mix bullish and bearish as market condi
     endpoint: 'ai-picks-generate',
     tokensInput: totalInputTokens,
     tokensOutput: totalOutputTokens,
-    costUsd: estimateClaudeCost(totalInputTokens, totalOutputTokens),
+    costUsd: 0,
     success: true,
   })
 

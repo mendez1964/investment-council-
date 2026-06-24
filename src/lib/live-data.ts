@@ -46,6 +46,7 @@ const COMPANY_NAMES: Record<string, string> = {
   smci: 'SMCI', 'super micro': 'SMCI', supermicro: 'SMCI',
   arm: 'ARM', mstr: 'MSTR', microstrategy: 'MSTR', coin: 'COIN', coinbase: 'COIN',
   pltr: 'PLTR', crwd: 'CRWD', panw: 'PANW', hood: 'HOOD', robinhood: 'HOOD',
+  'robinhood ventures': 'RVI', 'robinhood ventures fund': 'RVI', rvi: 'RVI',
   sofi: 'SOFI', rivian: 'RIVN', rivn: 'RIVN', lucid: 'LCID', lcid: 'LCID',
   disney: 'DIS', walmart: 'WMT', target: 'TGT', costco: 'COST',
   jpmorgan: 'JPM', 'jp morgan': 'JPM', 'bank of america': 'BAC',
@@ -186,7 +187,8 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
   const wantsBriefing = /pre.?market\s*briefing|end.?of.?day\s*(summary|briefing|report)|market\s*summary|market\s*briefing/i.test(msg)
   const wantsEarnings = wantsBriefing || /earnings\s*calendar|earnings\s*this\s*week|earnings\s*today|upcoming\s*earnings|who.*reporting|what.*reporting|earnings\s*schedule/i.test(msg)
   const wantsEconomic = wantsBriefing || /fed\s*funds|interest\s*rate|federal\s*reserve|inflation|cpi|consumer\s*price|yield\s*curve|treasury|2.year|10.year|unemployment|jobless|\bgdp\b|gross\s*domestic|macro|economic/i.test(msg)
-  const wantsMovers = wantsBriefing || /movers|gainers|losers|most\s*active|top\s*stocks|market\s*today|pre.?market|what.s moving|what is moving/i.test(msg)
+  const wantsMovers = wantsBriefing || msg.includes('?') ||
+    /movers|gainers|losers|most\s*active|top\s*stocks|best\s*stock|market\s*today|pre.?market|what['’]?s\s+moving|what\s+is\s+moving|momentum|tomorrow|swing\s*trade|top\s*pick|setup|breakout|volume\s*surge|unusual\s*volume/i.test(msg)
   const wantsSEC = /10-?k|10-?q|annual\s*report|quarterly\s*report|sec\s*filing|insider\s*(buy|sell|transaction)|form\s*4|\b8-?k\b|material\s*event|13[fF]|hedge\s*fund\s*hold/i.test(msg)
 
   const SECTOR_ETFS = ['XLK','XLF','XLE','XLV','XLI','XLY','XLP','XLU','XLRE','XLB','XLC']
@@ -588,13 +590,34 @@ export async function fetchLiveData(userMessage: string): Promise<string> {
   // ── Top market movers ────────────────────────────────────────────────────────
   if (wantsMovers) {
     tasks.push(
-      getTopMovers().catch(() => null).then(data => {
+      (async () => {
+        const data = await getTopMovers().catch(() => null)
         if (!data?.top_gainers) return
-        const gainers = data.top_gainers.slice(0, 5).map((s: any) => `${s.ticker} +${s.change_percentage}`).join(', ')
+        const gainers = data.top_gainers.slice(0, 5).map((s: any) => `${s.ticker} +${s.change_percentage} vol=${Number(s.volume).toLocaleString()}`).join(', ')
         const losers = data.top_losers.slice(0, 5).map((s: any) => `${s.ticker} ${s.change_percentage}`).join(', ')
-        const active = data.most_actively_traded.slice(0, 5).map((s: any) => `${s.ticker}`).join(', ')
+        const active = data.most_actively_traded.slice(0, 5).map((s: any) => `${s.ticker} vol=${Number(s.volume).toLocaleString()}`).join(', ')
         sections.push(`LIVE MARKET MOVERS (Alpha Vantage):\nTop Gainers: ${gainers}\nTop Losers: ${losers}\nMost Active: ${active}`)
-      })
+
+        // Auto-fetch technicals for top 2 quality gainers (price > $5, volume > 500k)
+        const qualityGainers = data.top_gainers
+          .filter((s: any) => parseFloat(s.price) > 5 && parseInt(s.volume) > 500000)
+          .slice(0, 2)
+          .map((s: any) => s.ticker)
+        if (qualityGainers.length > 0) {
+          const techResults = await Promise.all(qualityGainers.map((t: string) => getTechnicalSnapshot(t).catch(() => null)))
+          const techLines: string[] = ['TECHNICALS FOR TOP MOVERS:']
+          techResults.forEach((snap: any, i: number) => {
+            if (!snap) return
+            const t = qualityGainers[i]
+            const rsi = snap.rsi14 != null ? `RSI=${snap.rsi14.toFixed(1)}` : ''
+            const macd = snap.macdHistogram != null ? `MACD hist=${snap.macdHistogram > 0 ? '+' : ''}${snap.macdHistogram.toFixed(3)}` : ''
+            const ma = snap.sma20 != null && snap.close != null ? `Price ${snap.close > snap.sma20 ? 'ABOVE' : 'BELOW'} 20MA` : ''
+            const vol = snap.volumeAvg != null && snap.volume != null ? `Vol ${snap.volume > snap.volumeAvg ? 'ABOVE' : 'below'} avg` : ''
+            techLines.push(`  ${t}: ${[rsi, macd, ma, vol].filter(Boolean).join(' | ')}`)
+          })
+          if (techLines.length > 1) sections.push(techLines.join('\n'))
+        }
+      })()
     )
   }
 

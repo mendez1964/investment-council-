@@ -1,10 +1,12 @@
 import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const client = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 export async function POST(request: Request) {
   const supabase = createServerSupabaseClientAuth()
@@ -77,13 +79,13 @@ Respond with ONLY valid JSON in this exact format:
   "style_fit": "<assessment of whether the style/markets/timeframes are aligned>"
 }`
 
-  const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+  const message = await client.chat.completions.create({
+    model: OLLAMA_MODEL,
     max_tokens: 1024,
     messages: [{ role: 'user', content: prompt }],
   })
 
-  const rawText = message.content[0].type === 'text' ? message.content[0].text : ''
+  const rawText = message.choices[0]?.message?.content ?? ''
   let feedback: Record<string, unknown>
   try {
     const jsonMatch = rawText.match(/\{[\s\S]*\}/)

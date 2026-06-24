@@ -24,11 +24,13 @@
 
 export const maxDuration = 120
 
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { getCompanyNews, getMarketNews } from '@/lib/finnhub'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const client = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 const CRYPTO_SET = new Set([
   'BTC','ETH','SOL','DOGE','XRP','ADA','AVAX','LINK','DOT','MATIC','LTC','BCH',
@@ -49,13 +51,12 @@ async function scanAndAnalyze(items: RawItem[], tickers: string[]): Promise<any[
 
   const list = items.map((n, i) => `${i + 1}. "${n.headline}"`).join('\n')
 
-  const res = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+  const res = await client.chat.completions.create({
+    model: OLLAMA_MODEL,
     max_tokens: 3000,
-    system: 'You are IC Market Guardian — a financial news scanner. Identify which assets from a watchlist are affected by news, including indirect impacts (macro, sector, regulatory).',
-    messages: [{
-      role: 'user',
-      content: `Tracked assets: ${tickers.join(', ')}
+    messages: [
+      { role: 'system', content: 'You are IC Market Guardian — a financial news scanner. Identify which assets from a watchlist are affected by news, including indirect impacts (macro, sector, regulatory).' },
+      { role: 'user', content: `Tracked assets: ${tickers.join(', ')}
 
 For each headline below, identify:
 - Which tickers from the list are affected (direct OR indirect — "Fed raises rates" affects rate-sensitive stocks, sector news affects all stocks in that sector)
@@ -71,11 +72,11 @@ Headlines:
 ${list}
 
 Respond ONLY with a raw JSON array:
-[{"i":1,"tickers":["AAPL"],"impact_level":"high","impact_direction":"negative","summary":"Apple misses revenue guidance, weak iPhone demand.","price_impact_est":"-3 to -5%","is_price_moving":true}]`
-    }],
+[{"i":1,"tickers":["AAPL"],"impact_level":"high","impact_direction":"negative","summary":"Apple misses revenue guidance, weak iPhone demand.","price_impact_est":"-3 to -5%","is_price_moving":true}]` },
+    ],
   })
 
-  const text = res.content[0].type === 'text' ? res.content[0].text : ''
+  const text = res.choices[0]?.message?.content ?? ''
   try {
     const s = text.indexOf('['), e = text.lastIndexOf(']')
     if (s === -1 || e === -1) return []

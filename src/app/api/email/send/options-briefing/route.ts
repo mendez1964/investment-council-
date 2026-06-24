@@ -1,15 +1,17 @@
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { getResend, FROM, emailTemplate } from '@/lib/email'
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 
 const BASE = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.investmentcouncil.io'
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
 
 function verifyCron(request: Request): boolean {
   const secret = request.headers.get('x-cron-secret')
   return secret === (process.env.CRON_SECRET ?? 'ic-cron-2024')
 }
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const client = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 export const maxDuration = 120
 
@@ -76,13 +78,13 @@ Any major earnings, Fed speakers, or economic data this week that options trader
 
 Keep it under 350 words. Direct, data-first, no fluff.`
 
-    const message = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+    const message = await client.chat.completions.create({
+      model: OLLAMA_MODEL,
       max_tokens: 800,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const briefingText = message.content[0].type === 'text' ? message.content[0].text : 'Briefing unavailable.'
+    const briefingText = message.choices[0]?.message?.content ?? 'Briefing unavailable.'
 
     // Convert markdown to simple HTML
     const briefingHtml = briefingText

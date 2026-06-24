@@ -2,7 +2,12 @@
 // Uses real Supabase data — no scraping needed
 // All posts are keyword-tied for SEO consistency
 
+import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase'
+
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const ollamaClient = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 const SITE_URL = 'https://investmentcouncil.ai'
 
@@ -29,21 +34,12 @@ function thirtyDaysAgo() {
 }
 
 async function callClaude(prompt: string): Promise<string> {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY!,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+  const res = await ollamaClient.chat.completions.create({
+    model: OLLAMA_MODEL,
+    max_tokens: 4000,
+    messages: [{ role: 'user', content: prompt }],
   })
-  const data = await res.json()
-  return data.content?.[0]?.text ?? ''
+  return res.choices[0]?.message?.content ?? ''
 }
 
 export async function POST(request: Request) {

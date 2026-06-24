@@ -6,8 +6,9 @@ import { fetchATSignals, formatATSignalsForPrompt } from '@/lib/agentic-trader'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 
-// Investment Council's own Claude key — used only during 24h grace period
-const ic_anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+// Spark Ollama — used when no user API key (replaces IC Anthropic trial key)
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
 
 type AIProvider = 'claude' | 'chatgpt' | 'gemini' | 'grok'
 
@@ -349,7 +350,8 @@ export async function POST(request: Request) {
     })
 
     // Fetch live market data
-    const needsLiveData = /\b(quote|price|stock|ticker|etf|crypto|btc|eth|sol|market|briefing|analysis|analyze|fundamentals|earnings|sector|movers|scan|report|watchlist|portfolio|nvda|aapl|tsla|spy|qqq|msft|amzn|googl|meta|nflx|option|call|put|strike|expiry|0dte|chain|delta|gamma|theta|implied|fall|drop|rise|surge|crash|rally|target|predict|forecast|outlook|direction|trend|support|resistance|level|short|long|bullish|bearish|buy|sell|trade|hold|move|how far|smci|pltr|crwd|coin|mstr|hood|sofi|rivn|arm)\b/i.test(latestUserMessage)
+    const isSmallTalk = /^(thanks?|thank you|ok|okay|got it|great|perfect|sounds good|nice|cool|awesome|hello|hi|hey|bye|goodbye|yes|no|sure|nope|yep)\s*[.!]?\s*$/i.test(latestUserMessage.trim())
+    const needsLiveData = !isSmallTalk
 
     let liveData = ''
     if (needsLiveData) {
@@ -397,6 +399,41 @@ export async function POST(request: Request) {
       await Promise.all(tasks)
       if (sections.length) {
         liveData = sections.join('\n') + liveData
+      }
+    }
+
+    // Spark Scanner — inject trade setups when user asks for picks, momentum, or setups
+    const wantsScanner = /\b(trade|setup|pick|momentum|breakout|swing|scanner|best stock|top stock|long|short|entry|tomorrow|watchlist|play)\b/i.test(latestUserMessage)
+    if (wantsScanner) {
+      try {
+        const supabaseForScan = createServerSupabaseClient()
+        const { data: scanRows } = await supabaseForScan
+          .from('spark_scanner')
+          .select('symbol,direction,entry,stop,target,risk_reward,conviction,lstm_signal,lstm_confidence,chart_read,rationale,key_risk,scan_time')
+          .order('scan_time', { ascending: false })
+          .limit(20)
+        if (scanRows && scanRows.length > 0) {
+          const scanTime = new Date(scanRows[0].scan_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/New_York' })
+          const lines = [
+            `## SPARK SCANNER RESULTS (last run: ${scanTime} ET — ${scanRows.length} setups)`,
+            'These are AI-generated trade setups from LSTM model signals + chart vision analysis. Use them to answer trade setup questions.\n',
+          ]
+          for (const r of scanRows) {
+            const conf = r.lstm_confidence ? Math.round(r.lstm_confidence * 100) : '?'
+            lines.push(
+              `**${r.symbol}** — ${(r.direction || '').toUpperCase()} | Conviction: ${r.conviction} | LSTM: ${r.lstm_signal} ${conf}%`,
+              `  Entry: $${r.entry} | Stop: $${r.stop} | Target: $${r.target} | R:R: ${r.risk_reward}`,
+              `  Rationale: ${r.rationale}`,
+              `  Risk: ${r.key_risk}`,
+              `  Chart: ${r.chart_read?.slice(0, 200) ?? ''}`,
+              '',
+            )
+          }
+          liveData = lines.join('\n') + '\n\n' + liveData
+          console.log(`[spark-scanner] injected ${scanRows.length} setups into chat`)
+        }
+      } catch (err) {
+        console.error('[spark-scanner] fetch failed:', (err as Error).message)
       }
     }
 
@@ -524,11 +561,55 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
 
     const encoder = new TextEncoder()
 
-    // ── Claude (Anthropic SDK — supports prompt caching) ─────────────────────
+    // ── Ollama on Spark — used when no user key (free / trial) ──────────────
+    if (aiProvider === 'claude' && useICKey) {
+      const ollamaClient = new OpenAI({
+        baseURL: `${OLLAMA_BASE_URL}/v1`,
+        apiKey: 'ollama',
+      })
+
+      const fullSystem = [systemPrompt, ...(kbParts.length > 0 ? [kbParts.join('\n\n')] : []), liveAndReminder].join('\n\n')
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            const ollamaStream = await ollamaClient.chat.completions.create({
+              model: OLLAMA_MODEL,
+              messages: [
+                { role: 'system', content: fullSystem },
+                ...messages.map((m: { role: string; content: string }) => ({
+                  role: m.role as 'user' | 'assistant',
+                  content: m.content,
+                })),
+              ],
+              stream: true,
+            })
+
+            let outputTokens = 0
+            for await (const chunk of ollamaStream) {
+              const text = chunk.choices[0]?.delta?.content ?? ''
+              if (text) controller.enqueue(encoder.encode(text))
+              if (chunk.usage) outputTokens = chunk.usage.completion_tokens ?? 0
+            }
+
+            console.log(`[ollama:${OLLAMA_MODEL}] out:${outputTokens} cost:$0`)
+            const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens: 0, outputTokens, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0 })}]`
+            controller.enqueue(encoder.encode(usageMarker))
+            controller.close()
+          } catch (error) {
+            controller.error(error)
+          }
+        },
+      })
+
+      return new Response(stream, {
+        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Transfer-Encoding': 'chunked' },
+      })
+    }
+
+    // ── Claude (Anthropic SDK — user's own key) ───────────────────────────────
     if (aiProvider === 'claude') {
-      const anthropicClient = useICKey
-        ? ic_anthropic
-        : new Anthropic({ apiKey: userApiKey! })
+      const anthropicClient = new Anthropic({ apiKey: userApiKey! })
 
       const systemBlocks: Anthropic.Messages.TextBlockParam[] = []
 
@@ -567,8 +648,8 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
             for await (const chunk of anthropicStream) {
               if (chunk.type === 'message_start') {
                 const usage = chunk.message.usage as any
-                inputTokens     = usage?.input_tokens                   ?? 0
-                cacheReadTokens = usage?.cache_read_input_tokens        ?? 0
+                inputTokens      = usage?.input_tokens                  ?? 0
+                cacheReadTokens  = usage?.cache_read_input_tokens       ?? 0
                 cacheWriteTokens = usage?.cache_creation_input_tokens   ?? 0
               } else if (chunk.type === 'message_delta') {
                 outputTokens = (chunk.usage as any)?.output_tokens ?? 0
@@ -583,7 +664,7 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
               (cacheReadTokens  / 1_000_000) * 0.30 +
               (outputTokens     / 1_000_000) * 15.00
 
-            console.log(`[claude] in:${inputTokens} cacheWrite:${cacheWriteTokens} cacheRead:${cacheReadTokens} out:${outputTokens} cost:$${cost.toFixed(5)} ic:${useICKey}`)
+            console.log(`[claude] in:${inputTokens} cacheWrite:${cacheWriteTokens} cacheRead:${cacheReadTokens} out:${outputTokens} cost:$${cost.toFixed(5)}`)
 
             const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, cost })}]`
             controller.enqueue(encoder.encode(usageMarker))

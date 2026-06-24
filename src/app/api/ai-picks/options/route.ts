@@ -1,8 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { fetchLiveData } from '@/lib/live-data'
 import { getQuote, getPivotLevels, getIntradayCandles, computeVWAP } from '@/lib/finnhub'
 import { createServerSupabaseClient } from '@/lib/supabase'
-import { logApiUsage, estimateClaudeCost } from '@/lib/analytics'
+import { logApiUsage } from '@/lib/analytics'
 import { getBestContract, getExpirations, pickDailyExpiry, getChain, roundToATM, nearestStrike, computeGEX, findUnusualFlow } from '@/lib/tradier'
 
 // Fixed 0DTE universe — master these 5 tickers for maximum edge
@@ -195,7 +195,9 @@ async function fetchATMGreeks(today: string): Promise<string> {
 
 const TRADIER_ENABLED = !!process.env.TRADIER_API_KEY
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const client = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 function extractJSON(text: string): any {
   const cleaned = text.trim()
@@ -560,22 +562,24 @@ async function generatePicks(supabase: any, pickDate: string, expiryStr: string,
   }
   const prompt = type === 'daily' ? buildDailyPrompt(count, expiryStr, technicalLevels, newsContext, historyContext, greeksContext) : buildWeeklyPrompt(count, expiryStr)
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+  const response = await client.chat.completions.create({
+    model: OLLAMA_MODEL,
     max_tokens: 2000,
-    system: `You are an expert options trader applying the ${type === 'daily' ? 'IC Daily Options Formula (0DTE intraday edge)' : 'IC Weekly Options Formula (3-week swing positioning)'}. Score every trade rigorously — reject anything under 65. Output only valid JSON with no other text.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}`,
-    messages: [{ role: 'user', content: prompt }],
+    messages: [
+      { role: 'system', content: `You are an expert options trader applying the ${type === 'daily' ? 'IC Daily Options Formula (0DTE intraday edge)' : 'IC Weekly Options Formula (3-week swing positioning)'}. Score every trade rigorously — reject anything under 65. Output only valid JSON with no other text.${liveData ? `\n\nLIVE MARKET DATA:\n${liveData}` : ''}` },
+      { role: 'user', content: prompt },
+    ],
   })
 
-  const rawText = response.content[0].type === 'text' ? response.content[0].text : ''
+  const rawText = response.choices[0]?.message?.content ?? ''
   console.log(`[ai-options][${type}] preview:`, rawText.slice(0, 200))
 
   await logApiUsage(supabase, {
     apiName: 'claude',
     endpoint: `ai-options-${type}`,
-    tokensInput: response.usage.input_tokens,
-    tokensOutput: response.usage.output_tokens,
-    costUsd: estimateClaudeCost(response.usage.input_tokens, response.usage.output_tokens),
+    tokensInput: response.usage?.prompt_tokens ?? 0,
+    tokensOutput: response.usage?.completion_tokens ?? 0,
+    costUsd: 0,
     success: true,
   })
 

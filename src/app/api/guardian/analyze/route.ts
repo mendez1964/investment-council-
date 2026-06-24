@@ -41,11 +41,13 @@
 
 export const maxDuration = 120
 
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { getCompanyNews, getMarketNews } from '@/lib/finnhub'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const client = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 function verifyCron(request: Request): boolean {
   const secret = request.headers.get('x-cron-secret')
@@ -74,13 +76,12 @@ async function analyzeNews(ticker: string, items: NewsItem[]): Promise<AnalyzedI
 
   const list = items.map((n, i) => `${i + 1}. "${n.headline}"`).join('\n')
 
-  const res = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+  const res = await client.chat.completions.create({
+    model: OLLAMA_MODEL,
     max_tokens: 1200,
-    system: 'You are IC Market Guardian — an AI that analyzes financial news for retail investors. Be precise, concise, and honest about impact.',
-    messages: [{
-      role: 'user',
-      content: `Analyze these ${ticker} news headlines. For each:
+    messages: [
+      { role: 'system', content: 'You are IC Market Guardian — an AI that analyzes financial news for retail investors. Be precise, concise, and honest about impact.' },
+      { role: 'user', content: `Analyze these ${ticker} news headlines. For each:
 - impact_level: "high" (earnings, FDA, acquisition, major lawsuit, CEO change, index add/remove), "medium" (analyst call, product launch, partnership), "low" (opinion, minor mention, general)
 - impact_direction: "positive", "negative", or "neutral"
 - summary: max 15 words, plain English, what it means for the stock
@@ -91,11 +92,11 @@ Headlines:
 ${list}
 
 Respond ONLY with raw JSON array:
-[{"i":1,"impact_level":"high","impact_direction":"negative","summary":"Earnings missed by 8%, weak Q2 guidance issued.","price_impact_est":"-4 to -7%","is_price_moving":true}]`
-    }]
+[{"i":1,"impact_level":"high","impact_direction":"negative","summary":"Earnings missed by 8%, weak Q2 guidance issued.","price_impact_est":"-4 to -7%","is_price_moving":true}]` },
+    ],
   })
 
-  const text = res.content[0].type === 'text' ? res.content[0].text : ''
+  const text = res.choices[0]?.message?.content ?? ''
   try {
     const s = text.indexOf('['), e = text.lastIndexOf(']')
     if (s === -1 || e === -1) return []

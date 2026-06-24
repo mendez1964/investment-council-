@@ -3,8 +3,10 @@ import OpenAI from 'openai'
 import { createServerSupabaseClient } from '@/lib/supabase'
 import { createServerSupabaseClientAuth } from '@/lib/supabase-server-auth'
 
-// IC's own key — used only during 24h grace period and for owner/admin
-const ic_anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+// Spark Ollama — used during grace period and for owner/admin (no paid API key required)
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL ?? 'https://spark-api.adzoneai.io'
+const OLLAMA_MODEL    = process.env.OLLAMA_MODEL    ?? 'qwen3.5:35b-fast'
+const ic_ollama = new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: 'ollama' })
 
 type AIProvider = 'claude' | 'chatgpt' | 'gemini' | 'grok'
 
@@ -58,12 +60,12 @@ async function resolveClient(): Promise<ResolvedClient> {
       }
 
       if (isAdmin || isAdminGranted) {
-        return { provider: 'claude', anthropic: ic_anthropic, openai: null, model: 'claude-sonnet-4-6', blocked: false }
+        return { provider: 'claude', anthropic: null, openai: ic_ollama, model: OLLAMA_MODEL, blocked: false }
       }
 
       const inGracePeriod = Date.now() < new Date(user.created_at).getTime() + 24 * 60 * 60 * 1000
       if (inGracePeriod) {
-        return { provider: 'claude', anthropic: ic_anthropic, openai: null, model: 'claude-sonnet-4-6', blocked: false }
+        return { provider: 'claude', anthropic: null, openai: ic_ollama, model: OLLAMA_MODEL, blocked: false }
       }
 
       return {
@@ -73,8 +75,8 @@ async function resolveClient(): Promise<ResolvedClient> {
     }
   } catch {}
 
-  // Unauthenticated — use IC key
-  return { provider: 'claude', anthropic: ic_anthropic, openai: null, model: 'claude-sonnet-4-6', blocked: false }
+  // Unauthenticated — use Spark Ollama
+  return { provider: 'claude', anthropic: null, openai: ic_ollama, model: OLLAMA_MODEL, blocked: false }
 }
 
 async function callAI(client: ResolvedClient, system: string, userMessage: string, maxTokens = 1200): Promise<string> {
