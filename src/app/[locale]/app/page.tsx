@@ -1337,7 +1337,7 @@ Be direct and factual. Use numbers.`
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages, locale: currentLocale }),
+        body: JSON.stringify({ messages: newMessages, locale: currentLocale, engineOverride: typeof window !== 'undefined' ? localStorage.getItem('ic_chat_engine') : null }),
       })
       if (!response.ok) throw new Error('API error')
 

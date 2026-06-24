@@ -146,6 +146,40 @@ function SparkCard({ spark }: { spark: any }) {
   )
 }
 
+// Owner-only toggle: switch the chat engine between local Spark and Claude (for A/B testing).
+// Saved in the browser; the chat page sends it and the server honors it only for the owner.
+function ChatEngineToggle() {
+  const [engine, setEngine] = useState<'local' | 'claude'>('local')
+  useEffect(() => {
+    setEngine((typeof window !== 'undefined' && localStorage.getItem('ic_chat_engine') === 'claude') ? 'claude' : 'local')
+  }, [])
+  const choose = (v: 'local' | 'claude') => {
+    setEngine(v)
+    if (typeof window !== 'undefined') localStorage.setItem('ic_chat_engine', v)
+  }
+  return (
+    <div style={{ background: '#fff', border: '1px solid #e4e4e7', borderRadius: '10px', padding: '16px 20px' }}>
+      <div style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.07em', marginBottom: '8px' }}>CHAT ENGINE — OWNER TEST</div>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {(['local', 'claude'] as const).map(opt => (
+          <button key={opt} onClick={() => choose(opt)} style={{
+            flex: 1, padding: '8px 10px', borderRadius: '8px', cursor: 'pointer',
+            fontSize: '12px', fontWeight: 700,
+            border: engine === opt ? '2px solid #111' : '1px solid #e4e4e7',
+            background: engine === opt ? '#111' : '#fff',
+            color: engine === opt ? '#fff' : '#6b7280',
+          }}>
+            {opt === 'local' ? 'Local (Spark)' : 'Claude'}
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '6px' }}>
+        Applies to your chat only. Now using: <strong>{engine === 'claude' ? 'Claude' : 'Spark (local)'}</strong>.
+      </div>
+    </div>
+  )
+}
+
 interface ManagedUser {
   id: string
   email: string
@@ -1195,6 +1229,9 @@ export default function OwnerPage() {
               </div>
               <div style={{ marginTop: '12px' }}>
                 <SparkCard spark={stats?.spark} />
+              </div>
+              <div style={{ marginTop: '12px' }}>
+                <ChatEngineToggle />
               </div>
             </div>
 

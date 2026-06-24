@@ -250,7 +250,7 @@ Use all of the above data to give a complete, informed analysis including: price
 
 export async function POST(request: Request) {
   try {
-    const { messages, locale } = await request.json()
+    const { messages, locale, engineOverride } = await request.json()
 
     if (!messages || !Array.isArray(messages)) {
       return Response.json({ error: 'Invalid request' }, { status: 400 })
@@ -267,6 +267,7 @@ export async function POST(request: Request) {
     let aiProvider: AIProvider = 'claude'
     let userApiKey: string | null = null
     let useICKey = false
+    let forceClaudeAdmin = false  // owner-only toggle: force Claude instead of Spark (for testing)
 
     try {
       const authClient = createServerSupabaseClientAuth()
@@ -294,6 +295,9 @@ export async function POST(request: Request) {
         // Admin owner and admin-granted employees always use IC key (no expiry)
         const isAdmin = user.email === process.env.ADMIN_EMAIL || user.email === 'mendezdag@gmail.com'
         const isAdminGranted = !profile?.stripe_customer_id && (profile?.tier === 'trader' || profile?.tier === 'pro')
+
+        // Owner-only chat-engine toggle (for A/B testing local vs Claude)
+        forceClaudeAdmin = isAdmin && engineOverride === 'claude'
 
         if (userApiKey) {
           // User has their own key — use it
@@ -620,7 +624,8 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
       const stream = new ReadableStream({
         async start(controller) {
           let got = false
-          try {
+          // Admin "Claude" toggle: skip Spark entirely, go straight to Claude below
+          if (!forceClaudeAdmin) try {
             const ollamaStream = await ollamaClient.chat.completions.create({
               model: OLLAMA_MODEL,
               messages: [
@@ -653,7 +658,7 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
             const backupKey = process.env.ANTHROPIC_API_KEY
             if (backupKey) {
               try {
-                console.log('[chat] FAILOVER → Claude (Spark unavailable/empty)')
+                console.log(forceClaudeAdmin ? '[chat] admin toggle → Claude' : '[chat] FAILOVER → Claude (Spark unavailable/empty)')
                 await streamClaudeInto(controller, backupKey)
               } catch (e2) {
                 controller.error(e2)
