@@ -100,6 +100,8 @@ export default function Home() {
       items: [
         { itemId: 'Options Briefing', label: 'Options Morning Brief', tier: 'pro' as const, prompt: `Give me today's options morning briefing.
 
+SCOPE: This is an EQUITY OPTIONS briefing ONLY (index/stock options — SPX, SPY, QQQ, AAPL, NVDA, etc.). Do NOT include any cryptocurrency section, crypto analysis, or crypto picks.
+
 ## OPTIONS MORNING BRIEF — [Today's Date]
 
 **1. VOLATILITY ENVIRONMENT**
@@ -121,6 +123,8 @@ Major earnings, Fed speakers, or economic data that options traders must know be
 
 Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Direct and data-first. No fluff.` },
         { itemId: 'Pre-Market Briefing', label: t('items.preMarket'), tier: 'trader' as const, prompt: `Give me today's pre-market briefing.
+
+SCOPE: This is a U.S. EQUITIES / stock-market briefing ONLY. Bitcoin appears solely as a single macro reference line in the snapshot — do NOT add any cryptocurrency section, crypto analysis, or crypto picks. Keep the entire briefing focused on stocks, ETFs, and equity-market conditions.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
@@ -145,6 +149,8 @@ Use the BREAKING MARKET NEWS data provided. List the top 3-5 high/medium impact 
 - Bias: Bullish / Neutral / Cautious / Bearish + one sentence of factual reasoning (data-based, not opinion)
 - First 30 minutes: one thing to confirm before committing capital` },
         { itemId: 'End of Day Summary', label: t('items.eodSummary'), tier: 'trader' as const, prompt: `Give me today's end-of-day market summary.
+
+SCOPE: This is a U.S. EQUITIES / stock-market summary ONLY. Bitcoin appears solely as a single macro reference line in the snapshot — do NOT add any cryptocurrency section, crypto analysis, or crypto picks. Keep the entire summary focused on stocks, ETFs, and equity-market conditions.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full summary. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have — yields, Bitcoin, movers, etc.]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
 
@@ -869,7 +875,7 @@ Be thorough and detailed: fully develop each section with specific numbers, live
       id: 'analysis',
       title: t('sections.analysis'),
       items: [
-        { itemId: 'Morning Crypto Briefing', label: t('items.morningCryptoBriefing'), tier: 'trader' as const, prompt: `Give me this morning's crypto briefing. Cover: overnight BTC and ETH price action and key levels tested, Asian session performance, current funding rates and whether markets are overleveraged, Bitcoin dominance trend, any major news or catalysts overnight, and the top 3 things to watch today. Format as a structured briefing.` },
+        { itemId: 'Morning Crypto Briefing', label: t('items.morningCryptoBriefing'), tier: 'trader' as const, prompt: `Give me this morning's crypto briefing. SCOPE: cryptocurrency ONLY — do not produce a stock-market / equities section (you may reference equities in one line only as macro context). Cover: overnight BTC and ETH price action and key levels tested, Asian session performance, current funding rates and whether markets are overleveraged, Bitcoin dominance trend, any major news or catalysts overnight, and the top 3 things to watch today. Format as a structured briefing.` },
         { itemId: 'End of Day Crypto Recap', label: t('items.eodCryptoRecap'), tier: 'trader' as const, prompt: `Give me today's end-of-day crypto recap. Cover: how BTC and ETH performed today vs the stock market, which sectors of crypto outperformed (DeFi, L2s, meme coins, etc.), funding rate changes during the session, any significant whale activity or exchange flows, key support and resistance levels for overnight trading, and what to watch tomorrow. Format as a structured recap.` },
         { itemId: 'Full Crypto Council', label: t('items.fullCryptoCouncil'), prompt: 'Give me the full crypto council view right now. What do Saylor, PlanB, Raoul Pal, Hayes, Vitalik, Cathie Wood, Andreas, and Hoskinson all say about the current crypto market?' },
         { itemId: 'Bitcoin Deep Dive', label: t('items.bitcoinDeepDive'), prompt: 'Give me a full Bitcoin analysis right now using all relevant frameworks — Saylor, PlanB, Andreas, Raoul Pal, and Hayes.' },
