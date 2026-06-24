@@ -119,7 +119,7 @@ Major earnings, Fed speakers, or economic data that options traders must know be
 **5. TRADING REMINDERS**
 2-3 short rules-based reminders (IV crush risk, position sizing near events, premium decay timing).
 
-Under 350 words. Direct and data-first. No fluff.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Direct and data-first. No fluff.` },
         { itemId: 'Pre-Market Briefing', label: t('items.preMarket'), tier: 'trader' as const, prompt: `Give me today's pre-market briefing.
 
 IMPORTANT — DATA GATE: First check the live data provided. If SPY, QQQ, DIA, and IWM prices are ALL missing from the feed, do not generate the full briefing. Instead output only: "LIVE FEED UNAVAILABLE — Equity prices did not load. Available: [list what we do have]. Try asking for a specific ticker like SPY or ask again in a few minutes." Then stop.
@@ -187,7 +187,7 @@ VIX level and context — compressed, elevated, or spiking? What does the curren
 **5. HEALTH VERDICT**
 Healthy bull / Extended but intact / Weakening / Deteriorating — one sentence with the primary reason.
 
-Data and facts only. Under 250 words.` },
+Data and facts only. Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { itemId: 'Sector Rotation', label: t('items.sectorRotation'), prompt: 'Using the live sector data available, show me which sectors are leading and lagging right now. One table: Sector | ETF | Change % | Direction. Then 3-4 factual bullets on what the rotation pattern suggests about current risk appetite. Data only.' },
         { itemId: 'Macro Environment', label: t('items.macroEnvironment'), prompt: 'Give me a current macro environment snapshot using the live data available. Cover: Fed Funds Rate, CPI trend, 2Y and 10Y yields, yield curve shape, GDP trend, unemployment. Format as a table, then 2-3 factual bullets on what the numbers indicate. No advisor frameworks unless I ask.' },
         { itemId: 'Fear & Greed', label: t('items.fearGreed'), prompt: '', isFearGreed: true },
@@ -214,7 +214,7 @@ At this vol level, should position sizes be standard, reduced, or aggressive? On
 **5. VOL VERDICT**
 One sentence — is current volatility an opportunity or a warning signal?
 
-Data first. Under 200 words.` },
+Data first. Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { itemId: 'Economic Calendar', label: t('items.econCalendar'), prompt: '', isEconCalendar: true },
         { itemId: 'News Feed', label: t('items.newsFeed'), prompt: '', isNews: true },
       ],
@@ -276,7 +276,7 @@ Aggressively long / Cautiously long / Neutral / Defensive — one sentence, data
 **5. TRADE FRAMEWORK**
 What would Tudor Jones be positioned in today, what is he avoiding, and what is the key level that changes the thesis?
 
-Facts and live data first. Under 300 words.` },
+Facts and live data first. Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { label: 'Livermore', prompt: `Run the Jesse Livermore scan on today's market.
 
 ## LIVERMORE SCAN
@@ -301,7 +301,7 @@ In position / Waiting for pivot / Out of the market — one sentence with the ke
 **6. WHAT TO WATCH**
 The one price level or signal that would change Livermore's positioning today.
 
-Under 300 words. Price action and data only.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Price action and data only.` },
         { label: 'Buffett', prompt: `Run the Warren Buffett scan on today's market.
 
 ## BUFFETT SCAN
@@ -326,7 +326,7 @@ Deploy / Hold cash / Selective deployment — one sentence with the key valuatio
 **6. WHAT HE'S WATCHING**
 The one macro or market signal Buffett would be watching most closely right now.
 
-Under 300 words. Facts and valuations first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Facts and valuations first.` },
         { label: 'Lynch', prompt: `Run the Peter Lynch scan on today's market.
 
 ## LYNCH SCAN
@@ -351,7 +351,7 @@ Broadly bullish / Selective / Cautious — one sentence with the key consumer/gr
 **6. WHAT TO LOOK FOR**
 The one signal Lynch would want to see to become more or less aggressive.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { label: 'Graham', prompt: `Run the Benjamin Graham scan on today's market.
 
 ## GRAHAM SCAN
@@ -376,7 +376,7 @@ Defensive / Selectively enterprising / Avoid equities broadly — one sentence w
 **6. WHAT CHANGES THE PICTURE**
 The one valuation or credit signal that would make Graham more or less aggressive.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { label: 'Grantham', prompt: `Run the Jeremy Grantham scan on today's market.
 
 ## GRANTHAM SCAN
@@ -401,7 +401,7 @@ Significant risk / Caution warranted / Selective value / Broad opportunity — o
 **6. WHAT TO WATCH**
 The one signal that would confirm or deny the bubble thesis in today's market.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { label: 'Dalio', prompt: `Run the Ray Dalio scan on today's market.
 
 ## DALIO SCAN
@@ -426,7 +426,7 @@ All-Weather balanced / Tilt defensive / Tilt growth / Cash heavy — one sentenc
 **6. KEY RISK**
 The one macro risk Dalio would be most focused on hedging against right now.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { label: 'Burry', prompt: `Run the Michael Burry scan on today's market.
 
 ## BURRY SCAN
@@ -451,7 +451,7 @@ Bracing for impact / Selectively short / Long specific value / Mixed — one sen
 **6. WHAT CHANGES EVERYTHING**
 The one event or data point that would trigger the scenario Burry is watching for.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { label: 'Roubini', prompt: `Run the Nouriel Roubini scan on today's market.
 
 ## ROUBINI SCAN
@@ -476,7 +476,7 @@ Soft landing possible / Hard landing risk / Stagflation trap / Systemic crisis b
 **6. WHAT TO HEDGE**
 The specific risk Roubini would be actively hedging against right now and how.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
       ],
     },
     {
@@ -519,7 +519,7 @@ Using the live data available (prices, yields, VIX, economic indicators):
 
 **Bottom line:** One direct sentence — his overall stance and what triggers a change.
 
-Under 250 words. Facts and data first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Facts and data first.` },
         { label: 'Dalio', prompt: `Give me Ray Dalio's current market view using live data.
 
 **DALIO'S LENS:** Debt cycles, All-Weather balance, paradigm shifts, risk parity, global capital flows.
@@ -536,7 +536,7 @@ Using the live data available (Fed Funds rate, yields, equity prices, economic i
 
 **Bottom line:** One direct sentence — his overall allocation posture and the key trigger to watch.
 
-Under 250 words. Cycle position and data first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Cycle position and data first.` },
         { label: 'Soros', prompt: `Give me George Soros' current market view using live data.
 
 **SOROS'S LENS:** Reflexivity (perception shapes fundamentals), macro dislocations, currency dynamics, boom/bust sequences.
@@ -553,7 +553,7 @@ Using the live data available (DXY, yields, equity prices, volatility):
 
 **Bottom line:** One direct sentence — current positioning bias and what confirms or breaks the thesis.
 
-Under 250 words. Reflexivity and macro flow first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Reflexivity and macro flow first.` },
         { label: 'Tudor Jones', prompt: `Give me Paul Tudor Jones' current market view using live data.
 
 **TUDOR JONES'S LENS:** Macro momentum, 5:1 risk/reward, never fight the tape, protect capital first.
@@ -570,7 +570,7 @@ Using the live data available (SPY, QQQ, yields, VIX, DXY):
 
 **Bottom line:** One direct sentence — current bias, size, and the one level that changes everything.
 
-Under 250 words. Tape and momentum first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Tape and momentum first.` },
         { label: 'Lynch', prompt: `Give me Peter Lynch's current market view using live data.
 
 **LYNCH'S LENS:** GARP (growth at reasonable price), know what you own, consumer health, PEG thinking, find 10-baggers.
@@ -587,7 +587,7 @@ Using the live data available (prices, yields, economic indicators, sector perfo
 
 **Bottom line:** One direct sentence — overall opportunity level and what he'd tell his neighbor to do.
 
-Under 250 words. Consumer and earnings first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Consumer and earnings first.` },
         { label: 'Livermore', prompt: `Give me Jesse Livermore's current market view using live data.
 
 **LIVERMORE'S LENS:** Tape reading, pivotal points, line of least resistance, leading stocks, time your trades.
@@ -604,7 +604,7 @@ Using the live data available (prices, volume, sector leaders/laggards):
 
 **Bottom line:** One direct sentence — Livermore's current stance and the one price signal that changes it.
 
-Under 250 words. Price action and levels first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Price action and levels first.` },
         { label: 'Graham', prompt: `Give me Benjamin Graham's current market view using live data.
 
 **GRAHAM'S LENS:** Margin of safety, intrinsic value, Mr. Market's moods, defensive vs. enterprising investor.
@@ -621,7 +621,7 @@ Using the live data available (prices, yields, VIX, economic indicators):
 
 **Bottom line:** One direct sentence — Graham's overall stance and what valuation level would change it.
 
-Under 250 words. Valuation and safety first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Valuation and safety first.` },
         { label: 'Damodaran', prompt: `Give me Aswath Damodaran's current market view using live data.
 
 **DAMODARAN'S LENS:** Intrinsic valuation, DCF, equity risk premium, narrative vs. numbers, corporate finance discipline.
@@ -638,7 +638,7 @@ Using the live data available (yields, prices, economic indicators):
 
 **Bottom line:** One direct sentence — his implied expected return for equities and whether risk is adequately compensated.
 
-Under 250 words. Numbers and valuation models first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Numbers and valuation models first.` },
         { label: 'Burry', prompt: `Give me Michael Burry's current market view using live data.
 
 **BURRY'S LENS:** Deep contrarian, hidden leverage, consensus blind spots, credit stress, what nobody wants to see.
@@ -655,7 +655,7 @@ Using the live data available (yields, prices, VIX, economic indicators):
 
 **Bottom line:** One direct sentence — his positioning thesis and the one catalyst that triggers the scenario.
 
-Under 250 words. Risk and hidden stress first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Risk and hidden stress first.` },
         { label: 'Roubini', prompt: `Give me Nouriel Roubini's current market view using live data.
 
 **ROUBINI'S LENS:** Macro risk, stagflation, debt traps, geopolitical tail risk, "Dr. Doom" realism.
@@ -672,7 +672,7 @@ Using the live data available (CPI, Fed Funds, yields, GDP context):
 
 **Bottom line:** One direct sentence — probability of hard landing vs. soft landing and the key trigger to watch.
 
-Under 250 words. Macro risk and data first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Macro risk and data first.` },
         { label: 'Grantham', prompt: `Give me Jeremy Grantham's current market view using live data.
 
 **GRANTHAM'S LENS:** Bubble identification, mean reversion, long-term valuation, tail risk, generational calls.
@@ -689,7 +689,7 @@ Using the live data available (prices, yields, VIX, economic indicators):
 
 **Bottom line:** One direct sentence — his expected long-term return for US equities and what he'd be positioned in instead.
 
-Under 250 words. Valuation extremes and mean reversion first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Valuation extremes and mean reversion first.` },
       ],
     },
     {
@@ -719,7 +719,7 @@ Upcoming earnings, news, or data that affects timing. The one thing that could b
 
 **VERDICT:** Take it / Wait for confirmation / Avoid — one sentence with the key reason.
 
-Under 300 words. Data first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Data first.` },
         { itemId: 'Position Sizing', label: t('items.positionSizing'), prompt: `Help me size a position. Here are my details:
 
 Account size: $[ENTER AMOUNT]
@@ -760,7 +760,7 @@ What price level definitively breaks the thesis? Where is the technical and fund
 **5. RISK/REWARD VERDICT**
 Is the current risk/reward attractive, neutral, or unfavorable? One sentence.
 
-Under 300 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { itemId: 'Entry / Stop / Target', label: t('items.entryStopTarget'), prompt: `Help me define entry, stop, and target levels for `, needsTicker: true, promptSuffix: `
 
 Use live data from the feed. Structure as:
@@ -788,7 +788,7 @@ Use live data from the feed. Structure as:
 
 **VERDICT:** One sentence — is the current setup worth the risk?
 
-Under 250 words.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short.` },
         { itemId: 'Hold or Cut', label: t('items.holdOrCut'), prompt: `Help me think through whether to hold or cut my position in `, needsTicker: true, promptSuffix: `
 
 Use live data from the feed. Structure as:
@@ -812,7 +812,7 @@ Is there a case to cut size (reduce exposure) rather than a binary hold/cut deci
 
 **VERDICT:** Hold / Reduce / Cut — one direct sentence with the primary reason.
 
-Under 300 words. Data and facts first.` },
+Be thorough and detailed: fully develop each section with specific numbers, live data, and complete reasoning. Prioritize depth — do not cut it short. Data and facts first.` },
       ],
     },
     {

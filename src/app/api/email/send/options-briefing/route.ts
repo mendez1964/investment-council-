@@ -76,11 +76,11 @@ Any major earnings, Fed speakers, or economic data this week that options trader
 **5. TRADING REMINDERS**
 2-3 short rules-based reminders for options traders today (position sizing, IV crush risk near earnings, etc.)
 
-Keep it under 350 words. Direct, data-first, no fluff.`
+Be thorough and detailed — fully develop each section with specific numbers, live data, and complete reasoning. Aim for 800-1200 words. Direct and data-first, but do not cut it short.`
 
     const message = await client.chat.completions.create({
       model: OLLAMA_MODEL,
-      max_tokens: 800,
+      max_tokens: 3000,
       messages: [{ role: 'user', content: prompt }],
     })
 
