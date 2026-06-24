@@ -248,6 +248,18 @@ async function fetchSparkCryptoPicks(supabase: any): Promise<any[] | null> {
   return data
 }
 
+async function fetchSparkStockPicks(supabase: any): Promise<any[] | null> {
+  const today = new Date().toISOString().split('T')[0]
+  const { data, error } = await supabase
+    .from('ai_picks')
+    .select('*')
+    .eq('type', 'stock')
+    .eq('pick_date', today)
+    .eq('source', 'spark')
+  if (error || !data || data.length < 4) return null
+  return data
+}
+
 async function generatePicks(supabase: any, today: string, mode: 'all' | 'stocks' | 'crypto' = 'all') {
   const weekend = isWeekend(today)
   const doStocks = (mode === 'all' || mode === 'stocks') && !weekend
@@ -423,6 +435,12 @@ CRYPTO HARD RULES:
 
   // ── Call 1: Stocks ─────────────────────────────────────────────────────────
   if (doStocks) {
+    // Picks = C: use Spark's LSTM stock picks when available; only fall back to AI
+    // generation if Spark hasn't pushed any today (e.g. its cron hasn't run yet).
+    const sparkStocks = await fetchSparkStockPicks(supabase)
+    if (sparkStocks) {
+      console.log(`[ai-picks] Using ${sparkStocks.length} Spark LSTM stock picks — skipping AI generation`)
+    } else {
     const stocksPrompt = `You are an expert analyst using the IC Formula to generate the highest-conviction daily stock picks. Score every candidate rigorously. Reject anything under 70.
 
 OUTPUT ONLY RAW JSON — no explanation, no markdown, no code fences. Start with { and end with }.
@@ -465,6 +483,7 @@ Include EXACTLY 5 stock picks (SPX, SPY, QQQ, AAPL, NVDA — all 5).`
     const stocksParsed = extractJSON(stocksRaw)
     stocks = (stocksParsed.stocks ?? []).slice(0, 5)
     marketContext = stocksParsed.market_context ?? ''
+    }
   }
 
   // ── Call 2: Crypto ─────────────────────────────────────────────────────────
