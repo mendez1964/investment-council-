@@ -561,7 +561,54 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
 
     const encoder = new TextEncoder()
 
-    // ── Ollama on Spark — used when no user key (free / trial) ──────────────
+    // Shared Claude system blocks — used by the IC backup AND a subscriber's own key
+    const systemBlocks: Anthropic.Messages.TextBlockParam[] = [
+      { type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } } as Anthropic.Messages.TextBlockParam,
+      ...(kbParts.length > 0
+        ? [{ type: 'text', text: kbParts.join('\n\n'), cache_control: { type: 'ephemeral' } } as Anthropic.Messages.TextBlockParam]
+        : []),
+      { type: 'text', text: liveAndReminder } as Anthropic.Messages.TextBlockParam,
+    ]
+
+    // Stream a Claude completion into an existing controller (no close()).
+    // Used as the automatic backup when Spark is down, and for subscriber keys.
+    const streamClaudeInto = async (controller: ReadableStreamDefaultController, apiKey: string) => {
+      const anthropicClient = new Anthropic({ apiKey })
+      const anthropicStream = await (anthropicClient.messages.create as any)({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        system: systemBlocks,
+        messages: messages.map((m: { role: string; content: string }) => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        })),
+        stream: true,
+      })
+
+      let inputTokens = 0, outputTokens = 0, cacheReadTokens = 0, cacheWriteTokens = 0
+      for await (const chunk of anthropicStream) {
+        if (chunk.type === 'message_start') {
+          const usage = chunk.message.usage as any
+          inputTokens      = usage?.input_tokens                ?? 0
+          cacheReadTokens  = usage?.cache_read_input_tokens     ?? 0
+          cacheWriteTokens = usage?.cache_creation_input_tokens ?? 0
+        } else if (chunk.type === 'message_delta') {
+          outputTokens = (chunk.usage as any)?.output_tokens ?? 0
+        } else if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          controller.enqueue(encoder.encode(chunk.delta.text))
+        }
+      }
+
+      const cost =
+        (inputTokens      / 1_000_000) * 3.00 +
+        (cacheWriteTokens / 1_000_000) * 3.75 +
+        (cacheReadTokens  / 1_000_000) * 0.30 +
+        (outputTokens     / 1_000_000) * 15.00
+      console.log(`[claude] in:${inputTokens} cacheWrite:${cacheWriteTokens} cacheRead:${cacheReadTokens} out:${outputTokens} cost:$${cost.toFixed(5)}`)
+      controller.enqueue(encoder.encode(`\x00[USAGE:${JSON.stringify({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, cost })}]`))
+    }
+
+    // ── Ollama on Spark — primary brain; auto-fails over to Claude if down ────
     if (aiProvider === 'claude' && useICKey) {
       const ollamaClient = new OpenAI({
         baseURL: `${OLLAMA_BASE_URL}/v1`,
@@ -572,6 +619,7 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
 
       const stream = new ReadableStream({
         async start(controller) {
+          let got = false
           try {
             const ollamaStream = await ollamaClient.chat.completions.create({
               model: OLLAMA_MODEL,
@@ -588,17 +636,34 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
             let outputTokens = 0
             for await (const chunk of ollamaStream) {
               const text = chunk.choices[0]?.delta?.content ?? ''
-              if (text) controller.enqueue(encoder.encode(text))
+              if (text) { got = true; controller.enqueue(encoder.encode(text)) }
               if (chunk.usage) outputTokens = chunk.usage.completion_tokens ?? 0
             }
 
-            console.log(`[ollama:${OLLAMA_MODEL}] out:${outputTokens} cost:$0`)
-            const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens: 0, outputTokens, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0 })}]`
-            controller.enqueue(encoder.encode(usageMarker))
-            controller.close()
+            if (got) {
+              console.log(`[ollama:${OLLAMA_MODEL}] out:${outputTokens} cost:$0`)
+              controller.enqueue(encoder.encode(`\x00[USAGE:${JSON.stringify({ inputTokens: 0, outputTokens, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0 })}]`))
+            }
           } catch (error) {
-            controller.error(error)
+            console.error('[ollama] failed:', (error as Error).message)
           }
+
+          // BACKUP: Spark unreachable or returned nothing → fail over to Claude (IC key)
+          if (!got) {
+            const backupKey = process.env.ANTHROPIC_API_KEY
+            if (backupKey) {
+              try {
+                console.log('[chat] FAILOVER → Claude (Spark unavailable/empty)')
+                await streamClaudeInto(controller, backupKey)
+              } catch (e2) {
+                controller.error(e2)
+                return
+              }
+            } else {
+              controller.enqueue(encoder.encode('The local AI is temporarily unavailable. Please try again in a moment.'))
+            }
+          }
+          controller.close()
         },
       })
 
@@ -607,67 +672,12 @@ Current price: ${p(pivots.price)}${pivots.price && pivots.fib618 && pivots.fib38
       })
     }
 
-    // ── Claude (Anthropic SDK — user's own key) ───────────────────────────────
+    // ── Claude (Anthropic SDK — subscriber's own key) ─────────────────────────
     if (aiProvider === 'claude') {
-      const anthropicClient = new Anthropic({ apiKey: userApiKey! })
-
-      const systemBlocks: Anthropic.Messages.TextBlockParam[] = []
-
-      systemBlocks.push({
-        type: 'text',
-        text: systemPrompt,
-        cache_control: { type: 'ephemeral' },
-      } as Anthropic.Messages.TextBlockParam)
-
-      if (kbParts.length > 0) {
-        systemBlocks.push({
-          type: 'text',
-          text: kbParts.join('\n\n'),
-          cache_control: { type: 'ephemeral' },
-        } as Anthropic.Messages.TextBlockParam)
-      }
-
-      systemBlocks.push({ type: 'text', text: liveAndReminder })
-
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            const anthropicStream = await (anthropicClient.messages.create as any)({
-              model: 'claude-sonnet-4-6',
-              max_tokens: 4096,
-              system: systemBlocks,
-              messages: messages.map((m: { role: string; content: string }) => ({
-                role: m.role as 'user' | 'assistant',
-                content: m.content,
-              })),
-              stream: true,
-            })
-
-            let inputTokens = 0, outputTokens = 0, cacheReadTokens = 0, cacheWriteTokens = 0
-
-            for await (const chunk of anthropicStream) {
-              if (chunk.type === 'message_start') {
-                const usage = chunk.message.usage as any
-                inputTokens      = usage?.input_tokens                  ?? 0
-                cacheReadTokens  = usage?.cache_read_input_tokens       ?? 0
-                cacheWriteTokens = usage?.cache_creation_input_tokens   ?? 0
-              } else if (chunk.type === 'message_delta') {
-                outputTokens = (chunk.usage as any)?.output_tokens ?? 0
-              } else if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
-                controller.enqueue(encoder.encode(chunk.delta.text))
-              }
-            }
-
-            const cost =
-              (inputTokens      / 1_000_000) * 3.00 +
-              (cacheWriteTokens / 1_000_000) * 3.75 +
-              (cacheReadTokens  / 1_000_000) * 0.30 +
-              (outputTokens     / 1_000_000) * 15.00
-
-            console.log(`[claude] in:${inputTokens} cacheWrite:${cacheWriteTokens} cacheRead:${cacheReadTokens} out:${outputTokens} cost:$${cost.toFixed(5)}`)
-
-            const usageMarker = `\x00[USAGE:${JSON.stringify({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, cost })}]`
-            controller.enqueue(encoder.encode(usageMarker))
+            await streamClaudeInto(controller, userApiKey!)
             controller.close()
           } catch (error) {
             controller.error(error)
