@@ -206,24 +206,30 @@ async function evaluatePending(supabase: any) {
 
   await Promise.allSettled(pending.map(async (pick: any) => {
     let currentPrice: number | null = null
+    let benchmarkReturn: number | null = null
+    const benchmarkSymbol = pick.type === 'stock' ? 'SPY' : 'BTC'
     try {
       if (pick.type === 'stock') {
-        const q = await getQuote(pick.symbol)
-        currentPrice = q?.c ?? null
+        const [q, spy] = await Promise.allSettled([getQuote(pick.symbol), getQuote('SPY')])
+        currentPrice = q.status === 'fulfilled' ? (q.value?.c ?? null) : null
+        benchmarkReturn = spy.status === 'fulfilled' ? (spy.value?.dp ?? null) : null
       } else {
         const coinId = pick.coingecko_id || CRYPTO_ID_MAP[pick.symbol?.toUpperCase()] || pick.symbol?.toLowerCase()
-        const p = await getCryptoPrice(coinId) as any
-        currentPrice = p?.price ?? null
+        const [p, btc] = await Promise.allSettled([getCryptoPrice(coinId), getCryptoPrice('bitcoin')])
+        currentPrice = p.status === 'fulfilled' ? ((p.value as any)?.price ?? null) : null
+        benchmarkReturn = btc.status === 'fulfilled' ? ((btc.value as any)?.change_pct_24h ?? null) : null
       }
     } catch {}
     if (currentPrice == null || !pick.entry_price) return
     const priceChangePct = ((currentPrice - pick.entry_price) / pick.entry_price) * 100
     const directionReturnPct = pick.bias === 'bullish' ? priceChangePct : -priceChangePct
+    const alpha_pct = benchmarkReturn != null ? parseFloat((directionReturnPct - benchmarkReturn).toFixed(4)) : null
     await supabase.from('ai_picks').update({
       outcome: directionReturnPct > 0 ? 'win' : 'loss',
       exit_price: currentPrice,
       price_change_pct: parseFloat(priceChangePct.toFixed(4)),
       direction_return_pct: parseFloat(directionReturnPct.toFixed(4)),
+      ...(alpha_pct != null ? { alpha_pct, benchmark_symbol: benchmarkSymbol } : {}),
       evaluated_at: new Date().toISOString(),
     }).eq('id', pick.id)
   }))
@@ -772,7 +778,8 @@ export async function GET(request: Request) {
       }
       const stop_price  = p.bias === 'bullish' ? p.entry_price * (1 - stopPct)  : p.entry_price * (1 + stopPct)
       const target_price = p.bias === 'bullish' ? p.entry_price * (1 + targetPct) : p.entry_price * (1 - targetPct)
-      return { ...p, stop_price: parseFloat(stop_price.toFixed(2)), target_price: parseFloat(target_price.toFixed(2)), stop_pct: stopPct, target_pct: targetPct }
+      const low_conviction = (p.ic_score ?? 0) < 75 || (p.confidence ?? 10) <= 5
+      return { ...p, stop_price: parseFloat(stop_price.toFixed(2)), target_price: parseFloat(target_price.toFixed(2)), stop_pct: stopPct, target_pct: targetPct, low_conviction }
     })
 
     // Fetch SPY + BTC daily change for benchmark
